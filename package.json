@@ -13,24 +13,47 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/apps/CINEMAKATOK26-SERVER/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "dev": "nest start --watch",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./apps/CINEMAKATOK26-SERVER/test/jest-e2e.json"
+    "test:e2e": "jest --config ./apps/CINEMAKATOK26-SERVER/test/jest-e2e.json",
+    "start:gateway": "nest start api-gateway --watch",
+    "start:auth": "nest start auth-service --watch",
+    "start:user": "nest start user-service --watch"
   },
   "dependencies": {
+    "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
     "@nestjs/cqrs": "^11.0.3",
+    "@nestjs/jwt": "^11.0.2",
     "@nestjs/microservices": "^11.1.16",
+    "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.2.6",
+    "@nestjs/typeorm": "^11.0.0",
+    "@types/passport": "^1.0.17",
+    "@types/passport-jwt": "^4.0.1",
+    "amqp-connection-manager": "^5.0.0",
+    "amqplib": "^0.10.9",
+    "archiver": "^7.0.1",
+    "axios": "^1.13.6",
+    "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "config": "^4.4.1",
+    "exceljs": "^4.4.0",
     "lodash": "^4.17.23",
+    "nodemailer": "^8.0.2",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "typeorm": "^0.3.28"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -79,7 +102,7 @@
     ],
     "moduleNameMapper": {
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
-      "^\\/core(|/.*)$": "<rootDir>/libs/core/src/$1"
+      "^@app/core(|/.*)$": "<rootDir>/libs/core/src/$1"
     }
   }
 }

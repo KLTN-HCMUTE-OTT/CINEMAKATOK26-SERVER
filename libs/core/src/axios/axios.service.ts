@@ -1,7 +1,6 @@
 import * as https from 'https';
 
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import * as config from 'config';
 import * as crypto from 'crypto';
 
 import { getConfig } from '@app/common/utils/get-config';

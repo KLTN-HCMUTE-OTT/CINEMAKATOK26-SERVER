@@ -1,10 +1,3 @@
-import { Module } from '@nestjs/common';
-import { ApiGatewayController } from './api-gateway.controller';
-import { ApiGatewayService } from './api-gateway.service';
-
-@Module({
-  imports: [],
-  controllers: [ApiGatewayController],
-  providers: [ApiGatewayService],
-})
-export class ApiGatewayModule {}
+// This file is kept for backwards compatibility with nest-cli.json entryFile reference.
+// The actual module is in app.module.ts
+export { AppModule as ApiGatewayModule } from './app.module';

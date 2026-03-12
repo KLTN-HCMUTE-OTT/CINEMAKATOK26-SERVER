@@ -2,7 +2,13 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "declaration": true,
-    "outDir": "../../dist/libs/core"
+    "outDir": "../../dist/libs/core",
+    "module": "ES2022",
+    "target": "ES2022",
+    "strict": true,
+    "skipLibCheck": true,
+    "emitDeclarationOnly": true,
+    "declarationDir": "../../dist/libs/core",
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
