@@ -7,7 +7,7 @@ import { UserNotFoundError } from '@app/common/exceptions';
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(EntityUser)
+    @InjectRepository(EntityUser, 'user')
     private readonly userRepository: Repository<EntityUser>,
   ) {}
 

@@ -13,7 +13,7 @@ export class TokenService {
 
   constructor(
     private readonly jwtService: JwtService,
-    @InjectRepository(EntityRefreshToken)
+    @InjectRepository(EntityRefreshToken, 'auth')
     private readonly tokenRepository: Repository<EntityRefreshToken>,
   ) {}
 

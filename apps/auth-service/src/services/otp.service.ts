@@ -18,7 +18,7 @@ export class OtpService {
   private readonly MAX_ATTEMPTS = 5;
 
   constructor(
-    @InjectRepository(EntityUserOtp)
+    @InjectRepository(EntityUserOtp, 'auth')
     private readonly otpRepository: Repository<EntityUserOtp>,
   ) {}
 

@@ -1,38 +1,71 @@
-import { Module } from '@nestjs/common';
-import { getConfig } from '@app/common/utils/get-config';
+import { DynamicModule, Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-@Module({
-  imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: getConfig('core.database.host', ''),
-      port: getConfig('core.database.port', 5432),
-      username: getConfig('core.database.username', ''),
-      password: getConfig('core.database.password', ''),
-      database: getConfig('core.database.dbName', ''),
-      synchronize: true,
-      autoLoadEntities: true,
-      // ssl: {
-      //   rejectUnauthorized: false,
-      //   ca: getConfig('core.database.caCertificate', ''),
-      // },
-      extra: {
-        max: getConfig('core.database.extra.max', 100),
-        min: getConfig('core.database.extra.min', 1),
-        connectionLimit: getConfig('core.database.extra.connectionLimit', 100),
-        idleTimeoutMillis: getConfig('core.database.extra.idleTimeoutMillis', 20000),
-        connectTimeoutMillis: getConfig('core.database.extra.connectTimeoutMillis', 2000),
-      },
-    }),
-  ],
-  exports: [],
-})
+export type DatabaseServiceName =
+  | 'auth'
+  | 'user'
+  | 'order'
+  | 'content'
+  | 'activity';
+
+export interface DatabaseModuleOptions {
+  service: DatabaseServiceName;
+  global?: boolean;
+}
+
+@Module({})
 export class DatabaseModule {
-  static forRoot() {
+  static forRoot(options: DatabaseModuleOptions): DynamicModule {
+    const { service, global = true } = options;
+    const prefix = service.toUpperCase(); // 'auth' → 'AUTH'
+
     return {
       module: DatabaseModule,
-      global: true,
+      global,
+      imports: [
+        TypeOrmModule.forRootAsync({
+          name: service,
+          useFactory: (config: ConfigService) => {
+            const get = <T>(key: string, fallback: T): T =>
+              config.get<T>(`${prefix}_${key}`) ?? fallback;
+
+            const sslEnabled = get<boolean>('DB_SSL_ENABLED', false); 
+
+            return {
+              name: service,
+              type: get('DB_TYPE', 'postgres') as 'postgres',
+              host: get<string>('DB_HOST', 'localhost'),
+              port: get<number>('DB_PORT', 5432),
+              username: get<string>('DB_USERNAME', ''),
+              password: get<string>('DB_PASSWORD', ''),
+              database: get<string>('DB_NAME', ''),
+              synchronize: get<boolean>('DB_SYNCHRONIZE', false),
+              autoLoadEntities: true,
+              ssl: sslEnabled
+                ? {
+                    rejectUnauthorized: get<boolean>(
+                      'DB_SSL_REJECT_UNAUTHORIZED',
+                      false,
+                    ),
+                    ca: get<string>('DB_CA_CERTIFICATE', ''),
+                  }
+                : false,
+              extra: {
+                max: get<number>('DB_POOL_MAX', 10),
+                min: get<number>('DB_POOL_MIN', 2),
+                idleTimeoutMillis: get<number>('DB_POOL_IDLE_TIMEOUT_MS', 30000),
+                connectTimeoutMillis: get<number>(
+                  'DB_POOL_CONNECT_TIMEOUT_MS',
+                  5000,
+                ),
+              },
+            };
+          },
+          inject: [ConfigService],
+        }),
+      ],
+      exports: [TypeOrmModule],
     };
   }
 }

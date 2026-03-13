@@ -2,9 +2,9 @@ const { aws, uploadDir } = require('./default');
 
 require('dotenv').config();
 
-const number = name => ({ __name: name, __format: 'number' });
-const boolean = name => ({ __name: name, __format: 'boolean' });
-const json = name => ({ __name: name, __format: 'json' });
+const number = (name) => ({ __name: name, __format: 'number' });
+const boolean = (name) => ({ __name: name, __format: 'boolean' });
+const json = (name) => ({ __name: name, __format: 'json' });
 
 module.exports = {
   //Server configuration
@@ -55,15 +55,49 @@ module.exports = {
   },
   // Core Config
   core: {
-    database: {
-      type: 'CORE_DATABASE_TYPE',
-      host: 'CORE_DATABASE_HOST',
-      port: number('CORE_DATABASE_PORT'),
-      username: 'CORE_DATABASE_USERNAME',
-      password: 'CORE_DATABASE_PASSWORD',
-      dbName: 'CORE_DATABASE_DB_NAME',
-      synchronize: boolean('CORE_DATABASE_SYNCHRONIZE'),
-      caCertificate: 'DB_CA_CERTIFICATE',
+    databases: {
+      auth: {
+        type: 'AUTH_DB_TYPE',
+        host: 'AUTH_DB_HOST',
+        port: number('AUTH_DB_PORT'),
+        username: 'AUTH_DB_USERNAME',
+        password: 'AUTH_DB_PASSWORD',
+        dbName: 'AUTH_DB_NAME',
+        synchronize: boolean('AUTH_DB_SYNCHRONIZE'),
+        ssl: {
+          enabled: boolean('AUTH_DB_SSL_ENABLED'),
+          rejectUnauthorized: boolean('AUTH_DB_SSL_REJECT_UNAUTHORIZED'),
+          caCertificate: 'AUTH_DB_CA_CERTIFICATE',
+        },
+        extra: {
+          max: number('AUTH_DB_POOL_MAX'),
+          min: number('AUTH_DB_POOL_MIN'),
+          connectionLimit: number('AUTH_DB_POOL_CONNECTION_LIMIT'),
+          idleTimeoutMillis: number('AUTH_DB_POOL_IDLE_TIMEOUT_MS'),
+          connectTimeoutMillis: number('AUTH_DB_POOL_CONNECT_TIMEOUT_MS'),
+        },
+      },
+      user: {
+        type: 'USER_DB_TYPE',
+        host: 'USER_DB_HOST',
+        port: number('USER_DB_PORT'),
+        username: 'USER_DB_USERNAME',
+        password: 'USER_DB_PASSWORD',
+        dbName: 'USER_DB_NAME',
+        synchronize: boolean('USER_DB_SYNCHRONIZE'),
+        ssl: {
+          enabled: boolean('USER_DB_SSL_ENABLED'),
+          rejectUnauthorized: boolean('USER_DB_SSL_REJECT_UNAUTHORIZED'),
+          caCertificate: 'USER_DB_CA_CERTIFICATE',
+        },
+        extra: {
+          max: number('USER_DB_POOL_MAX'),
+          min: number('USER_DB_POOL_MIN'),
+          connectionLimit: number('USER_DB_POOL_CONNECTION_LIMIT'),
+          idleTimeoutMillis: number('USER_DB_POOL_IDLE_TIMEOUT_MS'),
+          connectTimeoutMillis: number('USER_DB_POOL_CONNECT_TIMEOUT_MS'),
+        },
+      },
     },
     cache: {
       store: 'CORE_CACHE_STORE',
