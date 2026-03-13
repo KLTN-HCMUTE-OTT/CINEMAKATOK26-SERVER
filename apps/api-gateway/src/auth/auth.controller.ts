@@ -16,7 +16,12 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { Public, UserSession } from '@app/common/decorators';
-import { AuthRequest, LoginResponse, RegisterRequest, OTPResponse } from '@app/common/dtos/auth/auth.dto';
+import {
+  AuthRequest,
+  LoginResponse,
+  RegisterRequest,
+  OTPResponse,
+} from '@app/common/dtos/auth/auth.dto';
 import { ApiResponseDto, ResponseBuilder } from '@app/common/utils/dto';
 import { firstValueFrom, Observable } from 'rxjs';
 import { plainToInstance } from 'class-transformer';
@@ -62,7 +67,10 @@ export class AuthController {
     description: 'OTP sent successfully',
     type: ApiResponseDto(OTPResponse),
   })
-  @ApiResponse({ status: 400, description: 'Email already exists or invalid data' })
+  @ApiResponse({
+    status: 400,
+    description: 'Email already exists or invalid data',
+  })
   async register(@Body() registerDto: RegisterRequest) {
     const optResponse = await firstValueFrom<OTPResponse>(
       this.authService.register(registerDto) as Observable<OTPResponse>,
@@ -72,7 +80,7 @@ export class AuthController {
       data: plainToInstance(OTPResponse, optResponse, {
         excludeExtraneousValues: true,
       }),
-    })
+    });
   }
 
   @Public()

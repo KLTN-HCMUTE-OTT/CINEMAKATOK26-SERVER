@@ -16,19 +16,32 @@ import { ERROR_CODE } from '@app/common/constants/global.constants';
  * Does NOT import TypeORM — the API Gateway doesn't use a database directly.
  */
 const getHttpErrorName = (status: number, defaultName: string) => {
-  if (defaultName && defaultName !== 'RpcException' && defaultName !== 'Error') {
+  if (
+    defaultName &&
+    defaultName !== 'RpcException' &&
+    defaultName !== 'Error'
+  ) {
     return defaultName;
   }
   switch (status) {
-    case 400: return 'BadRequestException';
-    case 401: return 'UnauthorizedException';
-    case 403: return 'ForbiddenException';
-    case 404: return 'NotFoundException';
-    case 409: return 'ConflictException';
-    case 422: return 'UnprocessableEntityException';
-    case 500: return 'InternalServerErrorException';
-    case 503: return 'ServiceUnavailableException';
-    default: return defaultName;
+    case 400:
+      return 'BadRequestException';
+    case 401:
+      return 'UnauthorizedException';
+    case 403:
+      return 'ForbiddenException';
+    case 404:
+      return 'NotFoundException';
+    case 409:
+      return 'ConflictException';
+    case 422:
+      return 'UnprocessableEntityException';
+    case 500:
+      return 'InternalServerErrorException';
+    case 503:
+      return 'ServiceUnavailableException';
+    default:
+      return defaultName;
   }
 };
 
@@ -43,26 +56,36 @@ export class GatewayExceptionFilter implements ExceptionFilter {
 
     let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Unexpected error occurred';
-    let code = ERROR_CODE.UNEXPECTED_ERROR;
+    let code: string = ERROR_CODE.UNEXPECTED_ERROR;
     let errorName = 'InternalServerErrorException';
 
     if (exception instanceof HttpException) {
       const res = exception.getResponse() as Record<string, any>;
-      
+
       statusCode = exception.getStatus();
+
       errorName = res['error'] ?? exception.name;
+
       message = res['message'] ?? exception.message;
-      code = res['code'] ?? (exception as any).code ?? ERROR_CODE.UNEXPECTED_ERROR;
+
+      code =
+        res['code'] ?? (exception as any).code ?? ERROR_CODE.UNEXPECTED_ERROR;
 
       // Map TCP connection error that got wrapped in HttpException to 503
+
       if (
-        code === 'ECONNREFUSED' || 
-        message?.includes('ECONNREFUSED') || 
-        (errorName === 'HttpException' && statusCode === 500 && (exception as any).code === 'ECONNREFUSED')
+        code === 'ECONNREFUSED' ||
+        message?.includes('ECONNREFUSED') ||
+        (errorName === 'HttpException' &&
+          statusCode === 500 &&
+          (exception as any).code === 'ECONNREFUSED')
       ) {
         statusCode = HttpStatus.SERVICE_UNAVAILABLE;
+
         message = 'A dependent service is currently unavailable or offline.';
+
         code = 'SERVICE_UNAVAILABLE';
+
         errorName = 'ServiceUnavailableException';
       }
     } else if (exception instanceof RpcException) {
@@ -70,9 +93,14 @@ export class GatewayExceptionFilter implements ExceptionFilter {
 
       if (typeof rpcError === 'object' && rpcError !== null) {
         const err = rpcError as Record<string, any>;
-        statusCode = err['statusCode'] ?? err['status'] ?? HttpStatus.SERVICE_UNAVAILABLE;
+
+        statusCode =
+          err['statusCode'] ?? err['status'] ?? HttpStatus.SERVICE_UNAVAILABLE;
+
         message = err['message'] ?? 'Service temporarily unavailable';
+
         code = err['code'] ?? 'SERVICE_UNAVAILABLE';
+
         errorName = err['error'] ?? 'ServiceUnavailableException';
       } else {
         statusCode = HttpStatus.SERVICE_UNAVAILABLE;
@@ -81,27 +109,47 @@ export class GatewayExceptionFilter implements ExceptionFilter {
         errorName = 'ServiceUnavailableException';
       }
     } else if (exception instanceof Error) {
-      if ((exception as any).code === 'ECONNREFUSED' || exception.message?.includes('ECONNREFUSED') || exception.message?.includes('Timeout')) {
+      if (
+        (exception as any).code === 'ECONNREFUSED' ||
+        exception.message?.includes('ECONNREFUSED') ||
+        exception.message?.includes('Timeout')
+      ) {
         statusCode = HttpStatus.SERVICE_UNAVAILABLE;
+
         message = 'A dependent service is currently unavailable.';
+
         code = 'SERVICE_UNAVAILABLE';
+
         errorName = 'ServiceUnavailableException';
       } else {
         message = exception.message;
+
         code = (exception as any).code ?? ERROR_CODE.UNEXPECTED_ERROR;
       }
     } else if (typeof exception === 'object' && exception !== null) {
       const err = exception as Record<string, any>;
-      if (err.statusCode || err.status) {
-        statusCode = err.statusCode ?? err.status;
-        message = err.message ?? message;
-        code = err.code ?? code;
-        errorName = err.error ?? 'RpcException';
+
+      // SAFE ASSIGNMENT: Only accept status if it's a number
+      const incomingStatus = err.statusCode ?? err.status;
+      if (typeof incomingStatus === 'number') {
+        statusCode = incomingStatus;
       }
+
+      message = err.message ?? message;
+      code = err.code ?? code;
+      errorName = err.error ?? 'RpcException';
+    }
+
+    // FINAL SAFETY NET: Ensure statusCode is never a string before calling Express
+    if (typeof statusCode !== 'number' || isNaN(statusCode)) {
+      statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     }
 
     if (statusCode === HttpStatus.INTERNAL_SERVER_ERROR) {
-      this.logger.error(JSON.stringify(exception, null, 2), (exception as Error)?.stack);
+      this.logger.error(
+        JSON.stringify(exception, null, 2),
+        (exception as Error)?.stack,
+      );
     }
 
     if (!response.headersSent) {

@@ -9,7 +9,6 @@ import {
   ArgumentsHost,
   Catch,
   ExceptionFilter,
-  ForbiddenException,
   HttpException,
   HttpStatus,
   InternalServerErrorException,
@@ -50,12 +49,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       switch (exception.constructor) {
         case QueryFailedError:
           errorResponse.statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
-          errorResponse.error = ForbiddenException.name;
+          errorResponse.error = InternalServerErrorException.name;
           errorResponse.message = exception.detail || (exception as QueryFailedError).message;
           break;
         case TypeORMError:
           errorResponse.statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
-          errorResponse.error = ForbiddenException.name;
+          errorResponse.error = InternalServerErrorException.name;
           errorResponse.message = exception.detail || (exception as QueryFailedError).message;
           break;
       }

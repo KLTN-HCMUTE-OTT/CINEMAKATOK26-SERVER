@@ -1,6 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { UserServiceModule } from './user.module';
 import { Transport } from '@nestjs/microservices';
+import {
+  HttpToRpcExceptionFilter,
+  RpcDomainExceptionFilter,
+} from '@app/common/filters';
 
 async function bootstrap() {
   const app = await NestFactory.createMicroservice(UserServiceModule, {
@@ -10,6 +14,12 @@ async function bootstrap() {
       port: Number(process.env.USER_SERVICE_PORT),
     },
   });
+
+  // Order matters: DomainError filter runs first (more specific), HttpException filter second
+  app.useGlobalFilters(
+    new HttpToRpcExceptionFilter(),
+    new RpcDomainExceptionFilter(),
+  );
 
   await app.listen();
 }

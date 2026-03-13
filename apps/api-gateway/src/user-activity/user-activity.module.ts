@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { OrderController } from './order.controller';
-import { OrderService } from './order.service';
+import { OrderController } from './user-activity.controller';
+import { UserActivityService } from './user-activity.service';
 
 @Module({
   imports: [
@@ -17,7 +17,7 @@ import { OrderService } from './order.service';
     ]),
   ],
   controllers: [OrderController],
-  providers: [OrderService],
-  exports: [OrderService],
+  providers: [UserActivityService],
+  exports: [UserActivityService],
 })
-export class OrderModule {}
+export class UserActivityModule {}

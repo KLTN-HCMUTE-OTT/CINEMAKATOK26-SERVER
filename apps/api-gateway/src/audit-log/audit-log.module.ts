@@ -1,22 +1,22 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { NotificationService } from './notification.service';
+import { AuditLogService } from './audit-log.service';
 
 @Module({
   imports: [
     ClientsModule.register([
       {
-        name: 'NOTIFICATION_SERVICE',
+        name: 'AUDIT_LOG_SERVICE',
         transport: Transport.RMQ,
         options: {
           urls: [process.env.RABBITMQ_URL ?? 'amqp://localhost:5672'],
-          queue: 'notification_queue',
+          queue: 'audit_log_queue',
           queueOptions: { durable: true },
         },
       },
     ]),
   ],
-  providers: [NotificationService],
-  exports: [NotificationService],
+  providers: [AuditLogService],
+  exports: [AuditLogService],
 })
-export class NotificationModule {}
+export class AuditLogModule {}

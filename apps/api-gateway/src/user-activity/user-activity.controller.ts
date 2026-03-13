@@ -1,13 +1,13 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { OrderService } from './order.service';
+import { UserActivityService } from './user-activity.service';
 import { UserSession } from '@app/common/decorators';
 
 @ApiTags('Orders')
 @ApiBearerAuth('access-token')
 @Controller('orders')
 export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(private readonly userActivityService: UserActivityService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new subscription order' })
@@ -15,7 +15,7 @@ export class OrderController {
     @UserSession('id') userId: string,
     @Body() body: Record<string, any>,
   ) {
-    return this.orderService.createOrder(userId, body);
+    return this.userActivityService.createOrder(userId, body);
   }
 
   @Get()
@@ -26,7 +26,7 @@ export class OrderController {
     @UserSession('id') userId: string,
     @Query() query: Record<string, any>,
   ) {
-    return this.orderService.getOrders(userId, query);
+    return this.userActivityService.getOrders(userId, query);
   }
 
   @Get(':id')
@@ -35,6 +35,6 @@ export class OrderController {
     @UserSession('id') userId: string,
     @Param('id') orderId: string,
   ) {
-    return this.orderService.getOrderById(userId, orderId);
+    return this.userActivityService.getOrderById(userId, orderId);
   }
 }

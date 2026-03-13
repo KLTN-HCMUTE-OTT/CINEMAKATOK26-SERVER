@@ -13,6 +13,8 @@ import { getConfig } from '@app/common/utils/get-config';
 // import { googleOauthConfig } from './config/google-oauth.config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TokenService } from './services/token.service';
+import { OtpService } from './services/otp.service';
+import { EmailService } from './services/email.service';
 
 @Module({
   imports: [
@@ -41,6 +43,6 @@ import { TokenService } from './services/token.service';
     ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, TokenService ],
+  providers: [AuthService, TokenService,OtpService, EmailService ],
 })
 export class AuthServiceModule {}

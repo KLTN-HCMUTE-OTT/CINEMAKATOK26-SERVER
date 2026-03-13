@@ -1,11 +1,14 @@
 import * as crypto from 'crypto';
 import { MoreThan, Repository } from 'typeorm';
 
-import { ERROR_CODE } from '@app/common/constants/global.constants';
 import { OTP_PURPOSE } from '@app/common/enums/global.enum';
 import { OTPHash } from '@app/common/utils/hash';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import {
+  InvalidOtpError,
+  OtpRateLimitExceededError,
+} from '@app/common/exceptions';
 
 import { EntityUserOtp } from '../entities/otp.entity';
 
@@ -49,7 +52,11 @@ export class OtpService {
   }
 
   /** Verify OTP */
-  async verifyOtp(email: string, otpInput: string, purpose: OTP_PURPOSE): Promise<boolean> {
+  async verifyOtp(
+    email: string,
+    otpInput: string,
+    purpose: OTP_PURPOSE,
+  ): Promise<boolean> {
     const otpEntities = await this.otpRepository.find({
       where: {
         email: email.toLowerCase(),
@@ -69,18 +76,12 @@ export class OtpService {
 
     if (!matchedEntity) {
       await this.incrementAttemptCount(email, purpose);
-      throw new BadRequestException({
-        code: ERROR_CODE.INVALID_TOKEN,
-        message: 'Invalid or expired OTP, please try again.',
-      });
+      throw new InvalidOtpError();
     }
 
     if (matchedEntity.attemptCount >= this.MAX_ATTEMPTS) {
       await this.invalidateOtp(matchedEntity.id);
-      throw new BadRequestException({
-        code: ERROR_CODE.UNAUTHORIZED,
-        message: 'Maximum OTP attempts exceeded. Please request a new OTP.',
-      });
+      throw new OtpRateLimitExceededError();
     }
     matchedEntity.isUsed = true;
     await this.otpRepository.save(matchedEntity);
@@ -89,7 +90,11 @@ export class OtpService {
   }
 
   /** Check if OTP exists and is valid */
-  async isOtpValid(email: string, otpInput: string, purpose: OTP_PURPOSE): Promise<boolean> {
+  async isOtpValid(
+    email: string,
+    otpInput: string,
+    purpose: OTP_PURPOSE,
+  ): Promise<boolean> {
     const otpEntities = await this.otpRepository.find({
       where: {
         email: email.toLowerCase(),
@@ -100,12 +105,17 @@ export class OtpService {
     });
 
     return otpEntities.some(
-      entity => entity.attemptCount < this.MAX_ATTEMPTS && OTPHash.compareOtp(otpInput, entity.otp),
+      (entity) =>
+        entity.attemptCount < this.MAX_ATTEMPTS &&
+        OTPHash.compareOtp(otpInput, entity.otp),
     );
   }
 
   /** Invalidate existing active OTPs for email + purpose */
-  private async invalidateExistingOtps(email: string, purpose: OTP_PURPOSE): Promise<void> {
+  private async invalidateExistingOtps(
+    email: string,
+    purpose: OTP_PURPOSE,
+  ): Promise<void> {
     await this.otpRepository.update(
       { email: email.toLowerCase(), purpose, isUsed: false },
       { isUsed: true },
@@ -118,7 +128,10 @@ export class OtpService {
   }
 
   /** Increment attempt count for all active OTPs of this email + purpose */
-  private async incrementAttemptCount(email: string, purpose: OTP_PURPOSE): Promise<void> {
+  private async incrementAttemptCount(
+    email: string,
+    purpose: OTP_PURPOSE,
+  ): Promise<void> {
     await this.otpRepository
       .createQueryBuilder()
       .update(EntityUserOtp)
@@ -144,7 +157,10 @@ export class OtpService {
     await this.otpRepository
       .createQueryBuilder()
       .delete()
-      .where('email = :email AND expiresAt < :now', { email: email.toLowerCase(), now: new Date() })
+      .where('email = :email AND expiresAt < :now', {
+        email: email.toLowerCase(),
+        now: new Date(),
+      })
       .execute();
   }
 }

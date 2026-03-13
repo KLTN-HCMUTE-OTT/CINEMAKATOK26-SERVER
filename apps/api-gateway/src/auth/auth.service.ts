@@ -11,18 +11,26 @@ export class AuthService {
   ) {}
 
   login(payload: AuthRequest): Observable<any> {
-    return this.authClient.send({ cmd: 'auth.login' }, payload).pipe(catchRpcError());
+    return this.authClient
+      .send({ cmd: 'auth.login' }, payload)
+      .pipe(catchRpcError());
   }
 
   register(payload: RegisterRequest): Observable<any> {
-    return this.authClient.send({ cmd: 'auth.register' }, payload).pipe(catchRpcError());
+    return this.authClient
+      .send({ cmd: 'auth.register' }, payload)
+      .pipe(catchRpcError());
   }
 
   refresh(payload: Record<string, any>): Observable<any> {
-    return this.authClient.send({ cmd: 'auth.refresh' }, payload).pipe(catchRpcError());
+    return this.authClient
+      .send({ cmd: 'auth.refresh' }, payload)
+      .pipe(catchRpcError());
   }
 
   logout(userId: string): Observable<any> {
-    return this.authClient.send({ cmd: 'auth.logout' }, { userId }).pipe(catchRpcError());
+    return this.authClient
+      .send({ cmd: 'auth.logout' }, { userId })
+      .pipe(catchRpcError());
   }
 }

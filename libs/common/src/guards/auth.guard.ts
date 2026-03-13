@@ -1,5 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -21,14 +24,22 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 
-  handleRequest(err, user, info, context: ExecutionContext) {
+  handleRequest(err: any, user: any, _info: any, context: ExecutionContext) {
     if (err || !user) {
-      throw err || new UnauthorizedException({ code: ERROR_CODE.INVALID_TOKEN });
+      throw (
+        err ||
+        new UnauthorizedException({
+          message: 'Token is invalid or has expired.',
+          code: ERROR_CODE.INVALID_TOKEN,
+        })
+      );
     }
 
-    const request = context.switchToHttp().getRequest();
-    request.userSession = user;
+    const request = context.switchToHttp().getRequest<Record<string, any>>();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    request['userSession'] = user;
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return user;
   }
 }

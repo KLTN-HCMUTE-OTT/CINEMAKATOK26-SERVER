@@ -2,11 +2,11 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
-export class NotificationService {
-  private readonly logger = new Logger(NotificationService.name);
+export class AuditLogService {
+  private readonly logger = new Logger(AuditLogService.name);
 
   constructor(
-    @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientProxy,
+    @Inject('AUDIT_LOG_SERVICE') private readonly auditLogClient: ClientProxy,
   ) {}
 
   /**
@@ -14,7 +14,7 @@ export class NotificationService {
    * Does NOT await a response — failures are logged but do not affect the caller.
    */
   emit(event: string, payload: Record<string, any>): void {
-    this.notificationClient.emit(event, payload);
+    this.auditLogClient.emit(event, payload);
     this.logger.debug(`Emitted notification event: ${event}`);
   }
 
