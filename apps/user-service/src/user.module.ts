@@ -1,30 +1,40 @@
 import { Module } from '@nestjs/common';
-import { UserController } from './user.controller';
-import { UserService } from './user.service';
-import { EntityUser } from './entities/user.entity';
-import { CoreModule } from '@app/core';
+import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { DatabaseModule } from '@app/core/database/database.module';
-import { validateUserEnv } from './config/env.schema';
-import * as path from 'path';
 import { ConfigModule } from '@nestjs/config';
+import * as path from 'path';
+
+import { CoreModule } from '@app/core';
+import { DatabaseModule } from '@app/core/database/database.module';
+
+import { UserController } from './user.controller';
+import { EntityUser } from './entities/user.entity';
+import { validateUserEnv } from './config/env.schema';
+import { CreateUserHandler } from './commands/handlers/create-user.handler';
+import { UpdatePasswordHandler } from './commands/handlers/update-password.handler';
+import { UpdateUserHandler } from './commands/handlers/update-user.handler';
+import { GetUserByEmailHandler } from './queries/handlers/get-user-by-email.handler';
+import { GetUserByIdHandler } from './queries/handlers/get-user-by-id.handler';
+
+const CommandHandlers = [CreateUserHandler, UpdateUserHandler, UpdatePasswordHandler];
+const QueryHandlers = [GetUserByEmailHandler, GetUserByIdHandler];
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: [
-        path.resolve('apps/user-service/.env'),  
-        path.resolve('.env'),              
+        path.resolve('apps/user-service/.env'),
+        path.resolve('.env'),
       ],
-      validate: validateUserEnv, 
+      validate: validateUserEnv,
       isGlobal: true,
     }),
-
+    CqrsModule,
     DatabaseModule.forRoot({ service: 'user' }),
     TypeOrmModule.forFeature([EntityUser], 'user'),
     CoreModule,
   ],
   controllers: [UserController],
-  providers: [UserService],
+  providers: [...CommandHandlers, ...QueryHandlers],
 })
 export class UserServiceModule {}

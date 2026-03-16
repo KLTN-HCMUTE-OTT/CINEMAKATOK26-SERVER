@@ -1,29 +1,68 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { AuthRequest, RegisterRequest } from '@app/common/dtos/auth/auth.dto';
+
+import {
+  AuthRequest,
+  ForgotPasswordRequest,
+  RegisterRequest,
+  RegisterWithOtpRequest,
+  ResetPasswordRequest,
+} from '@app/common/dtos/auth/auth.dto';
+
 import { AuthService } from './services/auth.service';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly authServiceService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
+
+  // ─── Auth ────────────────────────────────────────────────────────────────────
 
   @MessagePattern({ cmd: 'auth.login' })
-  async login(@Payload() payload: AuthRequest) {
-    return this.authServiceService.login(payload);
-  }
-
-  @MessagePattern({ cmd: 'auth.register' })
-  async register(@Payload() data: RegisterRequest) {
-    return this.authServiceService.register(data);
+  login(@Payload() payload: AuthRequest) {
+    return this.authService.login(payload);
   }
 
   @MessagePattern({ cmd: 'auth.refresh' })
-  async refresh(@Payload() data: { refreshToken: string }) {
-    return this.authServiceService.refresh(data);
+  refresh(@Payload() data: { refreshToken: string }) {
+    return this.authService.refresh(data);
   }
 
   @MessagePattern({ cmd: 'auth.logout' })
-  async logout(@Payload() data: { userId: string }) {
-    return this.authServiceService.logout(data.userId);
+  logout(@Payload() data: { userId: string }) {
+    return this.authService.logout(data.userId);
+  }
+
+  // ─── Registration ─────────────────────────────────────────────────────────────
+
+  @MessagePattern({ cmd: 'auth.send-register-otp' })
+  sendRegisterOtp(@Payload() data: RegisterRequest) {
+    return this.authService.sendRegisterOtp(data);
+  }
+
+  @MessagePattern({ cmd: 'auth.register-with-otp' })
+  registerWithOtp(@Payload() data: RegisterWithOtpRequest) {
+    return this.authService.registerWithOtp(data);
+  }
+
+  @MessagePattern({ cmd: 'auth.resend-register-otp' })
+  resendRegisterOtp(@Payload() data: { email: string }) {
+    return this.authService.resendRegisterOtp(data.email);
+  }
+
+  // ─── Forgot / Reset Password ──────────────────────────────────────────────────
+
+  @MessagePattern({ cmd: 'auth.forgot-password' })
+  forgotPassword(@Payload() data: ForgotPasswordRequest) {
+    return this.authService.forgotPassword(data);
+  }
+
+  @MessagePattern({ cmd: 'auth.reset-password' })
+  resetPassword(@Payload() data: ResetPasswordRequest) {
+    return this.authService.resetPassword(data);
+  }
+
+  @MessagePattern({ cmd: 'auth.resend-forgot-password-otp' })
+  resendForgotPasswordOtp(@Payload() data: { email: string }) {
+    return this.authService.resendForgotPasswordOtp(data.email);
   }
 }

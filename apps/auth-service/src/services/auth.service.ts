@@ -1,25 +1,31 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { firstValueFrom } from 'rxjs';
+import { ClientProxy } from '@nestjs/microservices';
+
 import {
   AuthRequest,
+  ForgotPasswordRequest,
+  LoginResponse,
+  OTPResponse,
+  RegisterRequest,
+  RegisterWithOtpRequest,
+  ResetPasswordRequest,
   TokenRequest,
   TokenResponse,
   UserPayload,
-  OTPResponse,
-  RegisterRequest,
 } from '@app/common/dtos/auth/auth.dto';
-import { PasswordHash } from '@app/common/utils/hash';
-import { firstValueFrom } from 'rxjs';
-import { ClientProxy } from '@nestjs/microservices';
-import { TokenService } from './token.service';
-import { OtpService } from './otp.service';
-import { EmailService } from './email.service';
 import { OTP_PURPOSE } from '@app/common/enums/global.enum';
 import {
+  EmailAlreadyExistsError,
   InvalidCredentialsError,
   UserBannedError,
-  EmailAlreadyExistsError,
   UserNotFoundError,
 } from '@app/common/exceptions';
+import { PasswordHash } from '@app/common/utils/hash';
+
+import { EmailService } from './email.service';
+import { OtpService } from './otp.service';
+import { TokenService } from './token.service';
 
 @Injectable()
 export class AuthService {
@@ -30,72 +36,46 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
-  /**
-   * Fetches a user by their email address via TCP microservice call.
-   * If the user service throws a domain error (e.g. USER_NOT_FOUND),
-   * this will be forwarded via the proxy and re-evaluated here if needed.
-   */
+  // ─── Internal Helpers ────────────────────────────────────────────────────────
+
   async findByEmail(email: string): Promise<UserPayload> {
     try {
       return await firstValueFrom<UserPayload>(
         this.userClient.send({ cmd: 'user.find-by-email' }, { email }),
       );
-    } catch (error: any) {
-      if (error && error.code === 'USER_NOT_FOUND') {
-        throw new UserNotFoundError();
-      }
+    } catch (error: unknown) {
+      const rpcError = error as { code?: string };
+      if (rpcError?.code === 'USER_NOT_FOUND') throw new UserNotFoundError();
       throw error;
     }
   }
 
-  /**
-   * Authenticates a user and generates access/refresh tokens.
-   */
-  async login(authRequest: AuthRequest): Promise<any> {
+  private async assertEmailNotTaken(email: string): Promise<void> {
+    try {
+      await this.findByEmail(email);
+      throw new EmailAlreadyExistsError();
+    } catch (error) {
+      if (!(error instanceof UserNotFoundError)) throw error;
+    }
+  }
+
+  // ─── Auth ────────────────────────────────────────────────────────────────────
+
+  async login(authRequest: AuthRequest): Promise<LoginResponse> {
     const user = await this.findByEmail(authRequest.email);
 
-    await this.validatePassword(authRequest.password, user.password);
-    await this.validateUserStatus(user);
+    this.validatePassword(authRequest.password, user.password);
+    this.validateUserStatus(user);
 
-    const tokens = await this.generateAndSaveTokens(user.id);
-
-    // await this.auditLogService.log({
-    //   action: LOG_ACTION.USER_LOGIN,
-    //   userId: user.id,
-    //   description: `User ${user.email} logged in`,
-    // });
+    const token = await this.generateAndSaveTokens(user.id);
 
     return {
       id: user.id,
       name: user.name,
       avatar: user.avatar,
       isAdmin: user.isAdmin,
-      token: tokens,
+      token,
     };
-  }
-
-  async register(registerDto: RegisterRequest): Promise<any> {
-    const { email } = registerDto;
-
-    try {
-      await this.findByEmail(email);
-      // If we reach here, the user exists
-      throw new EmailAlreadyExistsError();
-    } catch (error) {
-      // If it's literally a UserNotFoundError, that means the account doesn't exist.
-      // That's exactly what we want for registration!
-      if (!(error instanceof UserNotFoundError)) {
-        throw error;
-      }
-    }
-
-    const otp = await this.otpService.generateOtp(
-      email,
-      OTP_PURPOSE.REGISTRATION,
-    );
-    await this.emailService.sendOtpEmail(email, otp, 'REGISTRATION');
-
-    return new OTPResponse(5);
   }
 
   async refresh(data: { refreshToken: string }): Promise<TokenResponse> {
@@ -108,12 +88,112 @@ export class AuthService {
     await this.tokenService.removeRefreshToken(userId);
   }
 
-  // --- Private Helper Methods ---
+  // ─── Registration ─────────────────────────────────────────────────────────────
 
-  private async validatePassword(
-    inputPassword: string,
-    hashPassword?: string,
-  ): Promise<void> {
+  async sendRegisterOtp(dto: RegisterRequest): Promise<OTPResponse> {
+    await this.assertEmailNotTaken(dto.email);
+
+    const otp = await this.otpService.generateOtp(
+      dto.email,
+      OTP_PURPOSE.REGISTRATION,
+    );
+    await this.emailService.sendOtpEmail(dto.email, otp, 'REGISTRATION');
+
+    return new OTPResponse(5);
+  }
+
+  async registerWithOtp(dto: RegisterWithOtpRequest): Promise<void> {
+    await this.assertEmailNotTaken(dto.email);
+
+    await this.otpService.verifyOtp(
+      dto.email,
+      dto.otp,
+      OTP_PURPOSE.REGISTRATION,
+    );
+
+    const hashedPassword = PasswordHash.hashPassword(dto.password);
+
+    await firstValueFrom(
+      this.userClient.send(
+        { cmd: 'user.create' },
+        {
+          name: dto.name,
+          email: dto.email,
+          password: hashedPassword,
+          isEmailVerified: true,
+          ...(dto.dateOfBirth && { dateOfBirth: new Date(dto.dateOfBirth) }),
+          ...(dto.gender && { gender: dto.gender }),
+        },
+      ),
+    );
+  }
+
+  async resendRegisterOtp(email: string): Promise<OTPResponse> {
+    await this.assertEmailNotTaken(email);
+
+    const otp = await this.otpService.generateOtp(
+      email,
+      OTP_PURPOSE.REGISTRATION,
+    );
+    await this.emailService.sendOtpEmail(email, otp, 'REGISTRATION');
+
+    return new OTPResponse(5);
+  }
+
+  // ─── Forgot / Reset Password ──────────────────────────────────────────────────
+
+  async forgotPassword(dto: ForgotPasswordRequest): Promise<OTPResponse> {
+    await this.findByEmail(dto.email);
+
+    const otp = await this.otpService.generateOtp(
+      dto.email,
+      OTP_PURPOSE.FORGOT_PASSWORD,
+    );
+    await this.emailService.sendOtpEmail(dto.email, otp, 'FORGOT_PASSWORD');
+
+    return new OTPResponse(5);
+  }
+
+  async resetPassword(dto: ResetPasswordRequest): Promise<void> {
+    const user = await this.findByEmail(dto.email);
+
+    await this.otpService.verifyOtp(
+      dto.email,
+      dto.otp,
+      OTP_PURPOSE.FORGOT_PASSWORD,
+    );
+
+    const hashedPassword = PasswordHash.hashPassword(dto.newPassword);
+    await firstValueFrom(
+      this.userClient.send(
+        { cmd: 'user.update-password' },
+        { userId: user.id, hashedPassword },
+      ),
+    );
+
+    await this.otpService.cleanupExpiredOtpsByEmail(dto.email);
+    await this.otpService.cleanupExpiredOtps();
+
+    this.emailService.sendPasswordResetConfirmation(dto.email).catch(() => {
+      // Non-blocking — password was already changed successfully
+    });
+  }
+
+  async resendForgotPasswordOtp(email: string): Promise<OTPResponse> {
+    await this.findByEmail(email);
+
+    const otp = await this.otpService.generateOtp(
+      email,
+      OTP_PURPOSE.FORGOT_PASSWORD,
+    );
+    await this.emailService.sendOtpEmail(email, otp, 'FORGOT_PASSWORD');
+
+    return new OTPResponse(5);
+  }
+
+  // ─── Private Helpers ─────────────────────────────────────────────────────────
+
+  private validatePassword(inputPassword: string, hashPassword?: string): void {
     if (
       !hashPassword ||
       !PasswordHash.comparePassword(inputPassword, hashPassword)
@@ -122,7 +202,7 @@ export class AuthService {
     }
   }
 
-  private async validateUserStatus(user: UserPayload): Promise<void> {
+  private validateUserStatus(user: UserPayload): void {
     if (user.isBanned || user.status === 'BANNED') {
       const banMessage = user.bannedUntil
         ? `Your account has been banned until ${new Date(user.bannedUntil).toLocaleString()}. Reason: ${user.banReason || 'Violation of terms'}`
