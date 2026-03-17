@@ -21,7 +21,8 @@
     "test:e2e": "jest --config ./apps/CINEMAKATOK26-SERVER/test/jest-e2e.json",
     "start:gateway": "nest start api-gateway --watch",
     "start:auth": "nest start auth-service --watch",
-    "start:user": "nest start user-service --watch"
+    "start:user": "nest start user-service --watch",
+    "start:content": "nest start content-service --watch"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.1.0",

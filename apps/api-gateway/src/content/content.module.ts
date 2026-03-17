@@ -1,6 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { ContentController } from './content.controller';
+import { ActorsController } from './controllers/actors.controller';
+import { CategoriesController } from './controllers/categories.controller';
+import { ContentsController } from './controllers/contents.controller';
+import { DirectorsController } from './controllers/directors.controller';
+import { EpisodesController } from './controllers/episodes.controller';
+import { MoviesController } from './controllers/movies.controller';
+import { TagsController } from './controllers/tags.controller';
+import { TvSeriesController } from './controllers/tv-series.controller';
+import { VideosController } from './controllers/videos.controller';
 import { ContentService } from './content.service';
 
 @Module({
@@ -16,7 +24,17 @@ import { ContentService } from './content.service';
       },
     ]),
   ],
-  controllers: [ContentController],
+  controllers: [
+    ContentsController,
+    MoviesController,
+    TvSeriesController,
+    EpisodesController,
+    ActorsController,
+    DirectorsController,
+    CategoriesController,
+    TagsController,
+    VideosController,
+  ],
   providers: [ContentService],
   exports: [ContentService],
 })
