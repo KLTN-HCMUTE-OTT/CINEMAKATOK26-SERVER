@@ -7,6 +7,7 @@ import {
   RegisterRequest,
   RegisterWithOtpRequest,
   ResetPasswordRequest,
+  TokenRequest,
 } from '@app/common/dtos/auth/auth.dto';
 
 import { AuthService } from './services/auth.service';
@@ -23,7 +24,7 @@ export class AuthController {
   }
 
   @MessagePattern({ cmd: 'auth.refresh' })
-  refresh(@Payload() data: { refreshToken: string }) {
+  refresh(@Payload() data: TokenRequest) {
     return this.authService.refresh(data);
   }
 
@@ -39,9 +40,9 @@ export class AuthController {
     return this.authService.sendRegisterOtp(data);
   }
 
-  @MessagePattern({ cmd: 'auth.register-with-otp' })
-  registerWithOtp(@Payload() data: RegisterWithOtpRequest) {
-    return this.authService.registerWithOtp(data);
+  @MessagePattern({ cmd: 'auth.register-verify' })
+  registerVerify(@Payload() data: RegisterWithOtpRequest) {
+    return this.authService.registerVerify(data);
   }
 
   @MessagePattern({ cmd: 'auth.resend-register-otp' })

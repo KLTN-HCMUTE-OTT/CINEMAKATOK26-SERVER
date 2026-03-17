@@ -19,6 +19,9 @@ export const Unprotected = () =>
  * Add new codes here — never hard-code strings in services.
  */
 export const ERROR_CODE = {
+  // Email
+  EMAIL_SENDING_FAILED: 'EMAIL_SENDING_FAILED',
+  
   // General
   UNEXPECTED_ERROR: 'UNEXPECTED_ERROR',
   ENTITY_NOT_FOUND: 'ENTITY_NOT_FOUND',
