@@ -84,6 +84,12 @@ export class OtpRateLimitExceededError extends DomainError {
   }
 }
 
+export class EmailSendingFailedError extends DomainError {
+  constructor(message = 'Failed to send email. Please check email ') {
+    super(message, ERROR_CODE.EMAIL_SENDING_FAILED, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}
+
 // ─── Content ─────────────────────────────────────────────────────────────────
 
 export class ContentNotAvailableError extends DomainError {

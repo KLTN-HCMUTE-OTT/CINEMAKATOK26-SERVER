@@ -37,14 +37,14 @@ export class TokenService {
         JwtPayload & { isRefresh?: boolean; sub: string }
       >(token);
       if (!payload.isRefresh) {
-        throw new Error('Not a refresh token');
+        throw new InvalidTokenError('Not a refresh token');
       }
       const existedToken = await this.tokenRepository.findOneBy({
         userId: payload.sub,
         token,
       });
       if (!existedToken) {
-        throw new Error('Token not found');
+        throw new InvalidTokenError('Token not found');
       }
       return existedToken;
     } catch {

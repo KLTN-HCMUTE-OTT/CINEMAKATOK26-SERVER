@@ -78,10 +78,8 @@ export class AuthService {
     };
   }
 
-  async refresh(data: { refreshToken: string }): Promise<TokenResponse> {
-    const tokenRequest = new TokenRequest();
-    tokenRequest.refreshToken = data.refreshToken;
-    return this.tokenService.refresh(tokenRequest);
+  async refresh(token: TokenRequest): Promise<TokenResponse> {
+    return this.tokenService.refresh(token);
   }
 
   async logout(userId: string): Promise<void> {
@@ -102,7 +100,7 @@ export class AuthService {
     return new OTPResponse(5);
   }
 
-  async registerWithOtp(dto: RegisterWithOtpRequest): Promise<void> {
+  async registerVerify(dto: RegisterWithOtpRequest): Promise<any> {
     await this.assertEmailNotTaken(dto.email);
 
     await this.otpService.verifyOtp(
@@ -126,6 +124,7 @@ export class AuthService {
         },
       ),
     );
+    return true;
   }
 
   async resendRegisterOtp(email: string): Promise<OTPResponse> {
@@ -143,6 +142,7 @@ export class AuthService {
   // ─── Forgot / Reset Password ──────────────────────────────────────────────────
 
   async forgotPassword(dto: ForgotPasswordRequest): Promise<OTPResponse> {
+    console.log('service',dto)
     await this.findByEmail(dto.email);
 
     const otp = await this.otpService.generateOtp(
@@ -154,7 +154,7 @@ export class AuthService {
     return new OTPResponse(5);
   }
 
-  async resetPassword(dto: ResetPasswordRequest): Promise<void> {
+  async resetPassword(dto: ResetPasswordRequest): Promise<boolean> {
     const user = await this.findByEmail(dto.email);
 
     await this.otpService.verifyOtp(
@@ -164,7 +164,7 @@ export class AuthService {
     );
 
     const hashedPassword = PasswordHash.hashPassword(dto.newPassword);
-    await firstValueFrom(
+    await firstValueFrom<boolean>(
       this.userClient.send(
         { cmd: 'user.update-password' },
         { userId: user.id, hashedPassword },
@@ -177,6 +177,7 @@ export class AuthService {
     this.emailService.sendPasswordResetConfirmation(dto.email).catch(() => {
       // Non-blocking — password was already changed successfully
     });
+    return true;
   }
 
   async resendForgotPasswordOtp(email: string): Promise<OTPResponse> {
