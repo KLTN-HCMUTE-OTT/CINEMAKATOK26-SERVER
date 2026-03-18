@@ -56,6 +56,7 @@ export class ContentDto extends BaseEntityDto {
     description: 'Release date of the content',
     example: '2010-07-16',
   })
+  @Type(() => Date)
   @IsDate()
   @IsNotEmpty()
   @Expose()

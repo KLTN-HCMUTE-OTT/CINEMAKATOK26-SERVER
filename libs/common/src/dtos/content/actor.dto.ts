@@ -1,5 +1,12 @@
 import { Expose, Type } from 'class-transformer';
-import { IsDate, IsEnum, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsDate,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
 import { BaseEntityDto } from '@app/common/base/base-entity-dto';
 import { GENDER } from '@app/common/enums/global.enum';
@@ -20,6 +27,7 @@ export class ActorDto extends BaseEntityDto {
     example: '1990-01-01',
   })
   @IsNotEmpty()
+  @Type(() => Date)
   @IsDate()
   @Expose()
   dateOfBirth: Date;
@@ -126,5 +134,12 @@ export class ActorDetailDto extends ActorDto {
   contentCount?: number;
 }
 
-export class CreateActorDto extends OmitType(ActorDto, ['id', 'createdAt', 'updatedAt']) {}
-export class UpdateActorDto extends OmitType(ActorDto, ['createdAt', 'updatedAt']) {}
+export class CreateActorDto extends OmitType(ActorDto, [
+  'id',
+  'createdAt',
+  'updatedAt',
+]) {}
+export class UpdateActorDto extends OmitType(ActorDto, [
+  'createdAt',
+  'updatedAt',
+]) {}

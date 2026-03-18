@@ -1,5 +1,12 @@
 import { Expose, Type } from 'class-transformer';
-import { IsDate, IsEnum, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsDate,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
 import { BaseEntityDto } from '@app/common/base/base-entity-dto';
 import { GENDER } from '@app/common/enums/global.enum';
@@ -20,6 +27,7 @@ export class DirectorDto extends BaseEntityDto {
     example: '1990-01-01',
   })
   @IsNotEmpty()
+  @Type(() => Date)
   @IsDate()
   @Expose()
   dateOfBirth: Date;
@@ -120,5 +128,12 @@ export class DirectorDetailDto extends DirectorDto {
   contentCount?: number;
 }
 
-export class CreateDirectorDto extends OmitType(DirectorDto, ['id', 'createdAt', 'updatedAt']) {}
-export class UpdateDirectorDto extends OmitType(DirectorDto, ['createdAt', 'updatedAt']) {}
+export class CreateDirectorDto extends OmitType(DirectorDto, [
+  'id',
+  'createdAt',
+  'updatedAt',
+]) {}
+export class UpdateDirectorDto extends OmitType(DirectorDto, [
+  'createdAt',
+  'updatedAt',
+]) {}

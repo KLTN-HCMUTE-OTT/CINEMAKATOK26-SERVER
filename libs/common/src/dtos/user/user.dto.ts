@@ -1,5 +1,13 @@
 import { Expose, Type, plainToInstance } from 'class-transformer';
-import { IsBoolean, IsDate, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsDate,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 import { BaseEntityDto } from '@app/common/base/base-entity-dto';
 import { GENDER, USER_STATUS } from '@app/common/enums/global.enum';
@@ -73,6 +81,7 @@ export class UserDto extends BaseEntityDto {
     example: '2025-11-20T12:00:00Z',
     required: false,
   })
+  @Type(() => Date)
   @IsDate()
   @IsOptional()
   @Expose()
@@ -85,6 +94,7 @@ export class UserDetailDto extends UserDto {
     example: '1990-01-15',
     required: false,
   })
+  @Type(() => Date)
   @IsDate()
   @IsOptional()
   @Expose()
@@ -130,7 +140,12 @@ export class UserDetailDto extends UserDto {
   isEmailVerified: boolean;
 }
 
-export class UpdateUserDto extends PickType(UserDto, ['name', 'email', 'isAdmin', 'status']) {}
+export class UpdateUserDto extends PickType(UserDto, [
+  'name',
+  'email',
+  'isAdmin',
+  'status',
+]) {}
 
 export class UpdateUserInfoDto extends PickType(UserDetailDto, [
   'name',
