@@ -64,6 +64,12 @@ export class InvalidTokenError extends DomainError {
   }
 }
 
+export class SocialLoginFailedError extends DomainError {
+  constructor(message = 'Failed to login with social provider. Please try again.') {
+    super(message, ERROR_CODE.SOCIAL_LOGIN_FAILED, HttpStatus.BAD_REQUEST);
+  }
+}
+
 // ─── OTP ──────────────────────────────────────────────────────────────────────
 
 export class InvalidOtpError extends DomainError {

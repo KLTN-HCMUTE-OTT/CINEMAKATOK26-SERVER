@@ -44,9 +44,5 @@ export class CreateUserCommand extends BaseCommand {
 
   @IsString()
   @IsOptional()
-  provider?: string;
-
-  @IsString()
-  @IsOptional()
   providerId?: string;
 }

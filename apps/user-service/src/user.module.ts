@@ -15,11 +15,12 @@ import { UpdatePasswordHandler } from './commands/handlers/update-password.handl
 import { UpdateUserHandler } from './commands/handlers/update-user.handler';
 import { GetUserByEmailHandler } from './queries/handlers/get-user-by-email.handler';
 import { GetUserByIdHandler } from './queries/handlers/get-user-by-id.handler';
+import { GetUserByProviderIdHandler } from './queries/handlers/get-user-by-providerId.handler';
 
 const CommandHandlers = [CreateUserHandler, UpdateUserHandler, UpdatePasswordHandler];
-const QueryHandlers = [GetUserByEmailHandler, GetUserByIdHandler];
+const QueryHandlers = [GetUserByEmailHandler, GetUserByIdHandler, GetUserByProviderIdHandler];
 
-@Module({
+@Module({ 
   imports: [
     ConfigModule.forRoot({
       envFilePath: [

@@ -27,6 +27,8 @@ export interface UserPayload {
   isBanned: boolean;
   bannedUntil?: Date;
   banReason?: string;
+  providerId?: string;
+  isEmailVerified?: boolean;
 }
 
 export class AuthRequest {
@@ -227,17 +229,6 @@ export class RegisterWithOtpRequest extends RegisterRequest {
 
 // ============ SOCIAL LOGIN DTOs ============
 export class SocialLoginRequest {
-  @ApiProperty({
-    description: 'Social provider',
-    example: 'google',
-    enum: ['google', 'facebook'],
-  })
-  @IsString({ message: 'Provider is required' })
-  @IsNotEmpty({ message: 'Provider cannot be empty' })
-  @IsIn(['google', 'facebook'], { message: 'Provider must be either google or facebook' })
-  @Expose()
-  provider: 'google' | 'facebook';
-
   @ApiProperty({
     description: 'Access token from social provider',
     example: 'ya29.a0ARrd...',

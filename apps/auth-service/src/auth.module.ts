@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './services/auth.service';
+import { SocialAuthService } from './services/social-auth.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityRefreshToken } from './entities/refresh-token.entity';
 import { EntityUserOtp } from './entities/otp.entity';
@@ -60,6 +61,6 @@ import * as path from 'path';
     ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, TokenService, OtpService, EmailService],
+  providers: [AuthService, TokenService, OtpService, EmailService, SocialAuthService],
 })
 export class AuthServiceModule {}
