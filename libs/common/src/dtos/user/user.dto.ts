@@ -98,6 +98,7 @@ export class UserDetailDto extends UserDto {
   @IsDate()
   @IsOptional()
   @Expose()
+  @Type(() => Date)
   dateOfBirth?: Date;
 
   @ApiProperty({

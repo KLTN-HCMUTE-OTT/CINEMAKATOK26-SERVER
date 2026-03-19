@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { AuthService } from './services/auth.service';
+import { SocialAuthService } from './services/social-auth.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityRefreshToken } from './entities/refresh-token.entity';
 import { EntityUserOtp } from './entities/otp.entity';
@@ -11,7 +12,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { TokenService } from './services/token.service';
 import { OtpService } from './services/otp.service';
-import { EmailService } from './services/email.service';
 import { DatabaseModule } from '@app/core/database/database.module';
 import { validateAuthEnv } from './config/env.schema';
 import * as path from 'path';
@@ -20,10 +20,10 @@ import * as path from 'path';
   imports: [
     ConfigModule.forRoot({
       envFilePath: [
-        path.resolve('apps/auth-service/.env'),  
-        path.resolve('.env'),              
+        path.resolve('apps/auth-service/.env'),
+        path.resolve('.env'),
       ],
-      validate: validateAuthEnv, 
+      validate: validateAuthEnv,
       isGlobal: true,
     }),
 
@@ -57,9 +57,21 @@ import * as path from 'path';
         }),
         inject: [ConfigService],
       },
+      {
+        name: 'NOTIFICATION_SERVICE',
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [config.get<string>('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672')],
+            queue: 'notification_queue',
+            queueOptions: { durable: true },
+          },
+        }),
+        inject: [ConfigService],
+      },
     ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, TokenService, OtpService, EmailService],
+  providers: [AuthService, TokenService, OtpService, SocialAuthService],
 })
 export class AuthServiceModule {}

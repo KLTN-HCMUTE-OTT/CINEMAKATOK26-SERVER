@@ -22,7 +22,8 @@
     "start:gateway": "nest start api-gateway --watch",
     "start:auth": "nest start auth-service --watch",
     "start:user": "nest start user-service --watch",
-    "start:content": "nest start content-service --watch"
+    "start:content": "nest start content-service --watch",
+    "start:notification": "nest start notification-service --watch"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.1.0",
@@ -34,6 +35,7 @@
     "@nestjs/microservices": "^11.1.16",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/schedule": "^6.1.1",
     "@nestjs/swagger": "^11.2.6",
     "@nestjs/typeorm": "^11.0.0",
     "@types/passport": "^1.0.17",

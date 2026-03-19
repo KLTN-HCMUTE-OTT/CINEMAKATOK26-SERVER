@@ -18,9 +18,6 @@ export class CreateUserCommand extends BaseCommand {
   @IsString()
   name: string;
 
-  @IsString()
-  password: string;
-
   @IsBoolean()
   @IsOptional()
   isEmailVerified?: boolean;
@@ -41,10 +38,6 @@ export class CreateUserCommand extends BaseCommand {
   @IsBoolean()
   @IsOptional()
   isAdmin?: boolean;
-
-  @IsString()
-  @IsOptional()
-  provider?: string;
 
   @IsString()
   @IsOptional()

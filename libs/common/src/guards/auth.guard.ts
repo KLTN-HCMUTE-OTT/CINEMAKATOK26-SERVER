@@ -38,6 +38,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     const request = context.switchToHttp().getRequest<Record<string, any>>();
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     request['userSession'] = user;
+    request['user'] = user;
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return user;

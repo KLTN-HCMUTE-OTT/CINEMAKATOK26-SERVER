@@ -22,6 +22,9 @@ export const userEnvSchema = z.object({
   USER_DB_POOL_CONNECT_TIMEOUT_MS: z.coerce.number().default(5000),
   USER_DB_SSL_ENABLED: z.preprocess((v) => v === 'true' || v === '1', z.boolean()).default(false),
   USER_DB_SSL_REJECT_UNAUTHORIZED: z.preprocess((v) => v === 'true' || v === '1', z.boolean()).default(false),
+
+  // RabbitMQ
+  RABBITMQ_URL: z.string().min(1, 'RABBITMQ_URL is required'),
 });
 
 export type UserEnv = z.infer<typeof userEnvSchema>;
