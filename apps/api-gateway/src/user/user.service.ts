@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { catchRpcError } from '@app/common/exceptions';
 import { UpdateProfileRequest, ChangePasswordRequest, UpdateAvatarRequest } from '@app/common/dtos/user/profile.dto';
 import { PaginationQueryDto } from '@app/common/utils/dto';
+import { BanUserDto } from '@app/common/dtos/user/user.dto';
 
 @Injectable()
 export class UserService {
@@ -19,7 +20,7 @@ export class UserService {
 
   updateProfile(userId: string, updateDto: UpdateProfileRequest): Observable<any> {
     return this.userClient
-      .send({ cmd: 'user.updateProfile' }, { userId, ...updateDto })
+      .send({ cmd: 'user.updateProfile' }, { userId, updateDto })
       .pipe(catchRpcError());
   }
 
@@ -31,13 +32,13 @@ export class UserService {
 
   changePassword(userId: string, changePasswordDto: ChangePasswordRequest): Observable<any> {
     return this.userClient
-      .send({ cmd: 'user.changePassword' }, { userId, ...changePasswordDto })
+      .send({ cmd: 'user.changePassword' }, { userId, changePasswordDto })
       .pipe(catchRpcError());
   }
 
   updateAvatar(userId: string, updateAvatarDto: UpdateAvatarRequest): Observable<any> {
     return this.userClient
-      .send({ cmd: 'user.updateAvatar' }, { userId, ...updateAvatarDto })
+      .send({ cmd: 'user.updateAvatar' }, { userId, updateAvatarDto })
       .pipe(catchRpcError());
   }
 
@@ -53,9 +54,9 @@ export class UserService {
       .pipe(catchRpcError());
   }
 
-  banUser(userId: string, data: Record<string, any>): Observable<any> {
+  banUser(userId: string, banUserDto: BanUserDto): Observable<any> {
     return this.userClient
-      .send({ cmd: 'user.banUser' }, { userId, ...data })
+      .send({ cmd: 'user.banUser' }, { userId, banUserRequest: banUserDto })
       .pipe(catchRpcError());
   }
 
@@ -67,7 +68,7 @@ export class UserService {
 
   updateUser(userId: string, data: Record<string, any>): Observable<any> {
     return this.userClient
-      .send({ cmd: 'user.updateUser' }, { userId, ...data })
+      .send({ cmd: 'user.updateUser' }, { userId, updateUserRequest: data })
       .pipe(catchRpcError());
   }
 

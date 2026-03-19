@@ -25,7 +25,7 @@ export class EntityUser extends PersonEntity {
   providerId: string;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
-  avatar: string;
+  avatar: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   address: string;
@@ -37,10 +37,10 @@ export class EntityUser extends PersonEntity {
   status: USER_STATUS;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
-  banReason?: string;
+  banReason: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  bannedUntil?: Date;
+  bannedUntil: Date | null;
 
   @Column({ type: 'boolean', default: false })
   isBanned: boolean;

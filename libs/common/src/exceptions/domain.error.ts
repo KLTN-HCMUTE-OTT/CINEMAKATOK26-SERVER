@@ -56,6 +56,18 @@ export class UserBannedError extends DomainError {
   }
 }
 
+export class UserNotActiveError extends DomainError {
+  constructor(message = 'User is not active.') {
+    super(message, ERROR_CODE.USER_NOT_ACTIVE, HttpStatus.FORBIDDEN);
+  }
+}
+
+export class PassWordError extends DomainError {
+  constructor(message = 'Password not match.') {
+    super(message, ERROR_CODE.PASSWORD_NOT_MATCH, HttpStatus.BAD_REQUEST);
+  }
+}
+
 // ─── Auth / Token ─────────────────────────────────────────────────────────────
 
 export class InvalidTokenError extends DomainError {
@@ -126,5 +138,19 @@ export class VideoProcessingFailedError extends DomainError {
 export class PaymentDeclinedError extends DomainError {
   constructor(message = 'Payment was declined.') {
     super(message, ERROR_CODE.PAYMENT_DECLINED, HttpStatus.PAYMENT_REQUIRED);
+  }
+}
+
+// Invalid Body
+
+export class InvalidBodyError extends DomainError {
+  constructor(message = 'Invalid body provided.') {
+    super(message, ERROR_CODE.INVALID_BODY, HttpStatus.BAD_REQUEST);
+  }
+}
+
+export class NotFoundResourceError extends DomainError {
+  constructor(message = 'Resource not found.') {
+    super(message, ERROR_CODE.ENTITY_NOT_FOUND, HttpStatus.NOT_FOUND);
   }
 }

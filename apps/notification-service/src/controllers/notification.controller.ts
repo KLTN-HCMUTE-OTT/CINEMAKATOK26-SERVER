@@ -1,0 +1,91 @@
+import { Controller, Logger } from '@nestjs/common';
+import {
+  Ctx,
+  EventPattern,
+  Payload,
+  RmqContext,
+} from '@nestjs/microservices';
+
+import { EmailService } from '../services/email.service';
+
+@Controller()
+export class NotificationController {
+  private readonly logger = new Logger(NotificationController.name);
+
+  constructor(private readonly emailService: EmailService) {}
+
+  @EventPattern('notification.sendOtp')
+  async sendOtp(
+    @Payload() data: { email: string; otp: string; purpose: string },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const msg = context.getMessage();
+    try {
+      await this.emailService.sendOtpEmail(data.email, data.otp, data.purpose);
+      channel.ack(msg);
+    } catch (error) {
+      this.logger.error('sendOtp failed', error?.message);
+      channel.nack(msg, false, false); // discard — already logged inside EmailService
+    }
+  }
+
+  @EventPattern('notification.sendPasswordResetConfirmation')
+  async sendPasswordResetConfirmation(
+    @Payload() data: { email: string },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const msg = context.getMessage();
+    try {
+      await this.emailService.sendPasswordResetConfirmation(data.email);
+      channel.ack(msg);
+    } catch (error) {
+      this.logger.error('sendPasswordResetConfirmation failed', error?.message);
+      channel.nack(msg, false, false);
+    }
+  }
+
+  @EventPattern('notification.sendBanNotification')
+  async sendBanNotification(
+    @Payload()
+    data: {
+      email: string;
+      userName: string;
+      banReason: string;
+      bannedUntil: Date;
+    },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const msg = context.getMessage();
+    try {
+      await this.emailService.sendBanNotification(
+        data.email,
+        data.userName,
+        data.banReason,
+        data.bannedUntil,
+      );
+      channel.ack(msg);
+    } catch (error) {
+      this.logger.error('sendBanNotification failed', error?.message);
+      channel.nack(msg, false, false);
+    }
+  }
+
+  @EventPattern('notification.sendEmail')
+  async sendEmail(
+    @Payload() data: { to: string; subject: string; html: string },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const msg = context.getMessage();
+    try {
+      await this.emailService.sendEmail(data.to, data.subject, data.html);
+      channel.ack(msg);
+    } catch (error) {
+      this.logger.error('sendEmail failed', error?.message);
+      channel.nack(msg, false, false);
+    }
+  }
+}
