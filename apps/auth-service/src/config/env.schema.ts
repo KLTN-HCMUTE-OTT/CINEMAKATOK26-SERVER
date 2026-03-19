@@ -39,6 +39,9 @@ export const authEnvSchema = z.object({
   JWT_PUBLIC_KEY: z.string().min(1, 'JWT_PUBLIC_KEY is required'),
   JWT_EXPIRES_TIME: z.string().default('5m'),
   JWT_REFRESH_EXPIRES_TIME: z.string().default('7d'),
+
+  // RabbitMQ
+  RABBITMQ_URL: z.string().min(1, 'RABBITMQ_URL is required'),
 });
 
 export type AuthEnv = z.infer<typeof authEnvSchema>;

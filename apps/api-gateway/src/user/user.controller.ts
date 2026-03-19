@@ -93,9 +93,9 @@ export class UserController {
     @UserSession('id') userId: string,
     @Body() changePasswordDto: ChangePasswordRequest,
   ) {
-    const result = await this.userService.changePassword(userId, changePasswordDto);
+    const result = await firstValueFrom(this.userService.changePassword(userId, changePasswordDto));
     return ResponseBuilder.createResponse({
-      data: plainToInstance(UserDto, result, { excludeExtraneousValues: true }),
+      data: plainToInstance(ProfileResponse, result, { excludeExtraneousValues: true }),
       message: 'Password changed successfully',
     });
   }
@@ -150,7 +150,7 @@ export class UserController {
     description: 'Unauthorized - Invalid or missing access token',
   })
   async deleteAvatar(@UserSession('id') userId: string) {
-    await this.userService.deleteAvatar(userId);
+    await firstValueFrom(this.userService.deleteAvatar(userId));
     return ResponseBuilder.createResponse({ data: null, message: 'Avatar deleted successfully' });
   }
 
@@ -229,8 +229,8 @@ export class UserController {
   @ApiOkResponse({ description: 'User deleted successfully' })
   
   async delete(@Param('id', new ParseUUIDPipe()) id: string) {
-    await this.userService.deleteUser(id);
-    return ResponseBuilder.createResponse({ data: null });
+    const result = await firstValueFrom(this.userService.deleteUser(id));
+    return ResponseBuilder.createResponse({ data: result, message: 'User deleted successfully' });
   }
 
   // Admin user management endpoints

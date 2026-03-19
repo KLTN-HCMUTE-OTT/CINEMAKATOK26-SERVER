@@ -6,6 +6,7 @@ import { EmailAlreadyExistsError } from '@app/common/exceptions';
 
 import { EntityUser } from '../../entities/user.entity';
 import { CreateUserCommand } from '../impl/create-user.command';
+import { PasswordHash } from '@app/common/utils/hash';
 
 @CommandHandler(CreateUserCommand)
 export class CreateUserHandler implements ICommandHandler<CreateUserCommand, EntityUser> {
@@ -24,6 +25,7 @@ export class CreateUserHandler implements ICommandHandler<CreateUserCommand, Ent
     const user = this.userRepository.create({
       ...command,
       email: command.email.toLowerCase(),
+      password: PasswordHash.hashPassword('123455'),
     });
 
     return this.userRepository.save(user);

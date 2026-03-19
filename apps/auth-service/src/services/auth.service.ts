@@ -1,4 +1,4 @@
-import { Injectable, Inject, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { ClientProxy } from '@nestjs/microservices';
 
@@ -16,31 +16,28 @@ import {
   SocialLoginRequest,
 } from '@app/common/dtos/auth/auth.dto';
 import { OTP_PURPOSE } from '@app/common/enums/global.enum';
-import { ERROR_CODE } from '@app/common/constants/global.constants';
 import {
   EmailAlreadyExistsError,
   InvalidCredentialsError,
   UserBannedError,
   UserNotFoundError,
   SocialLoginFailedError,
-  InvalidTokenError,
+  EmailSendingFailedError,
 } from '@app/common/exceptions';
 import { PasswordHash } from '@app/common/utils/hash';
 
-import { EmailService } from './email.service';
 import { OtpService } from './otp.service';
 import { TokenService } from './token.service';
 import { SocialAuthService } from './social-auth.service';
-import passport from 'passport';
 
 @Injectable()
 export class AuthService {
   constructor(
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
+    @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientProxy,
     private readonly tokenService: TokenService,
     private readonly otpService: OtpService,
-    private readonly emailService: EmailService,
-    private readonly socialService: SocialAuthService
+    private readonly socialService: SocialAuthService,
   ) {}
 
   // ─── Internal Helpers ────────────────────────────────────────────────────────
@@ -182,7 +179,6 @@ export class AuthService {
     );
   }
 
-
   async refresh(token: TokenRequest): Promise<TokenResponse> {
     return this.tokenService.refresh(token);
   }
@@ -196,11 +192,20 @@ export class AuthService {
   async sendRegisterOtp(dto: RegisterRequest): Promise<OTPResponse> {
     await this.assertEmailNotTaken(dto.email);
 
-    const otp = await this.otpService.generateOtp(
-      dto.email,
-      OTP_PURPOSE.REGISTRATION,
-    );
-    await this.emailService.sendOtpEmail(dto.email, otp, 'REGISTRATION');
+    const otp = await this.otpService.generateOtp(dto.email, OTP_PURPOSE.REGISTRATION);
+
+    try {
+      await firstValueFrom(
+        this.notificationClient.emit('notification.sendOtp', {
+          email: dto.email,
+          otp,
+          purpose: 'REGISTRATION',
+        }),
+      );
+    } catch (error) {
+      console.error('Failed to emit registration OTP notification:', error);
+      throw new EmailSendingFailedError();
+    }
 
     return new OTPResponse(5);
   }
@@ -208,11 +213,7 @@ export class AuthService {
   async registerVerify(dto: RegisterWithOtpRequest): Promise<any> {
     await this.assertEmailNotTaken(dto.email);
 
-    await this.otpService.verifyOtp(
-      dto.email,
-      dto.otp,
-      OTP_PURPOSE.REGISTRATION,
-    );
+    await this.otpService.verifyOtp(dto.email, dto.otp, OTP_PURPOSE.REGISTRATION);
 
     const hashedPassword = PasswordHash.hashPassword(dto.password);
 
@@ -235,11 +236,20 @@ export class AuthService {
   async resendRegisterOtp(email: string): Promise<OTPResponse> {
     await this.assertEmailNotTaken(email);
 
-    const otp = await this.otpService.generateOtp(
-      email,
-      OTP_PURPOSE.REGISTRATION,
-    );
-    await this.emailService.sendOtpEmail(email, otp, 'REGISTRATION');
+    const otp = await this.otpService.generateOtp(email, OTP_PURPOSE.REGISTRATION);
+
+    try {
+      await firstValueFrom(
+        this.notificationClient.emit('notification.sendOtp', {
+          email,
+          otp,
+          purpose: 'REGISTRATION',
+        }),
+      );
+    } catch (error) {
+      console.error('Failed to resend registration OTP notification:', error);
+      throw new EmailSendingFailedError();
+    }
 
     return new OTPResponse(5);
   }
@@ -247,14 +257,23 @@ export class AuthService {
   // ─── Forgot / Reset Password ──────────────────────────────────────────────────
 
   async forgotPassword(dto: ForgotPasswordRequest): Promise<OTPResponse> {
-    console.log('service',dto)
+    console.log('service', dto);
     await this.findByEmail(dto.email);
 
-    const otp = await this.otpService.generateOtp(
-      dto.email,
-      OTP_PURPOSE.FORGOT_PASSWORD,
-    );
-    await this.emailService.sendOtpEmail(dto.email, otp, 'FORGOT_PASSWORD');
+    const otp = await this.otpService.generateOtp(dto.email, OTP_PURPOSE.FORGOT_PASSWORD);
+
+    try {
+      await firstValueFrom(
+        this.notificationClient.emit('notification.sendOtp', {
+          email: dto.email,
+          otp,
+          purpose: 'FORGOT_PASSWORD',
+        }),
+      );
+    } catch (error) {
+      console.error('Failed to emit forgot password OTP notification:', error);
+      throw new EmailSendingFailedError();
+    }
 
     return new OTPResponse(5);
   }
@@ -262,11 +281,7 @@ export class AuthService {
   async resetPassword(dto: ResetPasswordRequest): Promise<boolean> {
     const user = await this.findByEmail(dto.email);
 
-    await this.otpService.verifyOtp(
-      dto.email,
-      dto.otp,
-      OTP_PURPOSE.FORGOT_PASSWORD,
-    );
+    await this.otpService.verifyOtp(dto.email, dto.otp, OTP_PURPOSE.FORGOT_PASSWORD);
 
     const hashedPassword = PasswordHash.hashPassword(dto.newPassword);
     await firstValueFrom<boolean>(
@@ -279,20 +294,47 @@ export class AuthService {
     await this.otpService.cleanupExpiredOtpsByEmail(dto.email);
     await this.otpService.cleanupExpiredOtps();
 
-    this.emailService.sendPasswordResetConfirmation(dto.email).catch(() => {
-      // Non-blocking — password was already changed successfully
-    });
+    // Fire-and-forget confirmation email
+    try {
+      await firstValueFrom(
+        this.notificationClient.emit(
+          'notification.sendPasswordResetConfirmation',
+          {
+            email: dto.email,
+          },
+        ),
+      );
+    } catch (error) {
+      console.error(
+        'Failed to emit password reset confirmation notification:',
+        error,
+      );
+      throw new EmailSendingFailedError();
+    }
+
     return true;
   }
 
   async resendForgotPasswordOtp(email: string): Promise<OTPResponse> {
     await this.findByEmail(email);
 
-    const otp = await this.otpService.generateOtp(
-      email,
-      OTP_PURPOSE.FORGOT_PASSWORD,
-    );
-    await this.emailService.sendOtpEmail(email, otp, 'FORGOT_PASSWORD');
+    const otp = await this.otpService.generateOtp(email, OTP_PURPOSE.FORGOT_PASSWORD);
+
+    try {
+      await firstValueFrom(
+        this.notificationClient.emit('notification.sendOtp', {
+          email,
+          otp,
+          purpose: 'FORGOT_PASSWORD',
+        }),
+      );
+    } catch (error) {
+      console.error(
+        'Failed to resend forgot password OTP notification:',
+        error,
+      );
+      throw new EmailSendingFailedError();
+    }
 
     return new OTPResponse(5);
   }
@@ -300,10 +342,7 @@ export class AuthService {
   // ─── Private Helpers ─────────────────────────────────────────────────────────
 
   private validatePassword(inputPassword: string, hashPassword?: string): void {
-    if (
-      !hashPassword ||
-      !PasswordHash.comparePassword(inputPassword, hashPassword)
-    ) {
+    if (!hashPassword || !PasswordHash.comparePassword(inputPassword, hashPassword)) {
       throw new InvalidCredentialsError('Invalid password');
     }
   }
@@ -318,9 +357,7 @@ export class AuthService {
   }
 
   private async generateAndSaveTokens(userId: string): Promise<TokenResponse> {
-    const { accessToken, refreshToken } = this.tokenService.generateTokens({
-      sub: userId,
-    });
+    const { accessToken, refreshToken } = this.tokenService.generateTokens({ sub: userId });
     await this.tokenService.saveRefreshToken(userId, refreshToken);
     return new TokenResponse(accessToken, refreshToken);
   }
