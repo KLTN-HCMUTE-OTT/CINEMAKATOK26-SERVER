@@ -29,6 +29,7 @@ import {
   ResetPasswordRequest,
   TokenRequest,
   TokenResponse,
+  SocialLoginRequest
 } from '@app/common/dtos/auth/auth.dto';
 import { ApiResponseDto, ResponseBuilder } from '@app/common/utils/dto';
 import { firstValueFrom, Observable } from 'rxjs';
@@ -37,7 +38,7 @@ import { plainToInstance } from 'class-transformer';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Public()
   @Post('/login')
@@ -60,6 +61,36 @@ export class AuthController {
       }),
     });
   }
+
+  @Public()
+  @Post('/social-login')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Social login with Google/Facebook',
+    description:
+      'Login or register using Google/Facebook OAuth. Automatically creates account if user does not exist.',
+  })
+  @ApiBody({ type: SocialLoginRequest })
+  @ApiResponse({
+    status: 200,
+    description: 'Social login successful',
+    type: ApiResponseDto(LoginResponse),
+  })
+  @ApiResponse({ status: 400, description: 'Invalid social access token' })
+  async socialLogin(@Body() socialLoginDto: SocialLoginRequest) {
+    const result = await firstValueFrom<LoginResponse>(
+      this.authService.socialLogin(socialLoginDto) as Observable<LoginResponse>,
+    );
+
+    return ResponseBuilder.createResponse({
+      data: plainToInstance(LoginResponse, result, {
+        excludeExtraneousValues: true,
+      }),
+      message: 'Social login successful',
+    });
+  }
+
+
 
   @Public()
   @Post('register')
@@ -101,7 +132,7 @@ export class AuthController {
   })
   @ApiBody({ type: RegisterWithOtpRequest })
   @ApiResponse({
-    status: 201,
+    status: 200,
     description: 'User registered successfully',
   })
   @ApiResponse({
@@ -224,7 +255,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid OTP or password requirements not met' })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordRequest) {
     await firstValueFrom(this.authService.resetPassword(resetPasswordDto));
-    return ResponseBuilder.createResponse({ data: null , message: 'Password reset successfully. Please login to continue.'});
+    return ResponseBuilder.createResponse({ data: null, message: 'Password reset successfully. Please login to continue.' });
   }
 
   @Public()

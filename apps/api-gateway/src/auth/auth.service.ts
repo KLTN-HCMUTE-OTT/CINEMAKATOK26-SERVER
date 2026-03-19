@@ -1,4 +1,4 @@
-import { AuthRequest, RegisterRequest, RegisterWithOtpRequest, ForgotPasswordRequest, ResetPasswordRequest, TokenRequest } from '@app/common/dtos/auth/auth.dto';
+import { AuthRequest, RegisterRequest, RegisterWithOtpRequest, ForgotPasswordRequest, ResetPasswordRequest, TokenRequest, SocialLoginRequest } from '@app/common/dtos/auth/auth.dto';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { Observable } from 'rxjs';
@@ -15,6 +15,12 @@ export class AuthService {
   login(payload: AuthRequest): Observable<any> {
     return this.authClient
       .send({ cmd: 'auth.login' }, payload)
+      .pipe(catchRpcError());
+  }
+
+  socialLogin(payload: SocialLoginRequest): Observable<any> {
+    return this.authClient
+      .send({ cmd: 'auth.social-login' }, payload)
       .pipe(catchRpcError());
   }
 

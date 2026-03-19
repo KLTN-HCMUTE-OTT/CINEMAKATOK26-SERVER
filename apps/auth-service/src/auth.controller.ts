@@ -8,6 +8,7 @@ import {
   RegisterWithOtpRequest,
   ResetPasswordRequest,
   TokenRequest,
+  SocialLoginRequest,
 } from '@app/common/dtos/auth/auth.dto';
 
 import { AuthService } from './services/auth.service';
@@ -65,5 +66,10 @@ export class AuthController {
   @MessagePattern({ cmd: 'auth.resend-forgot-password-otp' })
   resendForgotPasswordOtp(@Payload() data: { email: string }) {
     return this.authService.resendForgotPasswordOtp(data.email);
+  }
+
+  @MessagePattern({ cmd: 'auth.social-login' })
+  socialLogin(@Payload() data: SocialLoginRequest) {
+    return this.authService.socialLogin(data);
   }
 }

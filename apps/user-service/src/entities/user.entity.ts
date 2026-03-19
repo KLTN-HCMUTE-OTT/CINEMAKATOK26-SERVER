@@ -7,7 +7,7 @@ import { PersonEntity } from './person.entity';
 @Entity({
   name: 'user',
 })
-@Unique(['provider', 'providerId'])
+@Unique(['providerId'])
 export class EntityUser extends PersonEntity {
   @Column({ type: 'varchar', length: 255, unique: true, nullable: true })
   email?: string | null;
@@ -20,9 +20,6 @@ export class EntityUser extends PersonEntity {
 
   @Column({ type: 'boolean', default: false })
   isEmailVerified: boolean;
-
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  provider: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   providerId: string;

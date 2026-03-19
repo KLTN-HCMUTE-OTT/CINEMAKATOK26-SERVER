@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { ClientProxy } from '@nestjs/microservices';
 
@@ -13,19 +13,25 @@ import {
   TokenRequest,
   TokenResponse,
   UserPayload,
+  SocialLoginRequest,
 } from '@app/common/dtos/auth/auth.dto';
 import { OTP_PURPOSE } from '@app/common/enums/global.enum';
+import { ERROR_CODE } from '@app/common/constants/global.constants';
 import {
   EmailAlreadyExistsError,
   InvalidCredentialsError,
   UserBannedError,
   UserNotFoundError,
+  SocialLoginFailedError,
+  InvalidTokenError,
 } from '@app/common/exceptions';
 import { PasswordHash } from '@app/common/utils/hash';
 
 import { EmailService } from './email.service';
 import { OtpService } from './otp.service';
 import { TokenService } from './token.service';
+import { SocialAuthService } from './social-auth.service';
+import passport from 'passport';
 
 @Injectable()
 export class AuthService {
@@ -34,6 +40,7 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly otpService: OtpService,
     private readonly emailService: EmailService,
+    private readonly socialService: SocialAuthService
   ) {}
 
   // ─── Internal Helpers ────────────────────────────────────────────────────────
@@ -42,6 +49,18 @@ export class AuthService {
     try {
       return await firstValueFrom<UserPayload>(
         this.userClient.send({ cmd: 'user.find-by-email' }, { email }),
+      );
+    } catch (error: unknown) {
+      const rpcError = error as { code?: string };
+      if (rpcError?.code === 'USER_NOT_FOUND') throw new UserNotFoundError();
+      throw error;
+    }
+  }
+
+  async findByProviderId(providerId: string): Promise<UserPayload> {
+    try {
+      return await firstValueFrom<UserPayload>(
+        this.userClient.send({ cmd: 'user.find-by-providerId' }, { providerId }),
       );
     } catch (error: unknown) {
       const rpcError = error as { code?: string };
@@ -77,6 +96,92 @@ export class AuthService {
       token,
     };
   }
+
+  async socialLogin(payload: SocialLoginRequest): Promise<LoginResponse> {
+    try {
+      const socialUser = await this.socialService.verifyGoogleToken(payload.accessToken);
+      const user = await this.getOrCreateSocialUser(socialUser);
+
+      this.validateUserStatus(user);
+      const token = await this.generateAndSaveTokens(user.id);
+
+      return {
+        id: user.id,
+        name: user.name,
+        avatar: user.avatar,
+        isAdmin: user.isAdmin,
+        token,
+      };
+    } catch (error) {
+      console.error('Social login error:', error);
+      const message = error.message?.toLowerCase() || '';
+      if (message.includes('invalid') && message.includes('token')) {
+        throw new InvalidCredentialsError('Invalid social access token');
+      }
+      throw new SocialLoginFailedError();
+    }
+  }
+
+  private async getOrCreateSocialUser(socialUser: any): Promise<UserPayload> {
+    const normalizedEmail = socialUser.email ? socialUser.email.toLowerCase() : null;
+    let user: UserPayload | null = null;
+
+    // 1. Try finding by email
+    if (normalizedEmail) {
+      try {
+        user = await this.findByEmail(normalizedEmail);
+      } catch (error) {
+        if (!(error instanceof UserNotFoundError)) throw error;
+      }
+    }
+
+    // 2. Try finding by provider ID
+    if (!user) {
+      try {
+        user = await this.findByProviderId(socialUser.id);
+      } catch (error) {
+        if (!(error instanceof UserNotFoundError)) throw error;
+      }
+    }
+
+    // 3. Update existing user or create new one
+    if (user) {
+      let hasUpdates = false;
+      if (user.providerId !== socialUser.id) {
+        user.providerId = socialUser.id;
+        hasUpdates = true;
+      }
+      if (socialUser.picture && user.avatar !== socialUser.picture) {
+        user.avatar = socialUser.picture;
+        hasUpdates = true;
+      }
+      if (!user.isEmailVerified && socialUser.email) {
+        user.isEmailVerified = true;
+        hasUpdates = true;
+      }
+
+      if (hasUpdates) {
+        await firstValueFrom(this.userClient.send({ cmd: 'user.update' }, user));
+      }
+      return user;
+    }
+
+    // Create new user
+    return firstValueFrom<UserPayload>(
+      this.userClient.send(
+        { cmd: 'user.create' },
+        {
+          name: socialUser.name,
+          email: normalizedEmail,
+          password: '',
+          providerId: socialUser.id,
+          avatar: socialUser.picture,
+          isEmailVerified: !!socialUser.email,
+        },
+      ),
+    );
+  }
+
 
   async refresh(token: TokenRequest): Promise<TokenResponse> {
     return this.tokenService.refresh(token);

@@ -4,3 +4,4 @@ export * from './override.decorator';
 export * from './parseJson.decorator';
 export * from './public.decorator';
 export * from './roles.decorator';
+export * from './admin-role.decorator';
