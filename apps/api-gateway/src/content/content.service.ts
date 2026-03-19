@@ -96,6 +96,42 @@ export class ContentService {
       .pipe(catchRpcError());
   }
 
+  getNews(query: Record<string, any>): Observable<any> {
+    return this.contentClient
+      .send({ cmd: 'content.getNews' }, query)
+      .pipe(catchRpcError());
+  }
+
+  getNewsById(id: string): Observable<any> {
+    return this.contentClient
+      .send({ cmd: 'content.getNewsById' }, { id })
+      .pipe(catchRpcError());
+  }
+
+  getRelatedNews(id: string, query?: Record<string, any>): Observable<any> {
+    return this.contentClient
+      .send({ cmd: 'content.getRelatedNews' }, { id, query })
+      .pipe(catchRpcError());
+  }
+
+  createNews(data: Record<string, any>): Observable<any> {
+    return this.contentClient
+      .send({ cmd: 'content.createNews' }, data)
+      .pipe(catchRpcError());
+  }
+
+  updateNews(id: string, data: Record<string, any>): Observable<any> {
+    return this.contentClient
+      .send({ cmd: 'content.updateNews' }, { id, data })
+      .pipe(catchRpcError());
+  }
+
+  deleteNews(id: string): Observable<any> {
+    return this.contentClient
+      .send({ cmd: 'content.deleteNews' }, { id })
+      .pipe(catchRpcError());
+  }
+
   getTvSeries(query: Record<string, any>): Observable<any> {
     return this.contentClient
       .send({ cmd: 'content.getTvSeries' }, query)

@@ -160,7 +160,7 @@ export class ActorsController {
   }
 
   @Post()
-  //@UseGuards(JwtAuthGuard, IsAdminGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: '[ADMIN] Create actor' })
   async createActor(@Body() createActorDto: CreateActorDto) {
@@ -174,7 +174,7 @@ export class ActorsController {
   }
 
   @Patch(':id')
-  //@UseGuards(JwtAuthGuard, IsAdminGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: '[ADMIN] Update actor' })
   @ApiParam({
@@ -194,7 +194,7 @@ export class ActorsController {
   }
 
   @Delete(':id')
-  //@UseGuards(JwtAuthGuard, IsAdminGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: '[ADMIN] Delete actor' })
   @ApiParam({

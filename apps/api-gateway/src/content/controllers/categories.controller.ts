@@ -180,7 +180,7 @@ export class CategoriesController {
   }
 
   @Post()
-  //@UseGuards(JwtAuthGuard, IsAdminGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiOperation({ summary: '[ADMIN] Create new category' })
   @ApiResponse({
     status: 201,
@@ -211,7 +211,7 @@ export class CategoriesController {
   }
 
   @Put(':id')
-  //@UseGuards(JwtAuthGuard, IsAdminGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiOperation({ summary: '[ADMIN] Update category' })
   @ApiParam({
     name: 'id',
@@ -252,7 +252,7 @@ export class CategoriesController {
   }
 
   @Delete(':id')
-  //@UseGuards(JwtAuthGuard, IsAdminGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiOperation({ summary: '[ADMIN] Delete category' })
   @ApiParam({
     name: 'id',

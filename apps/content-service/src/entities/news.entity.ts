@@ -1,6 +1,4 @@
-//import { EntityUser } from 'src/auth/entities/user.entity';
-
-import { Column, Entity, ManyToMany, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity } from 'typeorm';
 
 import { BaseEntity } from '@app/common/base/base-entity';
 
@@ -20,6 +18,9 @@ export class EntityNews extends BaseEntity {
   @Column({ type: 'text', array: true, default: [] })
   category: string[];
 
-  //   @ManyToOne(() => EntityUser, (user) => user.news)
-  //   author: EntityUser;
+  @Column({ type: 'varchar', length: 255 })
+  author_name: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  author_avatar: string | null;
 }

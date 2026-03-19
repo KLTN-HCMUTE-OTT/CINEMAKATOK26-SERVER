@@ -1,5 +1,5 @@
-import { Expose, Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, isEmpty } from 'class-validator';
+import { Expose } from 'class-transformer';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 import { BaseEntityDto } from '@app/common/base/base-entity-dto';
 import { ApiProperty, OmitType } from '@nestjs/swagger';
@@ -50,46 +50,33 @@ export class NewsDto extends BaseEntityDto {
   category: string[];
 
   @ApiProperty({
-    description: 'Name of the user who made the review',
+    description: 'Name of the news author',
     example: 'Jane Smith',
   })
   @Expose()
   @IsString()
-  @Transform(({ obj }) => {
-    if (obj.author && !isEmpty(obj.author.name)) {
-      return obj.author.name;
-    }
-    return obj.name || 'Unknown';
-  })
-  name: string;
+  @IsNotEmpty()
+  author_name: string;
 
   @ApiProperty({
-    description: 'Avatar URL of the user who made the review',
+    description: 'Avatar URL of the news author',
     example: 'https://example.com/avatar.jpg',
     nullable: true,
   })
   @Expose()
-  @Transform(({ obj }) => {
-    if (obj.author && obj.author.avatar) {
-      return obj.author.avatar;
-    }
-    return obj.avatar || null;
-  })
-  avatar: string | null;
+  @IsOptional()
+  @IsString()
+  author_avatar: string | null;
 }
 
 export class CreateNewsDto extends OmitType(NewsDto, [
   'id',
   'createdAt',
   'updatedAt',
-  'name',
-  'avatar',
 ]) {}
 
 export class UpdateNewsDto extends OmitType(NewsDto, [
   'id',
   'createdAt',
   'updatedAt',
-  'name',
-  'avatar',
 ]) {}

@@ -11,6 +11,7 @@ import { EntityActor, EntityDirector } from './entities/actor.entity';
 import { EntityCategory } from './entities/category.entity';
 import { EntityContent } from './entities/content.entity';
 import { EntityMovie } from './entities/movie.entity';
+import { EntityNews } from './entities/news.entity';
 import { EntityTag } from './entities/tag.entity';
 import {
   EntityEpisode,
@@ -24,6 +25,7 @@ import { ContentService } from './services/content.service';
 import { validateContentEnv } from './config/env.schema';
 import { DirectorService } from './services/director.service';
 import { MovieService } from './services/movie.service';
+import { NewsService } from './services/news.service';
 import { TagService } from './services/tag.service';
 import { TvSeriesService } from './services/tvseries.service';
 import { VideoService } from './services/video.service';
@@ -46,6 +48,7 @@ import { VideoService } from './services/video.service';
         EntityCategory,
         EntityContent,
         EntityMovie,
+        EntityNews,
         EntityTag,
         EntityTVSeries,
         EntitySeason,
@@ -63,6 +66,7 @@ import { VideoService } from './services/video.service';
     ContentService,
     DirectorService,
     MovieService,
+    NewsService,
     TagService,
     TvSeriesService,
     VideoService,

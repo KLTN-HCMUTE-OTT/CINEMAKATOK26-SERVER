@@ -22,6 +22,10 @@ import {
   UpdateMovieDto,
 } from 'libs/common/src/dtos/content/movies.dto';
 import {
+  CreateNewsDto,
+  UpdateNewsDto,
+} from 'libs/common/src/dtos/content/news.dto';
+import {
   CreateTVSeriesDto,
   UpdateTVSeriesDto,
 } from 'libs/common/src/dtos/content/tvseries.dto';
@@ -39,6 +43,7 @@ import { CategoryService } from './services/category.service';
 import { ContentService } from './services/content.service';
 import { DirectorService } from './services/director.service';
 import { MovieService } from './services/movie.service';
+import { NewsService } from './services/news.service';
 import { TagService } from './services/tag.service';
 import { TvSeriesService } from './services/tvseries.service';
 import { VideoService } from './services/video.service';
@@ -48,6 +53,7 @@ export class ContentController {
   constructor(
     private readonly contentService: ContentService,
     private readonly movieService: MovieService,
+    private readonly newsService: NewsService,
     private readonly tvSeriesService: TvSeriesService,
     private readonly actorService: ActorService,
     private readonly directorService: DirectorService,
@@ -136,6 +142,39 @@ export class ContentController {
   @MessagePattern({ cmd: 'content.deleteMovie' })
   deleteMovie(@Payload() payload: { id: string }) {
     return this.movieService.delete(payload.id);
+  }
+
+  // ─── News ───────────────────────────────────────────────────────────────────
+  @MessagePattern({ cmd: 'content.getNews' })
+  getNews(@Payload() query: Record<string, any>) {
+    return this.newsService.findAll(query);
+  }
+
+  @MessagePattern({ cmd: 'content.getNewsById' })
+  getNewsById(@Payload() payload: { id: string }) {
+    return this.newsService.findOne(payload.id);
+  }
+
+  @MessagePattern({ cmd: 'content.getRelatedNews' })
+  getRelatedNews(
+    @Payload() payload: { id: string; query?: Record<string, any> },
+  ) {
+    return this.newsService.findNewsRelated(payload.id, payload.query);
+  }
+
+  @MessagePattern({ cmd: 'content.createNews' })
+  createNews(@Payload() payload: CreateNewsDto) {
+    return this.newsService.create(payload);
+  }
+
+  @MessagePattern({ cmd: 'content.updateNews' })
+  updateNews(@Payload() payload: { id: string; data: UpdateNewsDto }) {
+    return this.newsService.update(payload.id, payload.data);
+  }
+
+  @MessagePattern({ cmd: 'content.deleteNews' })
+  deleteNews(@Payload() payload: { id: string }) {
+    return this.newsService.remove(payload.id);
   }
 
   // ─── TV Series ────────────────────────────────────────────────────────────────
