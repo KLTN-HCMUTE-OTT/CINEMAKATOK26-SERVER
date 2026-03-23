@@ -96,7 +96,7 @@ module.exports = {
     publicUrl: process.env.R2_PUBLIC_URL,
   },
 
-  uploadDir: 'uploads/',
+  uploadDir: 'D:\\uploads',
 
   email: {
     host: process.env.EMAIL_HOST,

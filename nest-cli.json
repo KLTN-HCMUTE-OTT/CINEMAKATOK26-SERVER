@@ -73,6 +73,15 @@
         "tsConfigPath": "apps/content-service/tsconfig.app.json"
       }
     },
+    "streaming-service": {
+      "type": "application",
+      "root": "apps/streaming-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/streaming-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/streaming-service/tsconfig.app.json"
+      }
+    },
     "notification-service": {
       "type": "application",
       "root": "apps/notification-service",
