@@ -89,4 +89,10 @@ export class UserService {
       .send({ cmd: 'user.getUserDetail' }, { userId })
       .pipe(catchRpcError());
   }
+
+  getUsersByIds(ids: string[]): Observable<any[]> {
+    return this.userClient
+      .send({ cmd: 'user.getUsersByIds' }, { ids })
+      .pipe(catchRpcError());
+  }
 }

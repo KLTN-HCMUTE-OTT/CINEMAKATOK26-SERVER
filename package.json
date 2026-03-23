@@ -23,7 +23,8 @@
     "start:auth": "nest start auth-service --watch",
     "start:user": "nest start user-service --watch",
     "start:content": "nest start content-service --watch",
-    "start:notification": "nest start notification-service --watch"
+    "start:notification": "nest start notification-service --watch",
+    "start:audit-log": "nest start audit-log-service --watch"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.1.0",
@@ -40,11 +41,14 @@
     "@nestjs/typeorm": "^11.0.0",
     "@types/passport": "^1.0.17",
     "@types/passport-jwt": "^4.0.1",
+    "@types/uuid": "^11.0.0",
     "amqp-connection-manager": "^5.0.0",
     "amqplib": "^0.10.9",
     "archiver": "^7.0.1",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
+    "cache-manager": "^7.2.8",
+    "cache-manager-redis-yet": "^5.1.5",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "config": "^4.4.1",
@@ -57,6 +61,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.28",
+    "uuid": "^13.0.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

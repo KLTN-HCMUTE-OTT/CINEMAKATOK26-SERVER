@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { AuditLogController } from './audit-log.controller';
 import { AuditLogService } from './audit-log.service';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
@@ -15,7 +17,9 @@ import { AuditLogService } from './audit-log.service';
         },
       },
     ]),
+    UserModule,
   ],
+  controllers: [AuditLogController],
   providers: [AuditLogService],
   exports: [AuditLogService],
 })

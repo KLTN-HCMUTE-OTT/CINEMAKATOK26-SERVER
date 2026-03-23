@@ -392,4 +392,9 @@ export class ContentController {
   deleteVideo(@Payload() payload: { id: string }) {
     return this.videoService.delete(payload.id);
   }
+
+  @MessagePattern({ cmd: 'content.getMovieOrSeriesFromVideo' })
+  getMovieOrSeriesFromVideo(@Payload() payload: { videoId: string }) {
+    return this.videoService.getMovieOrSeriesFromVideo(payload.videoId);
+  }
 }

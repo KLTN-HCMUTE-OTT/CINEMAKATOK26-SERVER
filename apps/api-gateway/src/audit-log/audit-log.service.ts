@@ -1,32 +1,29 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { PaginationQueryDto } from '@app/common/utils/dto/pagination-query.dto';
+import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { catchRpcError } from '@app/common/exceptions';
+import { Observable } from 'rxjs';
 
 @Injectable()
 export class AuditLogService {
-  private readonly logger = new Logger(AuditLogService.name);
-
   constructor(
-    @Inject('AUDIT_LOG_SERVICE') private readonly auditLogClient: ClientProxy,
+    @Inject('AUDIT_LOG_SERVICE') private readonly auditClient: ClientProxy,
   ) {}
 
-  /**
-   * Fire-and-forget: publish an event to the notification queue.
-   * Does NOT await a response — failures are logged but do not affect the caller.
-   */
-  emit(event: string, payload: Record<string, any>): void {
-    this.auditLogClient.emit(event, payload);
-    this.logger.debug(`Emitted notification event: ${event}`);
+  findAll(query: PaginationQueryDto): Observable<any> {
+    return this.auditClient.send({ cmd: 'get_audit_logs' }, query || {}).pipe(catchRpcError());
   }
 
-  sendWelcomeEmail(userId: string, email: string): void {
-    this.emit('notification.welcome', { userId, email });
+  logVideoAction(userId: string, videoId: string): Observable<any> {
+    return this.auditClient.send({ cmd: 'create_video_log' }, { userId, videoId }).pipe(catchRpcError());
   }
 
-  sendOrderConfirmation(userId: string, orderId: string): void {
-    this.emit('notification.order.confirmed', { userId, orderId });
+  getRecentActivity(query: PaginationQueryDto): Observable<any> {
+    return this.auditClient.send({ cmd: 'get_recent_activity' }, query || {}).pipe(catchRpcError());
   }
 
-  sendPaymentSuccess(userId: string, paymentId: string): void {
-    this.emit('notification.payment.success', { userId, paymentId });
+  getTransactionsForFPGrowth(): Observable<any> {
+    return this.auditClient.send({ cmd: 'get_transactions' }, {}).pipe(catchRpcError());
   }
 }
+

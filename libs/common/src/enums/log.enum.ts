@@ -65,3 +65,8 @@ export enum LOG_ACTION {
   // Content related actions
   CONTENT_VIEW_INCREASED = 'CONTENT_VIEW_INCREASED',
 }
+
+export enum RESOURCE_TYPE {
+  MOVIE = 'MOVIE',
+  SERIES = 'SERIES',
+}

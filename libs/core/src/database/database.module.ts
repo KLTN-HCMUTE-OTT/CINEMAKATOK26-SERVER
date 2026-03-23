@@ -7,7 +7,8 @@ export type DatabaseServiceName =
   | 'user'
   | 'order'
   | 'content'
-  | 'activity';
+  | 'activity'
+  | 'audit';
 
 export interface DatabaseModuleOptions {
   service: DatabaseServiceName;

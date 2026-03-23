@@ -32,6 +32,7 @@ import { GetUserByEmailHandler } from './queries/handlers/get-user-by-email.hand
 import { GetUserByIdHandler } from './queries/handlers/get-user-by-id.handler';
 import { GetUserByProviderIdHandler } from './queries/handlers/get-user-by-providerId.handler';
 import { GetAllUsersHandler } from './queries/handlers/get-all-users.handler';
+import { GetUsersByIdsHandler } from './queries/handlers/get-users-by-ids.handler';
 
 const CommandHandlers = [
   CreateUserHandler,
@@ -52,6 +53,7 @@ const QueryHandlers = [
   GetUserByIdHandler,
   GetUserByProviderIdHandler,
   GetAllUsersHandler,
+  GetUsersByIdsHandler,
 ];
 
 @Module({
