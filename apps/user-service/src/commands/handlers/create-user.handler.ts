@@ -9,7 +9,10 @@ import { CreateUserCommand } from '../impl/create-user.command';
 import { PasswordHash } from '@app/common/utils/hash';
 
 @CommandHandler(CreateUserCommand)
-export class CreateUserHandler implements ICommandHandler<CreateUserCommand, EntityUser> {
+export class CreateUserHandler implements ICommandHandler<
+  CreateUserCommand,
+  EntityUser
+> {
   constructor(
     @InjectRepository(EntityUser, 'user')
     private readonly userRepository: Repository<EntityUser>,
@@ -21,13 +24,11 @@ export class CreateUserHandler implements ICommandHandler<CreateUserCommand, Ent
     });
 
     if (existing) throw new EmailAlreadyExistsError();
-
     const user = this.userRepository.create({
       ...command,
       email: command.email.toLowerCase(),
       password: PasswordHash.hashPassword(command.password ?? ''),
     });
-
     return this.userRepository.save(user);
   }
 }

@@ -231,7 +231,7 @@ export class AuthService {
       OTP_PURPOSE.REGISTRATION,
     );
 
-    const hashedPassword = PasswordHash.hashPassword(dto.password);
+    //const hashedPassword = PasswordHash.hashPassword(dto.password);
 
     await firstValueFrom(
       this.userClient.send(
@@ -239,7 +239,7 @@ export class AuthService {
         {
           name: dto.name,
           email: dto.email,
-          password: hashedPassword,
+          password: dto.password,
           isEmailVerified: true,
           ...(dto.dateOfBirth && { dateOfBirth: new Date(dto.dateOfBirth) }),
           ...(dto.gender && { gender: dto.gender }),
