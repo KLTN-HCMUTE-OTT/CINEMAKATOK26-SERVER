@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AuditLogModule } from './audit-log.module';
+import { HttpToRpcExceptionFilter, RpcDomainExceptionFilter } from '@app/common/filters';
 
 async function bootstrap() {
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
@@ -16,6 +17,10 @@ async function bootstrap() {
       },
     },
   );
+  app.useGlobalFilters(
+      new HttpToRpcExceptionFilter(),
+      new RpcDomainExceptionFilter(),
+    );
   await app.listen();
   console.log('Audit Log Microservice is listening');
 }
