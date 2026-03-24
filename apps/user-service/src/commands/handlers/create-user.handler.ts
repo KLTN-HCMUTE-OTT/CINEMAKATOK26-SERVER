@@ -25,7 +25,7 @@ export class CreateUserHandler implements ICommandHandler<CreateUserCommand, Ent
     const user = this.userRepository.create({
       ...command,
       email: command.email.toLowerCase(),
-      password: PasswordHash.hashPassword('123455'),
+      password: PasswordHash.hashPassword(command.password ?? ''),
     });
 
     return this.userRepository.save(user);

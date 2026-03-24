@@ -83,12 +83,6 @@ export class AuthService {
 
   async login(authRequest: AuthRequest): Promise<LoginResponse> {
     const user = await this.findByEmail(authRequest.email);
-    console.log('input password:', authRequest.password);
-    console.log(
-      'hashh input password:',
-      PasswordHash.hashPassword(authRequest.password),
-    );
-    console.log('stored hash password:', user.password);
     this.validatePassword(authRequest.password, user.password);
     this.validateUserStatus(user);
 
