@@ -19,6 +19,7 @@ import { GetUserByEmailQuery } from './queries/impl/get-user-by-email.query';
 import { GetUserByIdQuery } from './queries/impl/get-user-by-id.query';
 import { GetUserByProviderIdQuery } from './queries/impl/get-user-by-providerId.query';
 import { GetAllUsersQuery } from './queries/impl/get-all-users.query';
+import { GetUsersByIdsQuery } from './queries/impl/get-users-by-ids.query';
 
 // DTOs
 import { UpdateProfileRequest, UpdateAvatarRequest } from '@app/common/dtos/user/profile.dto';
@@ -63,6 +64,11 @@ export class UserController {
   @MessagePattern({ cmd: 'user.getAllUsers' })
   getAllUsers(@Payload() payload: { query: PaginationQueryDto; search?: string }) {
     return this.queryBus.execute(new GetAllUsersQuery(payload.query, payload.search));
+  }
+
+  @MessagePattern({ cmd: 'user.getUsersByIds' })
+  getUsersByIds(@Payload() payload: { ids: string[] }) {
+    return this.queryBus.execute(new GetUsersByIdsQuery(payload.ids));
   }
 
   // ─── Commands ────────────────────────────────────────────────────────────────

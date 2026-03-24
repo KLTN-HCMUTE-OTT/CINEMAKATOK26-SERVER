@@ -23,8 +23,9 @@
     "start:auth": "nest start auth-service --watch",
     "start:user": "nest start user-service --watch",
     "start:content": "nest start content-service --watch",
-    "start:streaming": "cross-env SERVICE_NAME=streaming-service nest start streaming-service --watch",
     "start:notification": "nest start notification-service --watch",
+    "start:audit-log": "nest start audit-log-service --watch"
+    "start:streaming": "cross-env SERVICE_NAME=streaming-service nest start streaming-service --watch",
     "worker:video": "cross-env SERVICE_NAME=streaming-service ts-node -r tsconfig-paths/register apps/streaming-service/src/queue/video-worker.ts"
   },
   "dependencies": {
@@ -46,11 +47,14 @@
     "@nestjs/typeorm": "^11.0.0",
     "@types/passport": "^1.0.17",
     "@types/passport-jwt": "^4.0.1",
+    "@types/uuid": "^11.0.0",
     "amqp-connection-manager": "^5.0.0",
     "amqplib": "^0.10.9",
     "archiver": "^7.0.1",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
+    "cache-manager": "^7.2.8",
+    "cache-manager-redis-yet": "^5.1.5",
     "bullmq": "^5.61.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -69,6 +73,7 @@
     "rxjs": "^7.8.1",
     "sharp": "^0.34.5",
     "typeorm": "^0.3.28",
+    "uuid": "^13.0.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
