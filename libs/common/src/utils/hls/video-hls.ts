@@ -1,7 +1,7 @@
 import ffmpegStatic from 'ffmpeg-static';
 import { existsSync, mkdirSync } from 'fs';
 import { basename, join, parse } from 'path';
-import { CreateVideoDto } from 'src/cms/dtos/video.dto';
+import { CreateVideoDto } from '@app/common/dtos/content/video.dto';
 
 import { spawn } from 'child_process';
 import { plainToInstance } from 'class-transformer';
@@ -14,7 +14,9 @@ import { getConfig } from '../get-config';
  * Xử lý video sang HLS nhiều chất lượng (1080p, 720p, 480p)
  * Không dùng fluent-ffmpeg, dùng spawn trực tiếp => hiệu năng cao hơn
  */
-export const processVideoHLS = async (inputFilePath: string): Promise<CreateVideoDto> => {
+export const processVideoHLS = async (
+  inputFilePath: string,
+): Promise<CreateVideoDto> => {
   console.log('🎬 Starting HLS processing for:', inputFilePath);
 
   // Verify input file exists
@@ -149,7 +151,7 @@ export const processVideoHLS = async (inputFilePath: string): Promise<CreateVide
     let stderrOutput = '';
     let hasError = false;
 
-    ffmpegProcess.stdout.on('data', data => {
+    ffmpegProcess.stdout.on('data', (data) => {
       console.log(`[FFmpeg stdout] ${data.toString()}`);
     });
 
@@ -184,7 +186,7 @@ export const processVideoHLS = async (inputFilePath: string): Promise<CreateVide
     //       reject(new Error(validation.message));
     //       return;
     //     }
-    ffmpegProcess.stderr.on('data', data => {
+    ffmpegProcess.stderr.on('data', (data) => {
       const msg = data.toString();
       stderrOutput += msg;
 
@@ -207,7 +209,7 @@ export const processVideoHLS = async (inputFilePath: string): Promise<CreateVide
       }
     });
 
-    ffmpegProcess.on('close', async code => {
+    ffmpegProcess.on('close', async (code) => {
       console.log(`\n🏁 FFmpeg process finished with exit code: ${code}`);
 
       // Consider successful if exit code is 0 AND no critical errors detected
@@ -240,12 +242,14 @@ export const processVideoHLS = async (inputFilePath: string): Promise<CreateVide
         try {
           await new Promise<void>((resolveThumb, rejectThumb) => {
             const ffmpegThumb = spawn(ffmpegExecutable, ffmpegThumbArgs);
-            ffmpegThumb.on('close', thumbCode => {
+            ffmpegThumb.on('close', (thumbCode) => {
               if (thumbCode === 0 && existsSync(thumbnailPath)) {
                 console.log(`✅ Thumbnail generated: ${thumbnailPath}`);
                 resolveThumb();
               } else {
-                console.error(`❌ Thumbnail generation failed (exit code: ${thumbCode})`);
+                console.error(
+                  `❌ Thumbnail generation failed (exit code: ${thumbCode})`,
+                );
                 rejectThumb(new Error('Thumbnail generation failed'));
               }
             });
@@ -275,16 +279,20 @@ export const processVideoHLS = async (inputFilePath: string): Promise<CreateVide
       }
     });
 
-    ffmpegProcess.on('error', err => {
+    ffmpegProcess.on('error', (err) => {
       console.error('❌ Failed to start FFmpeg process:', err);
       console.error('');
       console.error('💡 FFmpeg is not installed or not accessible in PATH');
       console.error('   Please install FFmpeg:');
       console.error('   • Windows: choco install ffmpeg');
       console.error('   • Or download from: https://ffmpeg.org/download.html');
-      console.error('   • Then add to PATH or set FFMPEG_PATH environment variable');
+      console.error(
+        '   • Then add to PATH or set FFMPEG_PATH environment variable',
+      );
       console.error('');
-      console.error('   Alternative: reinstall node modules to get ffmpeg-static binary:');
+      console.error(
+        '   Alternative: reinstall node modules to get ffmpeg-static binary:',
+      );
       console.error('   pnpm install --force');
       reject(
         new Error(
@@ -306,7 +314,9 @@ const resolveFfmpegExecutable = (): string => {
   for (const candidate of candidates) {
     if (candidate && candidate.length > 0) {
       const exists = existsSync(candidate);
-      console.log(`🔍 Checking FFmpeg binary candidate: ${candidate} (exists: ${exists})`);
+      console.log(
+        `🔍 Checking FFmpeg binary candidate: ${candidate} (exists: ${exists})`,
+      );
       if (exists) {
         console.log(`✅ Using FFmpeg binary: ${candidate}`);
         return candidate;
@@ -318,11 +328,15 @@ const resolveFfmpegExecutable = (): string => {
     '⚠️  Falling back to system "ffmpeg" executable. Set FFMPEG_PATH env variable if FFmpeg is not on PATH.',
   );
   console.warn('   ffmpeg-static returned:', ffmpegStatic);
-  console.warn('   Make sure FFmpeg is installed: https://ffmpeg.org/download.html');
+  console.warn(
+    '   Make sure FFmpeg is installed: https://ffmpeg.org/download.html',
+  );
   return 'ffmpeg';
 };
 
-const validateOutput = (outputDir: string): { success: boolean; message: string } => {
+const validateOutput = (
+  outputDir: string,
+): { success: boolean; message: string } => {
   const masterPlaylist = join(outputDir, 'master.m3u8');
 
   if (!existsSync(masterPlaylist)) {
@@ -342,7 +356,9 @@ const validateOutput = (outputDir: string): { success: boolean; message: string 
       const fs = require('fs');
       const content = fs.readFileSync(variantPlaylist, 'utf-8');
       if (content.length < 50) {
-        errors.push(`Playlist for stream_${i} is too small (${content.length} bytes)`);
+        errors.push(
+          `Playlist for stream_${i} is too small (${content.length} bytes)`,
+        );
       }
     }
   }

@@ -70,7 +70,7 @@ export class ContentController {
 
   @MessagePattern({ cmd: 'content.getContentById' })
   getContentById(@Payload() payload: { id: string }) {
-    return this.contentService.findOne(payload.id);
+    return this.contentService.findContentById(payload.id);
   }
 
   @MessagePattern({ cmd: 'content.createContent' })

@@ -1,17 +1,23 @@
+import { catchRpcError } from '@app/common/exceptions';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { Observable } from 'rxjs';
 
 @Injectable()
-export class StreamingService {
+export class StreamingGatewayService {
   constructor(
-    @Inject('STREAMING_SERVICE') private readonly streamingClient: ClientProxy,
+    @Inject('STREAMING_SERVICE')
+    private readonly streamingClient: ClientProxy,
   ) {}
 
-  getStreamUrl(userId: string, contentId: string): Observable<any> {
-    return this.streamingClient.send(
-      { cmd: 'streaming.getUrl' },
-      { userId, contentId },
-    );
+  uploadVideo(payload: { inputPath: string }) {
+    return this.streamingClient
+      .send({ cmd: 'streaming.uploadVideo' }, payload)
+      .pipe(catchRpcError());
+  }
+
+  getFileAccess(s3Key: string) {
+    return this.streamingClient
+      .send({ cmd: 'streaming.getFileAccess' }, { s3Key })
+      .pipe(catchRpcError());
   }
 }
