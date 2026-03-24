@@ -273,7 +273,7 @@ export class VideoService {
     }
 
     if (video.ownerType === VideoOwnerType.MOVIE) {
-      return { movieId: video.ownerId };
+      return { movieId: video.ownerId ?? undefined };
     } else if (video.ownerType === VideoOwnerType.EPISODE) {
       if (!video.ownerId) {
         throw new NotFoundException({
@@ -286,8 +286,8 @@ export class VideoService {
         relations: ['season', 'season.tvseries'],
       });
       return {
-        tvSeriesId: episode?.season?.tvseries?.id,
-        episodeId: video.ownerId,
+        tvSeriesId: episode?.season?.tvseries?.id ?? undefined,
+        episodeId: video.ownerId ?? undefined,
       };
     }
 

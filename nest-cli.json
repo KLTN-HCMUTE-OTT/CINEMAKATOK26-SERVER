@@ -19,7 +19,7 @@
         "tsConfigPath": "apps/api-gateway/tsconfig.app.json"
       }
     },
-    "audit-log":{
+    "audit-log-service": {
       "type": "application",
       "root": "apps/audit-log-service",
       "entryFile": "main",

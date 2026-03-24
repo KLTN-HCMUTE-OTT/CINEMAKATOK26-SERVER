@@ -1,4 +1,12 @@
-import { AuthRequest, RegisterRequest, RegisterWithOtpRequest, ForgotPasswordRequest, ResetPasswordRequest, TokenRequest, SocialLoginRequest } from '@app/common/dtos/auth/auth.dto';
+import {
+  AuthRequest,
+  RegisterRequest,
+  RegisterWithOtpRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  TokenRequest,
+  SocialLoginRequest,
+} from '@app/common/dtos/auth/auth.dto';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { Observable } from 'rxjs';
@@ -75,7 +83,4 @@ export class AuthService {
       .send({ cmd: 'auth.resend-forgot-password-otp' }, { email })
       .pipe(catchRpcError());
   }
-
-
-
 }

@@ -2,7 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { Observable } from 'rxjs';
 import { catchRpcError } from '@app/common/exceptions';
-import { UpdateProfileRequest, ChangePasswordRequest, UpdateAvatarRequest } from '@app/common/dtos/user/profile.dto';
+import {
+  UpdateProfileRequest,
+  ChangePasswordRequest,
+  UpdateAvatarRequest,
+} from '@app/common/dtos/user/profile.dto';
 import { PaginationQueryDto } from '@app/common/utils/dto';
 import { BanUserDto } from '@app/common/dtos/user/user.dto';
 
@@ -18,7 +22,10 @@ export class UserService {
       .pipe(catchRpcError());
   }
 
-  updateProfile(userId: string, updateDto: UpdateProfileRequest): Observable<any> {
+  updateProfile(
+    userId: string,
+    updateDto: UpdateProfileRequest,
+  ): Observable<any> {
     return this.userClient
       .send({ cmd: 'user.updateProfile' }, { userId, updateDto })
       .pipe(catchRpcError());
@@ -30,13 +37,19 @@ export class UserService {
       .pipe(catchRpcError());
   }
 
-  changePassword(userId: string, changePasswordDto: ChangePasswordRequest): Observable<any> {
+  changePassword(
+    userId: string,
+    changePasswordDto: ChangePasswordRequest,
+  ): Observable<any> {
     return this.userClient
       .send({ cmd: 'user.changePassword' }, { userId, changePasswordDto })
       .pipe(catchRpcError());
   }
 
-  updateAvatar(userId: string, updateAvatarDto: UpdateAvatarRequest): Observable<any> {
+  updateAvatar(
+    userId: string,
+    updateAvatarDto: UpdateAvatarRequest,
+  ): Observable<any> {
     return this.userClient
       .send({ cmd: 'user.updateAvatar' }, { userId, updateAvatarDto })
       .pipe(catchRpcError());
@@ -90,7 +103,7 @@ export class UserService {
       .pipe(catchRpcError());
   }
 
-  getUsersByIds(ids: string[]): Observable<any[]> {
+  getUsersByIds(ids: string[]): Observable<any> {
     return this.userClient
       .send({ cmd: 'user.getUsersByIds' }, { ids })
       .pipe(catchRpcError());

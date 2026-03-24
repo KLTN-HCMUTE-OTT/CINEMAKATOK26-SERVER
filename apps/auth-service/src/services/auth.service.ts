@@ -34,7 +34,8 @@ import { SocialAuthService } from './social-auth.service';
 export class AuthService {
   constructor(
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
-    @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientProxy,
+    @Inject('NOTIFICATION_SERVICE')
+    private readonly notificationClient: ClientProxy,
     private readonly tokenService: TokenService,
     private readonly otpService: OtpService,
     private readonly socialService: SocialAuthService,
@@ -57,7 +58,10 @@ export class AuthService {
   async findByProviderId(providerId: string): Promise<UserPayload> {
     try {
       return await firstValueFrom<UserPayload>(
-        this.userClient.send({ cmd: 'user.find-by-providerId' }, { providerId }),
+        this.userClient.send(
+          { cmd: 'user.find-by-providerId' },
+          { providerId },
+        ),
       );
     } catch (error: unknown) {
       const rpcError = error as { code?: string };
@@ -79,7 +83,12 @@ export class AuthService {
 
   async login(authRequest: AuthRequest): Promise<LoginResponse> {
     const user = await this.findByEmail(authRequest.email);
-
+    console.log('input password:', authRequest.password);
+    console.log(
+      'hashh input password:',
+      PasswordHash.hashPassword(authRequest.password),
+    );
+    console.log('stored hash password:', user.password);
     this.validatePassword(authRequest.password, user.password);
     this.validateUserStatus(user);
 
@@ -96,7 +105,9 @@ export class AuthService {
 
   async socialLogin(payload: SocialLoginRequest): Promise<LoginResponse> {
     try {
-      const socialUser = await this.socialService.verifyGoogleToken(payload.accessToken);
+      const socialUser = await this.socialService.verifyGoogleToken(
+        payload.accessToken,
+      );
       const user = await this.getOrCreateSocialUser(socialUser);
 
       this.validateUserStatus(user);
@@ -120,7 +131,9 @@ export class AuthService {
   }
 
   private async getOrCreateSocialUser(socialUser: any): Promise<UserPayload> {
-    const normalizedEmail = socialUser.email ? socialUser.email.toLowerCase() : null;
+    const normalizedEmail = socialUser.email
+      ? socialUser.email.toLowerCase()
+      : null;
     let user: UserPayload | null = null;
 
     // 1. Try finding by email
@@ -158,7 +171,9 @@ export class AuthService {
       }
 
       if (hasUpdates) {
-        await firstValueFrom(this.userClient.send({ cmd: 'user.update' }, user));
+        await firstValueFrom(
+          this.userClient.send({ cmd: 'user.update' }, user),
+        );
       }
       return user;
     }
@@ -166,7 +181,7 @@ export class AuthService {
     // Create new user
     return firstValueFrom<UserPayload>(
       this.userClient.send(
-        { cmd: 'user.create' },
+        { cmd: 'user.createUser' },
         {
           name: socialUser.name,
           email: normalizedEmail,
@@ -192,7 +207,10 @@ export class AuthService {
   async sendRegisterOtp(dto: RegisterRequest): Promise<OTPResponse> {
     await this.assertEmailNotTaken(dto.email);
 
-    const otp = await this.otpService.generateOtp(dto.email, OTP_PURPOSE.REGISTRATION);
+    const otp = await this.otpService.generateOtp(
+      dto.email,
+      OTP_PURPOSE.REGISTRATION,
+    );
 
     try {
       await firstValueFrom(
@@ -213,13 +231,17 @@ export class AuthService {
   async registerVerify(dto: RegisterWithOtpRequest): Promise<any> {
     await this.assertEmailNotTaken(dto.email);
 
-    await this.otpService.verifyOtp(dto.email, dto.otp, OTP_PURPOSE.REGISTRATION);
+    await this.otpService.verifyOtp(
+      dto.email,
+      dto.otp,
+      OTP_PURPOSE.REGISTRATION,
+    );
 
     const hashedPassword = PasswordHash.hashPassword(dto.password);
 
     await firstValueFrom(
       this.userClient.send(
-        { cmd: 'user.create' },
+        { cmd: 'user.createUser' },
         {
           name: dto.name,
           email: dto.email,
@@ -236,7 +258,10 @@ export class AuthService {
   async resendRegisterOtp(email: string): Promise<OTPResponse> {
     await this.assertEmailNotTaken(email);
 
-    const otp = await this.otpService.generateOtp(email, OTP_PURPOSE.REGISTRATION);
+    const otp = await this.otpService.generateOtp(
+      email,
+      OTP_PURPOSE.REGISTRATION,
+    );
 
     try {
       await firstValueFrom(
@@ -260,7 +285,10 @@ export class AuthService {
     console.log('service', dto);
     await this.findByEmail(dto.email);
 
-    const otp = await this.otpService.generateOtp(dto.email, OTP_PURPOSE.FORGOT_PASSWORD);
+    const otp = await this.otpService.generateOtp(
+      dto.email,
+      OTP_PURPOSE.FORGOT_PASSWORD,
+    );
 
     try {
       await firstValueFrom(
@@ -281,7 +309,11 @@ export class AuthService {
   async resetPassword(dto: ResetPasswordRequest): Promise<boolean> {
     const user = await this.findByEmail(dto.email);
 
-    await this.otpService.verifyOtp(dto.email, dto.otp, OTP_PURPOSE.FORGOT_PASSWORD);
+    await this.otpService.verifyOtp(
+      dto.email,
+      dto.otp,
+      OTP_PURPOSE.FORGOT_PASSWORD,
+    );
 
     const hashedPassword = PasswordHash.hashPassword(dto.newPassword);
     await firstValueFrom<boolean>(
@@ -318,7 +350,10 @@ export class AuthService {
   async resendForgotPasswordOtp(email: string): Promise<OTPResponse> {
     await this.findByEmail(email);
 
-    const otp = await this.otpService.generateOtp(email, OTP_PURPOSE.FORGOT_PASSWORD);
+    const otp = await this.otpService.generateOtp(
+      email,
+      OTP_PURPOSE.FORGOT_PASSWORD,
+    );
 
     try {
       await firstValueFrom(
@@ -342,7 +377,10 @@ export class AuthService {
   // ─── Private Helpers ─────────────────────────────────────────────────────────
 
   private validatePassword(inputPassword: string, hashPassword?: string): void {
-    if (!hashPassword || !PasswordHash.comparePassword(inputPassword, hashPassword)) {
+    if (
+      !hashPassword ||
+      !PasswordHash.comparePassword(inputPassword, hashPassword)
+    ) {
       throw new InvalidCredentialsError('Invalid password');
     }
   }
@@ -357,7 +395,9 @@ export class AuthService {
   }
 
   private async generateAndSaveTokens(userId: string): Promise<TokenResponse> {
-    const { accessToken, refreshToken } = this.tokenService.generateTokens({ sub: userId });
+    const { accessToken, refreshToken } = this.tokenService.generateTokens({
+      sub: userId,
+    });
     await this.tokenService.saveRefreshToken(userId, refreshToken);
     return new TokenResponse(accessToken, refreshToken);
   }

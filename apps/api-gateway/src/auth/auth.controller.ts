@@ -29,7 +29,7 @@ import {
   ResetPasswordRequest,
   TokenRequest,
   TokenResponse,
-  SocialLoginRequest
+  SocialLoginRequest,
 } from '@app/common/dtos/auth/auth.dto';
 import { ApiResponseDto, ResponseBuilder } from '@app/common/utils/dto';
 import { firstValueFrom, Observable } from 'rxjs';
@@ -38,7 +38,7 @@ import { plainToInstance } from 'class-transformer';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Public()
   @Post('/login')
@@ -90,8 +90,6 @@ export class AuthController {
     });
   }
 
-
-
   @Public()
   @Post('register')
   @HttpCode(200)
@@ -127,8 +125,7 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({
     summary: 'Verify OTP and complete registration',
-    description:
-      `Verifies the 6-digit OTP sent to the user's email and completes the registration process. If verification is successful, the user account is created and activated.`,
+    description: `Verifies the 6-digit OTP sent to the user's email and completes the registration process. If verification is successful, the user account is created and activated.`,
   })
   @ApiBody({ type: RegisterWithOtpRequest })
   @ApiResponse({
@@ -186,7 +183,10 @@ export class AuthController {
   @ApiBody({ type: TokenRequest })
   @HttpCode(200)
   @ApiOperation({ summary: 'Refresh access token' })
-  @ApiOkResponse({ description: 'Refresh token success', type: ApiResponseDto(TokenResponse) })
+  @ApiOkResponse({
+    description: 'Refresh token success',
+    type: ApiResponseDto(TokenResponse),
+  })
   @ApiResponse({ status: 401, description: 'Invalid refresh token' })
   async refresh(@Body() body: TokenRequest) {
     const result = await firstValueFrom<TokenResponse>(
@@ -229,7 +229,9 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Failed to send OTP' })
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordRequest) {
     const result = await firstValueFrom<OTPResponse>(
-      this.authService.forgotPassword(forgotPasswordDto) as Observable<OTPResponse>,
+      this.authService.forgotPassword(
+        forgotPasswordDto,
+      ) as Observable<OTPResponse>,
     );
     return ResponseBuilder.createResponse({
       data: plainToInstance(OTPResponse, result, {
@@ -252,10 +254,16 @@ export class AuthController {
     status: 200,
     description: 'Password reset successfully',
   })
-  @ApiResponse({ status: 400, description: 'Invalid OTP or password requirements not met' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid OTP or password requirements not met',
+  })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordRequest) {
     await firstValueFrom(this.authService.resetPassword(resetPasswordDto));
-    return ResponseBuilder.createResponse({ data: null, message: 'Password reset successfully. Please login to continue.' });
+    return ResponseBuilder.createResponse({
+      data: null,
+      message: 'Password reset successfully. Please login to continue.',
+    });
   }
 
   @Public()
@@ -263,7 +271,8 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({
     summary: 'Resend OTP',
-    description: "Resends OTP to user's email. Previous OTPs will be invalidated.",
+    description:
+      "Resends OTP to user's email. Previous OTPs will be invalidated.",
   })
   @ApiQuery({
     name: 'email',
@@ -279,7 +288,9 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Failed to resend OTP' })
   async resendOtp(@Query('email') email: string) {
     const result = await firstValueFrom<OTPResponse>(
-      this.authService.resendForgotPasswordOtp(email) as Observable<OTPResponse>,
+      this.authService.resendForgotPasswordOtp(
+        email,
+      ) as Observable<OTPResponse>,
     );
     return ResponseBuilder.createResponse({
       data: plainToInstance(OTPResponse, result, {

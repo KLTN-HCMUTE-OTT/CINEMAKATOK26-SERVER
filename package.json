@@ -24,7 +24,7 @@
     "start:user": "nest start user-service --watch",
     "start:content": "nest start content-service --watch",
     "start:notification": "nest start notification-service --watch",
-    "start:audit-log": "nest start audit-log-service --watch"
+    "start:audit-log": "nest start audit-log-service --watch",
     "start:streaming": "cross-env SERVICE_NAME=streaming-service nest start streaming-service --watch",
     "worker:video": "cross-env SERVICE_NAME=streaming-service ts-node -r tsconfig-paths/register apps/streaming-service/src/queue/video-worker.ts"
   },
