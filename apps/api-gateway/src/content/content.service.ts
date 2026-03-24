@@ -9,6 +9,7 @@ export class ContentService {
     @Inject('CONTENT_SERVICE') private readonly contentClient: ClientProxy,
   ) {}
 
+  // ========================= CONTENTS =========================
   getContents(query: Record<string, any>): Observable<any> {
     return this.contentClient
       .send({ cmd: 'content.getContents' }, query)
@@ -38,7 +39,7 @@ export class ContentService {
       .send({ cmd: 'content.deleteContent' }, { id })
       .pipe(catchRpcError());
   }
-
+  // ========================= MOVIES =========================
   getMovies(query: Record<string, any>): Observable<any> {
     return this.contentClient
       .send({ cmd: 'content.getMovies' }, query)
@@ -95,7 +96,7 @@ export class ContentService {
       .send({ cmd: 'content.deleteMovie' }, { id })
       .pipe(catchRpcError());
   }
-
+  // ========================= NEWS =========================
   getNews(query: Record<string, any>): Observable<any> {
     return this.contentClient
       .send({ cmd: 'content.getNews' }, query)
@@ -131,7 +132,7 @@ export class ContentService {
       .send({ cmd: 'content.deleteNews' }, { id })
       .pipe(catchRpcError());
   }
-
+  // ========================= Tv SERIES =========================
   getTvSeries(query: Record<string, any>): Observable<any> {
     return this.contentClient
       .send({ cmd: 'content.getTvSeries' }, query)
@@ -188,7 +189,7 @@ export class ContentService {
       .send({ cmd: 'content.deleteTvSeries' }, { id })
       .pipe(catchRpcError());
   }
-
+  // ========================= ACTORS =========================
   getActors(query: Record<string, any>): Observable<any> {
     return this.contentClient
       .send({ cmd: 'content.getActors' }, query)
@@ -230,7 +231,7 @@ export class ContentService {
       .send({ cmd: 'content.deleteActor' }, { id })
       .pipe(catchRpcError());
   }
-
+  // ========================= DIRECTORS =========================
   getDirectors(query: Record<string, any>): Observable<any> {
     return this.contentClient
       .send({ cmd: 'content.getDirectors' }, query)
@@ -266,7 +267,7 @@ export class ContentService {
       .send({ cmd: 'content.deleteDirector' }, { id })
       .pipe(catchRpcError());
   }
-
+  // ========================= CATEGORIES =========================
   getCategories(query: Record<string, any>): Observable<any> {
     return this.contentClient
       .send({ cmd: 'content.getCategories' }, query)
@@ -308,7 +309,7 @@ export class ContentService {
       .send({ cmd: 'content.deleteCategory' }, { id })
       .pipe(catchRpcError());
   }
-
+  // ========================= TAGS =========================
   getTags(query: Record<string, any>): Observable<any> {
     return this.contentClient
       .send({ cmd: 'content.getTags' }, query)
@@ -344,7 +345,7 @@ export class ContentService {
       .send({ cmd: 'content.deleteTag' }, { id })
       .pipe(catchRpcError());
   }
-
+  // ========================= VIDEOS =========================
   getVideos(query: Record<string, any>): Observable<any> {
     return this.contentClient
       .send({ cmd: 'content.getVideos' }, query)

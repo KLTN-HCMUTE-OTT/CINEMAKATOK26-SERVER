@@ -195,7 +195,6 @@ export class MovieService {
       .leftJoinAndSelect('metaData.actors', 'actors')
       .leftJoinAndSelect('metaData.directors', 'directors')
       .leftJoinAndSelect('metaData.tags', 'tags')
-      .leftJoinAndSelect('metaData.reviews', 'reviews')
       .where('movie.id = :id', { id })
       .getOne();
 
@@ -293,19 +292,8 @@ export class MovieService {
           code: ERROR_CODE.ENTITY_NOT_FOUND,
         });
       }
-
-      // ✅ Xóa videos liên kết với movie trước
       await this.videoService.unassignVideosByMovieIds([id]);
-
-      // ✅ Xóa movie (cascade sẽ xóa:
-      // - EntityContent (metaData)
-      // - Tất cả quan hệ của content: categories, actors, directors, tags (qua junction tables)
-      // - Tất cả reviews liên kết với content
-      // - Tất cả watchlist entries liên kết với content
-      // - Tất cả favorite entries liên kết với content
-      // - Watch progress của videos sẽ được xóa tự động do cascade từ video)
       await queryRunner.manager.remove(movie);
-
       await queryRunner.commitTransaction();
     } catch (error) {
       await queryRunner.rollbackTransaction();
