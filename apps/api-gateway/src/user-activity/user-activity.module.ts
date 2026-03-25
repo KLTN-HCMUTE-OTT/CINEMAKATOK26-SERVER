@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { FavoriteController } from './controllers/favorite.controller';
 import { WatchProgressController } from './controllers/watch-progress.controller';
+import { WatchListController } from './controllers/watchlist.controller';
+import { FavoriteService } from './services/favorite.service';
 import { WatchProgressService } from './services/watch-progress.service';
+import { WatchListService } from './services/watchlist.service';
 
 @Module({
   imports: [
@@ -16,8 +20,12 @@ import { WatchProgressService } from './services/watch-progress.service';
       },
     ]),
   ],
-  controllers: [WatchProgressController],
-  providers: [WatchProgressService],
-  exports: [WatchProgressService],
+  controllers: [
+    WatchProgressController,
+    FavoriteController,
+    WatchListController,
+  ],
+  providers: [WatchProgressService, FavoriteService, WatchListService],
+  exports: [WatchProgressService, FavoriteService, WatchListService],
 })
 export class UserActivityModule {}
