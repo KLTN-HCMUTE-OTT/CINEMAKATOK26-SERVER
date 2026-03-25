@@ -22,6 +22,7 @@
     "start:gateway": "nest start api-gateway --watch",
     "start:auth": "nest start auth-service --watch",
     "start:user": "nest start user-service --watch",
+    "start:user-activity": "nest start user-activity-service --watch",
     "start:content": "nest start content-service --watch",
     "start:notification": "nest start notification-service --watch",
     "start:audit-log": "nest start audit-log-service --watch",

@@ -1,23 +1,23 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { OrderController } from './user-activity.controller';
-import { UserActivityService } from './user-activity.service';
+import { WatchProgressController } from './controllers/watch-progress.controller';
+import { WatchProgressService } from './services/watch-progress.service';
 
 @Module({
   imports: [
     ClientsModule.register([
       {
-        name: 'ORDER_SERVICE',
+        name: 'USER_ACTIVITY_SERVICE',
         transport: Transport.TCP,
         options: {
-          host: process.env.ORDER_SERVICE_HOST ?? 'localhost',
-          port: Number(process.env.ORDER_SERVICE_PORT ?? 3004),
+          host: process.env.USER_ACTIVITY_SERVICE_HOST ?? 'localhost',
+          port: Number(process.env.USER_ACTIVITY_SERVICE_PORT ?? 3007),
         },
       },
     ]),
   ],
-  controllers: [OrderController],
-  providers: [UserActivityService],
-  exports: [UserActivityService],
+  controllers: [WatchProgressController],
+  providers: [WatchProgressService],
+  exports: [WatchProgressService],
 })
 export class UserActivityModule {}
