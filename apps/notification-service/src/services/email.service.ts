@@ -152,6 +152,44 @@ export class EmailService {
     this.logger.log(`Ban notification sent to ${email}`);
   }
 
+  async sendReportResult(
+    email: string,
+    userName: string,
+    reportId: string,
+    result: string,
+  ): Promise<void> {
+    const subject = 'Report Processing Result';
+    const html = this.renderReportResult(userName, reportId, result);
+    await this.dispatch({ from: `"${this.fromName}" <${this.fromEmail}>`, to: email, subject, html });
+    this.logger.log(`Report result email sent to ${email}`);
+  }
+
+  private renderReportResult(
+    userName: string,
+    reportId: string,
+    result: string,
+  ): string {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+        <div style="background-color: #4f46e5; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">${this.fromName}</h1>
+        </div>
+        <div style="padding: 30px; color: #333;">
+          <h2 style="margin-top: 0;">Report Processing Result</h2>
+          <p>Dear ${userName},</p>
+          <p>We have processed your report (ID: <b>${reportId}</b>).</p>
+          <div style="margin: 20px 0; padding: 15px; background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 5px;">
+            <p><strong>Result:</strong></p>
+            <p style="color: #374151;">${result}</p>
+          </div>
+          <p>Thank you for helping us keep our community safe.</p>
+        </div>
+        <div style="background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #777;">
+          <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+      </div>`;
+  }
+
   async sendEmail(to: string, subject: string, html: string): Promise<void> {
     await this.dispatch({ from: `"${this.fromName}" <${this.fromEmail}>`, to, subject, html });
     this.logger.log(`Email sent to ${to}`);

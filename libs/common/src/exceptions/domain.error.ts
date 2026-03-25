@@ -154,3 +154,29 @@ export class NotFoundResourceError extends DomainError {
     super(message, ERROR_CODE.ENTITY_NOT_FOUND, HttpStatus.NOT_FOUND);
   }
 }
+
+// User Activity
+
+export class ReviewNotFoundError extends DomainError {
+  constructor(message = 'Review not found.') {
+    super(message, ERROR_CODE.REVIEW_NOT_FOUND, HttpStatus.NOT_FOUND);
+  }
+}
+
+export class CreateReviewFailedError extends DomainError {
+  constructor(message = 'Failed to create review.') {
+    super(message, ERROR_CODE.CREATE_REVIEW_FAILED, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}
+
+export class UpdateReviewFailedError extends DomainError {
+  constructor(message = 'Failed to update review.') {
+    super(message, ERROR_CODE.UPDATE_REVIEW_FAILED, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}
+
+export class DeleteReviewFailedError extends DomainError {
+  constructor(message = 'Failed to delete review.') {
+    super(message, ERROR_CODE.DELETE_REVIEW_FAILED, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}
