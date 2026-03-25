@@ -74,9 +74,32 @@ export class WatchProgressService {
   }
 
   private async getVideo(videoId: string): Promise<Record<string, any>> {
-    return firstValueFrom(
-      this.contentClient.send({ cmd: 'content.getVideoById' }, { id: videoId }),
-    );
+    try {
+      const video = await firstValueFrom(
+        this.contentClient.send(
+          { cmd: 'content.getVideoById' },
+          { id: videoId },
+        ),
+      );
+
+      if (!video) {
+        throw new NotFoundException({
+          message: `Video not found`,
+          code: ERROR_CODE.ENTITY_NOT_FOUND,
+        });
+      }
+
+      return video;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new NotFoundException({
+        message: `Video not found`,
+        code: ERROR_CODE.ENTITY_NOT_FOUND,
+      });
+    }
   }
 
   private async getOwnerInfo(
