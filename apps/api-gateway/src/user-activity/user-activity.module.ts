@@ -6,6 +6,8 @@ import { WatchListController } from './controllers/watchlist.controller';
 import { FavoriteService } from './services/favorite.service';
 import { WatchProgressService } from './services/watch-progress.service';
 import { WatchListService } from './services/watchlist.service';
+import { ReviewController } from './controllers/review.controller';
+import { ReviewService } from './services/review.service';
 
 @Module({
   imports: [
@@ -24,8 +26,19 @@ import { WatchListService } from './services/watchlist.service';
     WatchProgressController,
     FavoriteController,
     WatchListController,
+    ReviewController,
   ],
-  providers: [WatchProgressService, FavoriteService, WatchListService],
-  exports: [WatchProgressService, FavoriteService, WatchListService],
+  providers: [
+    WatchProgressService,
+    FavoriteService,
+    WatchListService,
+    ReviewService,
+  ],
+  exports: [
+    WatchProgressService,
+    FavoriteService,
+    WatchListService,
+    ReviewService,
+  ],
 })
 export class UserActivityModule {}

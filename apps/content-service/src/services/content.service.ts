@@ -18,6 +18,7 @@ import { CategoryService } from './category.service';
 import { DirectorService } from './director.service';
 import { MovieService } from './movie.service';
 import { TagService } from './tag.service';
+import { ContentNotFoundError } from '@app/common/exceptions/domain.error';
 
 @Injectable()
 export class ContentService {
@@ -239,10 +240,7 @@ export class ContentService {
       where: { id },
     });
     if (!content) {
-      throw new NotFoundException({
-        message: `Content not found`,
-        code: ERROR_CODE.ENTITY_NOT_FOUND,
-      });
+      throw new ContentNotFoundError();
     }
     return content;
   }

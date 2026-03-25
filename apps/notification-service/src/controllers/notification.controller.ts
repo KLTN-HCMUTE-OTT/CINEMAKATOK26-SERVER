@@ -88,4 +88,31 @@ export class NotificationController {
       channel.nack(msg, false, false);
     }
   }
+
+  @EventPattern('notification.sendReportResult')
+  async sendReportResult(
+    @Payload()
+    data: {
+      email: string;
+      userName: string;
+      reportId: string;
+      result: string;
+    },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const msg = context.getMessage();
+    try {
+      await this.emailService.sendReportResult(
+        data.email,
+        data.userName,
+        data.reportId,
+        data.result,
+      );
+      channel.ack(msg);
+    } catch (error) {
+      this.logger.error('sendReportResult failed', error?.message);
+      channel.nack(msg, false, false);
+    }
+  }
 }
