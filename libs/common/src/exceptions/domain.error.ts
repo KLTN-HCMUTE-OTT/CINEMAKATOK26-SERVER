@@ -186,3 +186,15 @@ export class GetReviewsFailedError extends DomainError {
     super(message, ERROR_CODE.GET_REVIEWS_FAILED, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
+
+export class ReviewReplyNotFoundError extends DomainError {
+  constructor(message = 'Review reply not found.') {
+    super(message, ERROR_CODE.REVIEW_REPLY_NOT_FOUND, HttpStatus.NOT_FOUND);
+  }
+}
+
+export class DeleteReviewReplyFailedError extends DomainError {
+  constructor(message = 'Failed to delete review reply.') {
+    super(message, ERROR_CODE.DELETE_REVIEW_REPLY_FAILED, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}

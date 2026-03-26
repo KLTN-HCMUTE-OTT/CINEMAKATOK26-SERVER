@@ -12,8 +12,32 @@ export class ReviewReplyController {
     ) {}
 
     @MessagePattern({ cmd: 'activity.review-reply.list' })
-    findReplies(@Payload() query: PaginationQueryDto & { status?: REVIEW_STATUS }) {
+    findReplies(@Payload() query: PaginationQueryDto & { 
+        reviewId?: string; 
+        episodeReviewId?: string; 
+        userId?: string; 
+        parentReplyId?: string; 
+        status?: REVIEW_STATUS 
+    }) {
         return this.reviewReplyService.findReplies(query);
+    }
+
+    @MessagePattern({ cmd: 'activity.review-reply.list-for-review' })
+    findRepliesForReview(@Payload() payload: PaginationQueryDto & { reviewId: string, parentReplyId?: string } ) {
+        const { reviewId, parentReplyId, ...query } = payload;
+        return this.reviewReplyService.findReplies(query && {reviewId, parentReplyId });
+    }
+
+    @MessagePattern({ cmd: 'activity.review-reply.list-for-episode-review' })
+    findRepliesForEpisodeReview(@Payload() payload: PaginationQueryDto & { episodeReviewId: string, parentReplyId?: string } ) {
+        const { episodeReviewId, parentReplyId, ...query } = payload;
+        return this.reviewReplyService.findReplies(query && {episodeReviewId, parentReplyId });
+    }
+
+    @MessagePattern({ cmd: 'activity.review-reply.list-by-user' })
+    findRepliesByUserId(@Payload() payload: PaginationQueryDto & { userId: string, parentReplyId?: string } ) {
+        const { userId, parentReplyId, ...query } = payload;
+        return this.reviewReplyService.findReplies(query && {userId, parentReplyId });
     }
 
     @MessagePattern({ cmd: 'activity.review-reply.get' })
@@ -41,5 +65,35 @@ export class ReviewReplyController {
     @MessagePattern({ cmd: 'activity.review-reply.check-owner' })
     isReplyOwner(@Payload() payload: { id: string, userId: string }) {
         return this.reviewReplyService.isReplyOwner(payload.id, payload.userId);
+    }
+
+    @MessagePattern({ cmd: 'activity.review-reply.count-by-review' })
+    getReplyCountForReview(@Payload() payload: { reviewId: string }) {
+        return this.reviewReplyService.countRepliesForReview(payload.reviewId);
+    }
+
+    @MessagePattern({ cmd: 'activity.review-reply.count-by-episode-review' })
+    getReplyCountForEpisodeReview(@Payload() payload: { episodeReviewId: string }) {
+        return this.reviewReplyService.countRepliesForEpisodeReview(payload.episodeReviewId);
+    }
+
+    @MessagePattern({ cmd: 'activity.review-reply.count-by-reply' })
+    getReplyCountForReply(@Payload() payload: { replyId: string }) {
+        return this.reviewReplyService.countRepliesForReply(payload.replyId);
+    }
+
+    @MessagePattern({ cmd: 'activity.review-reply.counts-by-reviews' })
+    getReplyCountsForReviews(@Payload() payload: { reviewIds: string[] }) {
+        return this.reviewReplyService.getReplyCountsForReviews(payload.reviewIds);
+    }
+
+    @MessagePattern({ cmd: 'activity.review-reply.counts-by-episode-reviews' })
+    getReplyCountsForEpisodeReviews(@Payload() payload: { episodeReviewIds: string[] }) {
+        return this.reviewReplyService.getReplyCountsForEpisodeReviews(payload.episodeReviewIds);
+    }
+
+    @MessagePattern({ cmd: 'activity.review-reply.counts-by-replies' })
+    getReplyCountsForReplies(@Payload() payload: { replyIds: string[] }) {
+        return this.reviewReplyService.getReplyCountsForReplies(payload.replyIds);
     }
 }
