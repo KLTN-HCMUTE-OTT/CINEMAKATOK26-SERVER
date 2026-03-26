@@ -180,3 +180,9 @@ export class DeleteReviewFailedError extends DomainError {
     super(message, ERROR_CODE.DELETE_REVIEW_FAILED, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
+
+export class GetReviewsFailedError extends DomainError {
+  constructor(message = 'Failed to get reviews.') {
+    super(message, ERROR_CODE.GET_REVIEWS_FAILED, HttpStatus.INTERNAL_SERVER_ERROR);
+  }
+}

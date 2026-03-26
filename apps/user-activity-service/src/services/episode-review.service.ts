@@ -9,15 +9,18 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  HttpException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
-import { CreateEpisodeReviewDto, UpdateEpisodeReviewDto } from '@app/common/dtos/user-activity/episode.-review.dto';
+import { CreateEpisodeReviewDto, UpdateEpisodeReviewDto } from '@app/common/dtos/user-activity/episode-review.dto';
 import { EntityReport } from '../entities/report.entity';
 import { EntityReviewEpisode } from '../entities/review-episode.entity';
 import { EntityReviewReply } from '../entities/review-reply.entity';
+import { CreateReviewFailedError, DomainError, ReviewNotFoundError, UpdateReviewFailedError, DeleteReviewFailedError, GetReviewsFailedError, ContentNotFoundError } from '@app/common/exceptions/domain.error';
+import { catchRpcError } from '@app/common/exceptions';
 
 @Injectable()
 export class EpisodeReviewService {
@@ -29,11 +32,15 @@ export class EpisodeReviewService {
   ) {}
 
   async createReview(userId: string, createEpisodeReviewDto: CreateEpisodeReviewDto) {
-    // Check if episode exists via Content Service
-    // Note: We assume content.getEpisodeById exists or we use content.getTvSeriesById and find it
-    // For simplicity and decoupling, we assume a direct command or skip check if not critical for this refactor phase
-    // but better to have it. Let's use getTvSeriesById if we have to, or assume cmd exists.
-    
+    try{
+      const content = await firstValueFrom(
+      this.contentClient.send({ cmd: 'content.getEpisodeById' }, { id: createEpisodeReviewDto.episodeId }),
+    );
+
+    if (!content) {
+      throw new NotFoundException({ message: `Content not found`, code: ERROR_CODE.ENTITY_NOT_FOUND });
+    }
+
     const existingReview = await this.reviewEpisodeRepository.findOne({
       where: {
         userId,
@@ -54,15 +61,20 @@ export class EpisodeReviewService {
     });
     
     const savedReview = await this.reviewEpisodeRepository.save(review);
-    
-    // Broadcast update if needed (e.g. for ratings)
-    this.contentClient.emit('activity.episode-review.created', { review: savedReview });
 
     return savedReview;
+    }
+    catch(error){
+      if(error instanceof DomainError || error instanceof HttpException || (error as any).code){
+        throw error;
+      }
+      throw new CreateReviewFailedError();
+    }
   }
 
   async updateReview(id: string, updateReviewDto: UpdateEpisodeReviewDto, userId?: string) {
-    const review = await this.findReviewById(id);
+    try{
+      const review = await this.findReviewById(id);
 
     if (userId && review.userId !== userId) {
       throw new ForbiddenException({
@@ -74,13 +86,19 @@ export class EpisodeReviewService {
     Object.assign(review, updateReviewDto);
     const updatedReview = await this.reviewEpisodeRepository.save(review);
     
-    this.contentClient.emit('activity.episode-review.updated', { review: updatedReview });
-
     return updatedReview;
+    }
+    catch(error){
+      if(error instanceof DomainError || error instanceof HttpException || (error as any).code){
+        throw error;
+      }
+      throw new UpdateReviewFailedError();
+    }
   }
 
   async deleteReview(id: string, userId?: string) {
-    const review = await this.findReviewById(id);
+    try{
+      const review = await this.findReviewById(id);
 
     if (userId && review.userId !== userId) {
       throw new ForbiddenException({
@@ -90,11 +108,8 @@ export class EpisodeReviewService {
     }
 
     await this.reviewEpisodeRepository.manager.transaction(async (manager) => {
-        // Delete all replies for this episode review
-        // In the same microservice, we can do this directly
         await manager.delete(EntityReviewReply, { episodeReview: { id } });
 
-        // Delete all related reports
         await manager.delete(EntityReport, {
             targetId: id,
             type: REPORT_TYPE.EPISODE_REVIEW,
@@ -102,8 +117,14 @@ export class EpisodeReviewService {
 
         await manager.delete(EntityReviewEpisode, id);
     });
-
-    this.contentClient.emit('activity.episode-review.deleted', { id });
+    return true;
+    }
+    catch(error){
+      if(error instanceof DomainError || error instanceof HttpException || (error as any).code){
+        throw error;
+      }
+      throw new DeleteReviewFailedError();
+    }
   }
 
   async findReviewById(id: string) {
@@ -112,15 +133,13 @@ export class EpisodeReviewService {
     });
     
     if (!review) {
-      throw new NotFoundException({
-        message: `Review not found`,
-        code: ERROR_CODE.ENTITY_NOT_FOUND,
-      });
+      throw new ReviewNotFoundError();
     }
     return review;
   }
 
   async findReviews(query: PaginationQueryDto & { episodeId?: string; userId?: string; status?: REVIEW_STATUS }) {
+    try{
     const { page = 1, limit = 10, sort, search, episodeId, userId, status } = query || {};
 
     const queryBuilder = this.reviewEpisodeRepository.createQueryBuilder('review');
@@ -129,7 +148,14 @@ export class EpisodeReviewService {
     const statusFilter = status || REVIEW_STATUS.ACTIVE;
     queryBuilder.andWhere('review.status = :status', { status: statusFilter });
 
-    if (episodeId) queryBuilder.andWhere('review.episodeId = :episodeId', { episodeId });
+    if (episodeId) {
+      await firstValueFrom(
+        this.contentClient.send({ cmd: 'content.getEpisodeById' }, { id: episodeId })
+        .pipe(catchRpcError()),
+      );
+
+      queryBuilder.andWhere('review.episodeId = :episodeId', { episodeId });
+    }
     if (userId) queryBuilder.andWhere('review.userId = :userId', { userId });
     
     if (search)
@@ -150,6 +176,13 @@ export class EpisodeReviewService {
       .getManyAndCount();
 
     return { data, total };
+    }
+    catch(error){
+       if (error instanceof RpcException) {
+        throw error;
+      }
+      throw new GetReviewsFailedError();
+    }
   }
 
   async isReviewOwner(reviewId: string, userId: string): Promise<boolean> {
