@@ -198,3 +198,15 @@ export class DeleteReviewReplyFailedError extends DomainError {
     super(message, ERROR_CODE.DELETE_REVIEW_REPLY_FAILED, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
+
+export class ReportNotFoundError extends DomainError {
+  constructor(message = 'Report not found.') {
+    super(message, ERROR_CODE.ENTITY_NOT_FOUND, HttpStatus.NOT_FOUND);
+  }
+}
+
+export class EpisodeReviewNotFoundError extends DomainError {
+  constructor(message = 'Episode review not found.') {
+    super(message, ERROR_CODE.ENTITY_NOT_FOUND, HttpStatus.NOT_FOUND);
+  }
+}

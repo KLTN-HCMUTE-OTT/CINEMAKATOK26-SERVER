@@ -2,7 +2,7 @@ import { firstValueFrom } from 'rxjs';
 import { Repository } from 'typeorm';
 
 import { REPORT_STATUS, REPORT_TYPE, REVIEW_STATUS } from '@app/common/enums/global.enum';
-import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 
@@ -11,7 +11,12 @@ import { EntityReviewEpisode } from '../entities/review-episode.entity';
 import { EntityReviewReply } from '../entities/review-reply.entity';
 import { EntityReview } from '../entities/review.entity';
 import { PaginationQueryDto } from '@app/common/utils/dto/pagination-query.dto';
-import { ERROR_CODE } from '@app/common/constants/global.constants';
+import { 
+  ReportNotFoundError, 
+  ReviewNotFoundError, 
+  EpisodeReviewNotFoundError, 
+  ReviewReplyNotFoundError 
+} from '@app/common/exceptions/domain.error';
 
 @Injectable()
 export class ReportService {
@@ -38,16 +43,7 @@ export class ReportService {
     const { type, targetId, reason, details } = payload;
 
     // Check if the target exists within this microservice
-    if (type === REPORT_TYPE.REVIEW) {
-      const review = await this.reviewRepository.findOne({ where: { id: targetId } });
-      if (!review) throw new NotFoundException('Review not found');
-    } else if (type === REPORT_TYPE.EPISODE_REVIEW) {
-      const episodeReview = await this.reviewEpisodeRepository.findOne({ where: { id: targetId } });
-      if (!episodeReview) throw new NotFoundException({message: 'Episode review not found', code: ERROR_CODE.ENTITY_NOT_FOUND});
-    } else if (type === REPORT_TYPE.REVIEW_REPLY) {
-      const reviewReply = await this.reviewReplyRepository.findOne({ where: { id: targetId } });
-      if (!reviewReply) throw new NotFoundException({message: 'Review reply not found', code: ERROR_CODE.ENTITY_NOT_FOUND});
-    }
+    await this.validateReportTarget(type, targetId);
 
     const report = this.reportRepository.create({
       type,
@@ -60,6 +56,19 @@ export class ReportService {
     return this.reportRepository.save(report);
   }
 
+  private async validateReportTarget(type: REPORT_TYPE, targetId: string) {
+    if (type === REPORT_TYPE.REVIEW) {
+      const review = await this.reviewRepository.findOne({ where: { id: targetId } });
+      if (!review) throw new ReviewNotFoundError();
+    } else if (type === REPORT_TYPE.EPISODE_REVIEW) {
+      const episodeReview = await this.reviewEpisodeRepository.findOne({ where: { id: targetId } });
+      if (!episodeReview) throw new EpisodeReviewNotFoundError();
+    } else if (type === REPORT_TYPE.REVIEW_REPLY) {
+      const reviewReply = await this.reviewReplyRepository.findOne({ where: { id: targetId } });
+      if (!reviewReply) throw new ReviewReplyNotFoundError();
+    }
+  }
+
   async findAll(query: PaginationQueryDto & { status?: REPORT_STATUS, type?: REPORT_TYPE }) {
     const { page = 1, limit = 10, sort, search, status, type } = query;
 
@@ -69,7 +78,7 @@ export class ReportService {
     if (type) queryBuilder.andWhere('report.type = :type', { type });
     
     if (search) {
-      queryBuilder.andWhere('report.reason ILIKE :search OR report.details ILIKE :search', { search: `%${search}%` });
+      queryBuilder.andWhere('(report.reason ILIKE :search OR report.details ILIKE :search)', { search: `%${search}%` });
     }
 
     if (sort) {
@@ -86,68 +95,148 @@ export class ReportService {
       .take(limit)
       .getManyAndCount();
 
-    return { data, total };
+    // Enrich reports with target data and reporter information
+    const enrichedData = await Promise.all(data.map(report => this.enrichReport(report)));
+
+    return { data: enrichedData, total };
+  }
+
+  private async enrichReport(report: EntityReport) {
+    const reporter = await this.getExternalInfo(this.userClient, 'user.getById', { id: report.reporterId });
+    
+    let target: any = null;
+    if (report.type === REPORT_TYPE.REVIEW) {
+      target = await this.reviewRepository.findOne({ where: { id: report.targetId } });
+    } else if (report.type === REPORT_TYPE.EPISODE_REVIEW) {
+      target = await this.reviewEpisodeRepository.findOne({ where: { id: report.targetId } });
+    } else if (report.type === REPORT_TYPE.REVIEW_REPLY) {
+      target = await this.reviewReplyRepository.findOne({ where: { id: report.targetId } });
+    }
+
+    return {
+      ...report,
+      reporter,
+      target,
+    };
   }
 
   async findOne(id: string): Promise<EntityReport> {
     const report = await this.reportRepository.findOne({ where: { id } });
-    if (!report) throw new NotFoundException('Report not found');
+    if (!report) throw new ReportNotFoundError();
     return report;
   }
 
-  async updateStatus(id: string, status: REPORT_STATUS): Promise<EntityReport> {
+  async approveItem(id: string): Promise<boolean> {
     const report = await this.findOne(id);
-    report.status = status;
-    const savedReport = await this.reportRepository.save(report);
+    
+    // Ban the reported item
+    await this.banItem(report.type, report.targetId);
 
-    // If approved, we might want to automatically ban the item
-    if (status === REPORT_STATUS.APPROVED) {
-        await this.handleItemBan(report.type, report.targetId);
-    }
-
-    // Notify the reporter
-    this.notifyReporter(savedReport).catch(err => 
-      this.logger.error(`Failed to notify reporter for report ${id}: ${err.message}`)
-    );
-
-    return savedReport;
+    // Update report status to APPROVED
+    await this.reportRepository.update(id, { status: REPORT_STATUS.APPROVED });
+    return true;
   }
 
-  private async notifyReporter(report: EntityReport) {
-    const reporter = await this.getReporterInfo(report.reporterId);
-    if (!reporter || !reporter.email) return;
+  async rejectItem(id: string): Promise<boolean> {
+    const report = await this.findOne(id);
+    await this.reportRepository.update(id, { status: REPORT_STATUS.REJECTED });
+    return true;
+  }
 
-    const result = report.status === REPORT_STATUS.APPROVED 
-        ? 'Your report has been approved and the content has been removed or restricted.'
-        : 'Your report has been processed but no violation was found at this time.';
+  async banItem(type: REPORT_TYPE, id: string): Promise<boolean> {
+    let targetUser: any = null;
+    let contentInfo: any = null;
 
-    this.notificationClient.emit('notification.sendReportResult', {
-        email: reporter.email,
-        userName: reporter.userName || reporter.firstName || 'User',
-        reportId: report.id,
-        result: result
+    if (type === REPORT_TYPE.REVIEW) {
+      const review = await this.reviewRepository.findOne({ where: { id } });
+      if (!review) throw new ReviewNotFoundError();
+      
+      await this.reviewRepository.update(id, { status: REVIEW_STATUS.BANNED });
+      targetUser = await this.getExternalInfo(this.userClient, 'user.getById', { id: review.userId });
+      contentInfo = await this.getExternalInfo(this.contentClient, 'content.getContentById', { id: review.contentId });
+      
+      await this.sendBanEmail(targetUser, contentInfo?.title || 'Unknown Content', review.contentReviewed, 'Review');
+
+    } else if (type === REPORT_TYPE.EPISODE_REVIEW) {
+      const epReview = await this.reviewEpisodeRepository.findOne({ where: { id } });
+      if (!epReview) throw new EpisodeReviewNotFoundError();
+      
+      await this.reviewEpisodeRepository.update(id, { status: REVIEW_STATUS.BANNED });
+      targetUser = await this.getExternalInfo(this.userClient, 'user.getById', { id: epReview.userId });
+      // Fetch details from content service if needed, for now use generic info
+      await this.sendBanEmail(targetUser, 'Specific Episode', epReview.contentReviewed, 'Episode Review');
+
+    } else if (type === REPORT_TYPE.REVIEW_REPLY) {
+      const reply = await this.reviewReplyRepository.findOne({ where: { id } });
+      if (!reply) throw new ReviewReplyNotFoundError();
+      
+      await this.reviewReplyRepository.update(id, { status: REVIEW_STATUS.BANNED });
+      targetUser = await this.getExternalInfo(this.userClient, 'user.getById', { id: reply.userId });
+      await this.sendBanEmail(targetUser, 'Review Reply', reply.content, 'Review Reply');
+    }
+
+    // Also update all pending reports for this target to APPROVED
+    await this.reportRepository.update(
+      { targetId: id, type: type, status: REPORT_STATUS.PENDING },
+      { status: REPORT_STATUS.APPROVED }
+    );
+        return true;
+  }
+
+  async unbanItem(type: REPORT_TYPE, id: string): Promise<boolean> {
+    let targetUser: any = null;
+
+    if (type === REPORT_TYPE.REVIEW) {
+      const review = await this.reviewRepository.findOne({ where: { id } });
+      if (!review) throw new ReviewNotFoundError();
+      await this.reviewRepository.update(id, { status: REVIEW_STATUS.ACTIVE });
+      targetUser = await this.getExternalInfo(this.userClient, 'user.getById', { id: review.userId });
+      await this.sendRestoreEmail(targetUser, 'Your Review');
+    } else if (type === REPORT_TYPE.EPISODE_REVIEW) {
+      const epReview = await this.reviewEpisodeRepository.findOne({ where: { id } });
+      if (!epReview) throw new EpisodeReviewNotFoundError();
+      await this.reviewEpisodeRepository.update(id, { status: REVIEW_STATUS.ACTIVE });
+      targetUser = await this.getExternalInfo(this.userClient, 'user.getById', { id: epReview.userId });
+      await this.sendRestoreEmail(targetUser, 'Your Episode Review');
+    } else if (type === REPORT_TYPE.REVIEW_REPLY) {
+      const reply = await this.reviewReplyRepository.findOne({ where: { id } });
+      if (!reply) throw new ReviewReplyNotFoundError();
+      await this.reviewReplyRepository.update(id, { status: REVIEW_STATUS.ACTIVE });
+      targetUser = await this.getExternalInfo(this.userClient, 'user.getById', { id: reply.userId });
+      await this.sendRestoreEmail(targetUser, 'Your Review Reply');
+    }
+    
+    return true;
+  }
+
+  private async getExternalInfo(client: ClientProxy, cmd: string, payload: any): Promise<any> {
+    try {
+      return await firstValueFrom(client.send({ cmd }, payload));
+    } catch (error) {
+      this.logger.error(`External call failed [${cmd}]: ${error.message}`);
+      return null;
+    }
+  }
+
+  private async sendBanEmail(user: any, contentTitle: string, bannedContent: string, itemType: string) {
+    if (!user || !user.email) return;
+    this.notificationClient.emit('notification.sendReviewBan', {
+      email: user.email,
+      userName: user.name || 'User',
+      contentTitle,
+      bannedContent,
+      itemType,
     });
   }
 
-  private async getReporterInfo(userId: string): Promise<any> {
-    try {
-        return await firstValueFrom(this.userClient.send({ cmd: 'user.getById' }, { id: userId }));
-    } catch (error) {
-        this.logger.error(`Failed to get reporter info for user ${userId}: ${error.message}`);
-        return null;
-    }
-  }
+  private async sendRestoreEmail(user: any, itemDescription: string) {
+    if (!user || !user.email) return;
 
-  private async handleItemBan(type: REPORT_TYPE, targetId: string) {
-    if (type === REPORT_TYPE.REVIEW) {
-        await this.reviewRepository.update(targetId, { status: REVIEW_STATUS.BANNED });
-    } else if (type === REPORT_TYPE.EPISODE_REVIEW) {
-        await this.reviewEpisodeRepository.update(targetId, { status: REVIEW_STATUS.BANNED });
-    } else if (type === REPORT_TYPE.REVIEW_REPLY) {
-        await this.reviewReplyRepository.update(targetId, { status: REVIEW_STATUS.BANNED });
-    }
-    
-    this.contentClient.emit('activity.item.banned', { type, targetId });
+    this.notificationClient.emit('notification.sendReviewRestore', {
+      email: user.email,
+      userName: user.name || 'User',
+      itemDescription,
+    });
   }
 
   async delete(id: string): Promise<void> {

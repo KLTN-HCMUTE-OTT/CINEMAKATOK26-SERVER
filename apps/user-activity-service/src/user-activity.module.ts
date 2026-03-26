@@ -31,6 +31,7 @@ import { ReviewService } from './services/review.service';
 import { EpisodeReviewService } from './services/episode-review.service';
 import { ReviewReplyService } from './services/review-reply.service';
 import { ReportService } from './services/report.service';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -74,20 +75,26 @@ import { ReportService } from './services/report.service';
         },
       },
       {
-        name: 'NOTIFICATION_SERVICE',
-        transport: Transport.TCP,
-        options: {
-          host: process.env.NOTIFICATION_SERVICE_HOST ?? 'localhost',
-          port: Number(process.env.NOTIFICATION_SERVICE_PORT ?? 3004),
-        },
-      },
-      {
         name: 'USER_SERVICE',
         transport: Transport.TCP,
         options: {
           host: process.env.USER_SERVICE_HOST ?? 'localhost',
           port: Number(process.env.USER_SERVICE_PORT ?? 3002),
         },
+      },
+    ]),
+    ClientsModule.registerAsync([
+      {
+        name: 'NOTIFICATION_SERVICE',
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [config.get<string>('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672')],
+            queue: 'notification_queue',
+            queueOptions: { durable: true },
+          },
+        }),
+        inject: [ConfigService],
       },
     ]),
   ],

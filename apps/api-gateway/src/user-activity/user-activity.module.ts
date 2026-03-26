@@ -12,6 +12,8 @@ import { EpisodeReviewController } from './controllers/episode-review.controller
 import { EpisodeReviewService } from './services/episode-review.service';
 import { ReviewReplyController } from './controllers/review-reply.controller';
 import { ReviewReplyService } from './services/review-reply.service';
+import { ReportController } from './controllers/report.controller';
+import { ReportService } from './services/report.service';
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { ReviewReplyService } from './services/review-reply.service';
     ReviewController,
     EpisodeReviewController,
     ReviewReplyController,
+    ReportController,
   ],
   providers: [
     WatchProgressService,
@@ -41,6 +44,7 @@ import { ReviewReplyService } from './services/review-reply.service';
     ReviewService,
     EpisodeReviewService,
     ReviewReplyService,
+    ReportService,
   ],
   exports: [
     WatchProgressService,
@@ -49,6 +53,7 @@ import { ReviewReplyService } from './services/review-reply.service';
     ReviewService,
     EpisodeReviewService,
     ReviewReplyService,
+    ReportService,
   ],
 })
 export class UserActivityModule {}

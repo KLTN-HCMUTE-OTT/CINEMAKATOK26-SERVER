@@ -23,13 +23,33 @@ export class ReportController {
     }
 
     @MessagePattern({ cmd: 'activity.report.create' })
-    create(@Payload() payload: any & { userId: string }) {
-        const { userId, ...createDto } = payload;
-        return this.reportService.create(userId, createDto);
+    create(@Payload() payload: { reporterId: string } & any) {
+        const { reporterId, ...createDto } = payload;
+        return this.reportService.create(reporterId, createDto);
     }
 
-    @MessagePattern({ cmd: 'activity.report.update-status' })
-    updateStatus(@Payload() payload: { id: string, status: any }) {
-        return this.reportService.updateStatus(payload.id, payload.status);
+    @MessagePattern({ cmd: 'activity.report.approve' })
+    approve(@Payload() payload: { id: string }) {
+        return this.reportService.approveItem(payload.id);
+    }
+
+    @MessagePattern({ cmd: 'activity.report.reject' })
+    reject(@Payload() payload: { id: string }) {
+        return this.reportService.rejectItem(payload.id);
+    }
+
+    @MessagePattern({ cmd: 'activity.report.ban' })
+    ban(@Payload() payload: { type: REPORT_TYPE, id: string }) {
+        return this.reportService.banItem(payload.type, payload.id);
+    }
+
+    @MessagePattern({ cmd: 'activity.report.unban' })
+    unban(@Payload() payload: { type: REPORT_TYPE, id: string }) {
+        return this.reportService.unbanItem(payload.type, payload.id);
+    }
+
+    @MessagePattern({ cmd: 'activity.report.delete' })
+    delete(@Payload() payload: { id: string }) {
+        return this.reportService.delete(payload.id);
     }
 }

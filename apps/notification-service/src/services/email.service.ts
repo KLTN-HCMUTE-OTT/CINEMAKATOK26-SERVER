@@ -12,9 +12,11 @@ export class EmailService {
   constructor(private readonly configService: ConfigService) {
     this.fromName = this.configService.get<string>('SMTP_FROM_NAME')!;
     this.fromEmail = this.configService.get<string>('SMTP_USER')!;
+    const port = this.configService.get<number>('SMTP_PORT')!;
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>('SMTP_HOST')!,
-      port: this.configService.get<number>('SMTP_PORT')!,
+      port,
+      secure: port === 465, // true for 465, false for other ports
       auth: {
         user: this.configService.get<string>('SMTP_USER')!,
         pass: this.configService.get<string>('SMTP_PASS')!,
@@ -140,6 +142,32 @@ export class EmailService {
     this.logger.log(`Password reset confirmation sent to ${email}`);
   }
 
+  private renderUserUnbanNotification(userName: string): string {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+        <div style="background-color: #10b981; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">${this.fromName}</h1>
+        </div>
+        <div style="padding: 30px; color: #333;">
+          <h2 style="margin-top: 0; color: #10b981;">Account Reactivated</h2>
+          <p>Dear ${userName},</p>
+          <p>Your account has been successfully reactivated. You can now log in and enjoy our services again.</p>
+          <p>Thank you for your patience.</p>
+        </div>
+        <div style="background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #777;">
+          <p>This is an automated message. Please do not reply to this email.</p>
+          <p>© 2025 ${this.fromName}. All rights reserved.</p>
+        </div>
+      </div>`;
+  }
+
+  async sendUserUnbanNotification(email: string, userName: string): Promise<void> {
+    const subject = 'Account Reactivation Notification';
+    const html = this.renderUserUnbanNotification(userName);
+    await this.dispatch({ from: `"${this.fromName}" <${this.fromEmail}>`, to: email, subject, html });
+    this.logger.log(`Unban notification sent to ${email}`);
+  }
+
   async sendBanNotification(
     email: string,
     userName: string,
@@ -188,6 +216,77 @@ export class EmailService {
           <p>This is an automated message. Please do not reply to this email.</p>
         </div>
       </div>`;
+  }
+
+  private renderReviewBanNotification(
+    userName: string,
+    contentTitle: string,
+    bannedContent: string,
+    itemType: string,
+  ): string {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+        <div style="background-color: #dc2626; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">${this.fromName}</h1>
+        </div>
+        <div style="padding: 30px; color: #333;">
+          <h2 style="margin-top: 0; color: #dc2626;">${itemType} Banned</h2>
+          <p>Dear ${userName},</p>
+          <p>Your ${itemType.toLowerCase()} for "<strong>${contentTitle}</strong>" has been banned due to violation of our community guidelines.</p>
+          <div style="margin: 20px 0; padding: 15px; background-color: #fee2e2; border: 1px solid #fca5a5; border-radius: 5px;">
+            <h3 style="margin-top: 0; color: #991b1b;">Banned Content:</h3>
+            <p style="color: #7f1d1d; font-style: italic;">"${bannedContent}"</p>
+          </div>
+          <p>If you believe this was in error, please contact support.</p>
+        </div>
+        <div style="background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #777;">
+          <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+      </div>`;
+  }
+
+  private renderReviewRestoreNotification(
+    userName: string,
+    itemDescription: string,
+  ): string {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+        <div style="background-color: #10b981; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">${this.fromName}</h1>
+        </div>
+        <div style="padding: 30px; color: #333;">
+          <h2 style="margin-top: 0; color: #10b981;">Content Restored</h2>
+          <p>Dear ${userName},</p>
+          <p>Good news! ${itemDescription} has been restored and is now visible again.</p>
+        </div>
+        <div style="background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #777;">
+          <p>This is an automated message. Please do not reply to this email.</p>
+        </div>
+      </div>`;
+  }
+
+  async sendReviewBanNotification(
+    email: string,
+    userName: string,
+    contentTitle: string,
+    bannedContent: string,
+    itemType: string,
+  ): Promise<void> {
+    const subject = `${itemType} Banned`;
+    const html = this.renderReviewBanNotification(userName, contentTitle, bannedContent, itemType);
+    await this.dispatch({ from: `"${this.fromName}" <${this.fromEmail}>`, to: email, subject, html });
+    this.logger.log(`${itemType} ban notification sent to ${email}`);
+  }
+
+  async sendReviewRestoreNotification(
+    email: string,
+    userName: string,
+    itemDescription: string,
+  ): Promise<void> {
+    const subject = `${itemDescription} Restored`;
+    const html = this.renderReviewRestoreNotification(userName, itemDescription);
+    await this.dispatch({ from: `"${this.fromName}" <${this.fromEmail}>`, to: email, subject, html });
+    this.logger.log(`${itemDescription} restore notification sent to ${email}`);
   }
 
   async sendEmail(to: string, subject: string, html: string): Promise<void> {
