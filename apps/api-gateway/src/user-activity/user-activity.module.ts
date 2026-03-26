@@ -8,6 +8,8 @@ import { WatchProgressService } from './services/watch-progress.service';
 import { WatchListService } from './services/watchlist.service';
 import { ReviewController } from './controllers/review.controller';
 import { ReviewService } from './services/review.service';
+import { EpisodeReviewController } from './controllers/episode-review.controller';
+import { EpisodeReviewService } from './services/episode-review.service';
 
 @Module({
   imports: [
@@ -27,12 +29,14 @@ import { ReviewService } from './services/review.service';
     FavoriteController,
     WatchListController,
     ReviewController,
+    EpisodeReviewController,
   ],
   providers: [
     WatchProgressService,
     FavoriteService,
     WatchListService,
     ReviewService,
+    EpisodeReviewService,
   ],
   exports: [
     WatchProgressService,

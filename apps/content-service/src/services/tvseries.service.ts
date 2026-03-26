@@ -22,6 +22,7 @@ import {
 import { EntityVideo, VideoOwnerType } from '../entities/video.entity';
 import { ContentService } from './content.service';
 import { VideoService } from './video.service';
+import { ContentNotFoundError } from '@app/common/exceptions/domain.error';
 
 @Injectable()
 export class TvSeriesService {
@@ -426,6 +427,14 @@ export class TvSeriesService {
 
     const [tvSeriesWithVideos] = await this._attachVideosToEpisodes([tvSeries]);
     return tvSeriesWithVideos;
+  }
+
+  async findEpisodeById(id: string) {
+    const episode = await this.episodeRepository.findOne({ where: { id } });
+    if(!episode){
+      throw new ContentNotFoundError();
+    }
+    return episode;
   }
 
   /**

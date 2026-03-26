@@ -4,7 +4,7 @@ import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 import { REPORT_REASON, REPORT_STATUS, REPORT_TYPE } from '@app/common/enums/global.enum';
 import { ApiProperty } from '@nestjs/swagger';
 
-import { EpisodeReviewDto } from './episode.-review.dto';
+import { EpisodeReviewDto } from './episode-review.dto';
 import { ReviewDto } from './review.dto';
 
 export class CreateReportDto {

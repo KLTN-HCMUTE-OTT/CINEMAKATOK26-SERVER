@@ -128,6 +128,11 @@ export class ContentController {
       payload.query,
     );
   }
+  @MessagePattern({ cmd: 'content.getEpisodeById' })
+  getEpisodeById(@Payload() payload: { id: string }) {
+    return this.tvSeriesService.findEpisodeById(payload.id);
+  }
+
 
   @MessagePattern({ cmd: 'content.createMovie' })
   createMovie(@Payload() payload: CreateMovieDto) {
