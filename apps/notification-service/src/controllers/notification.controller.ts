@@ -73,6 +73,29 @@ export class NotificationController {
     }
   }
 
+  @EventPattern('notification.sendUnbanNotification')
+  async sendUnbanNotification(
+    @Payload()
+    data: {
+      email: string;
+      userName: string;
+    },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const msg = context.getMessage();
+    try {
+      await this.emailService.sendUserUnbanNotification(
+        data.email,
+        data.userName,
+      );
+      channel.ack(msg);
+    } catch (error) {
+      this.logger.error('sendUnbanNotification failed', error?.message);
+      channel.nack(msg, false, false);
+    }
+  }
+
   @EventPattern('notification.sendEmail')
   async sendEmail(
     @Payload() data: { to: string; subject: string; html: string },
@@ -112,6 +135,60 @@ export class NotificationController {
       channel.ack(msg);
     } catch (error) {
       this.logger.error('sendReportResult failed', error?.message);
+      channel.nack(msg, false, false);
+    }
+  }
+
+  @EventPattern('notification.sendReviewBan')
+  async sendReviewBan(
+    @Payload()
+    data: {
+      email: string;
+      userName: string;
+      contentTitle: string;
+      bannedContent: string;
+      itemType: string;
+    },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const msg = context.getMessage();
+    try {
+      await this.emailService.sendReviewBanNotification(
+        data.email,
+        data.userName,
+        data.contentTitle,
+        data.bannedContent,
+        data.itemType,
+      );
+      channel.ack(msg);
+    } catch (error) {
+      this.logger.error('sendReviewBan failed', error?.message);
+      channel.nack(msg, false, false);
+    }
+  }
+
+  @EventPattern('notification.sendReviewRestore')
+  async sendReviewRestore(
+    @Payload()
+    data: {
+      email: string;
+      userName: string;
+      itemDescription: string;
+    },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const msg = context.getMessage();
+    try {
+      await this.emailService.sendReviewRestoreNotification(
+        data.email,
+        data.userName,
+        data.itemDescription,
+      );
+      channel.ack(msg);
+    } catch (error) {
+      this.logger.error('sendReviewRestore failed', error?.message);
       channel.nack(msg, false, false);
     }
   }

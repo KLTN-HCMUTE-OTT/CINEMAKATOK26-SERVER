@@ -26,6 +26,8 @@ export const userActivityEnvSchema = z.object({
 
   CONTENT_SERVICE_HOST: z.string().default('localhost'),
   CONTENT_SERVICE_PORT: z.coerce.number().default(3003),
+
+  RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672'),
 });
 
 export type UserActivityEnv = z.infer<typeof userActivityEnvSchema>;
