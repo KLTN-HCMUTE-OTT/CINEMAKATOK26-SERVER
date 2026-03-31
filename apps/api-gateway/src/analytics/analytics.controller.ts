@@ -1,6 +1,6 @@
 import { firstValueFrom } from 'rxjs';
 
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -21,6 +21,7 @@ import {
   UserStatsDto,
   ViewStatsItemDto,
 } from '@app/common/dtos/analytics/analytics.dto';
+import { ViewForecastItemDto } from '@app/common/dtos/analytics/forecast.dto';
 
 import { AnalyticsService } from './analytics.service';
 
@@ -188,6 +189,66 @@ export class AnalyticsController {
       currentPage: query.page || 1,
       itemsPerPage: query.limit || 10,
       message: 'Trending TV series retrieved successfully',
+    });
+  }
+
+  @Get('forecast/views')
+  @ApiOperation({ summary: 'Get ML view forecast for contents' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    type: String,
+    example: '{ "totalForecast7d": "DESC" }',
+  })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'View forecast retrieved successfully',
+    type: PaginatedApiResponseDto(ViewForecastItemDto),
+  })
+  async getViewForecast(@Query() query: PaginationQueryDto) {
+    const result = await firstValueFrom(
+      this.analyticsService.getViewForecast(query),
+    );
+    const maeText =
+      result.metrics?.mae !== null && result.metrics?.mae !== undefined
+        ? `MAE=${result.metrics.mae}`
+        : 'MAE=NA';
+    const mapeText =
+      result.metrics?.mape !== null && result.metrics?.mape !== undefined
+        ? `MAPE=${result.metrics.mape}%`
+        : 'MAPE=NA';
+    return ResponseBuilder.createPaginatedResponse({
+      data: result.data,
+      totalItems: result.total,
+      currentPage: query.page || 1,
+      itemsPerPage: query.limit || 10,
+      message: `View forecast retrieved successfully. Generated at ${result.generatedAt || 'unknown'}. ${maeText}, ${mapeText}`,
+    });
+  }
+
+  @Post('forecast/retrain')
+  @ApiOperation({ summary: 'Manually trigger forecast model retraining' })
+  @ApiResponse({
+    status: 200,
+    description: 'Forecast retraining triggered successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        data: { success: true, message: 'Forecast retraining completed' },
+        message: 'Forecast model retraining triggered successfully',
+      },
+    },
+  })
+  async retrainForecast() {
+    const result = await firstValueFrom(
+      this.analyticsService.retrainForecast(),
+    );
+    return ResponseBuilder.createResponse({
+      data: result,
+      message: 'Forecast model retraining triggered successfully',
     });
   }
 }

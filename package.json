@@ -29,7 +29,8 @@
     "start:analytics": "nest start analytics-service --watch",
     "start:streaming": "cross-env SERVICE_NAME=streaming-service nest start streaming-service --watch",
     "worker:video": "cross-env SERVICE_NAME=streaming-service ts-node -r tsconfig-paths/register apps/streaming-service/src/queue/video-worker.ts",
-    "seed:analytics": "ts-node -r tsconfig-paths/register db/seed-analytics.ts"
+    "seed:analytics": "ts-node -r tsconfig-paths/register db/seed-analytics.ts",
+    "ml:forecast:views": "ts-node -r tsconfig-paths/register ml/forecast-views-ml.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.910.0",
@@ -68,6 +69,7 @@
     "ioredis": "^5.8.1",
     "lodash": "^4.17.23",
     "multer": "^2.0.2",
+    "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.2",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
