@@ -4,10 +4,14 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PaginationQueryDto } from '@app/common/utils/dto/pagination-query.dto';
 
 import { AnalyticsService } from '../service/analytics.service';
+import { ForecastTrainingScheduler } from '../scheduler/forecast-training.scheduler';
 
 @Controller()
 export class AnalyticsController {
-  constructor(private readonly analyticsService: AnalyticsService) {}
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+    private readonly forecastScheduler: ForecastTrainingScheduler,
+  ) {}
 
   @MessagePattern({ cmd: 'analytics.getMoviesStats' })
   getMoviesStats(@Payload() query: PaginationQueryDto) {
@@ -37,5 +41,15 @@ export class AnalyticsController {
   @MessagePattern({ cmd: 'analytics.getTrendingTVSeries' })
   getTrendingTVSeries(@Payload() query: PaginationQueryDto) {
     return this.analyticsService.getTrendingTVSeries(query || {});
+  }
+
+  @MessagePattern({ cmd: 'analytics.getViewForecast' })
+  getViewForecast(@Payload() query: PaginationQueryDto) {
+    return this.analyticsService.getViewForecast(query || {});
+  }
+
+  @MessagePattern({ cmd: 'analytics.retrainForecast' })
+  async retrainForecast() {
+    return this.forecastScheduler.manualRetrain();
   }
 }

@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'fs';
+import { resolve } from 'path';
+
 import { firstValueFrom } from 'rxjs';
 
 import { LOG_ACTION } from '@app/common/enums/log.enum';
@@ -19,6 +22,19 @@ type AuditLogRecord = {
 type SortSpec = {
   key: string;
   direction: SortDirection;
+};
+
+type ViewForecastRecord = {
+  contentId: string;
+  title: string;
+  contentType: string;
+  historyViews: Array<{ day: string; views: number }>;
+  last7Avg: number;
+  next7DaysViews: number[];
+  totalForecast7d: number;
+  predictedTrend: 'up' | 'down';
+  mae: number | null;
+  mape: number | null;
 };
 
 @Injectable()
@@ -68,7 +84,9 @@ export class AnalyticsService {
         return null;
       }
 
-      const rawDirection = String((parsed as Record<string, unknown>)[key] || 'DESC').toUpperCase();
+      const rawDirection = String(
+        (parsed as Record<string, unknown>)[key] || 'DESC',
+      ).toUpperCase();
       return {
         key,
         direction: rawDirection === 'ASC' ? 'ASC' : 'DESC',
@@ -110,7 +128,10 @@ export class AnalyticsService {
     return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
   }
 
-  private paginate<T>(items: T[], query: PaginationQueryDto): { data: T[]; total: number; page: number; limit: number } {
+  private paginate<T>(
+    items: T[],
+    query: PaginationQueryDto,
+  ): { data: T[]; total: number; page: number; limit: number } {
     const page = query.page && query.page > 0 ? query.page : 1;
     const limit = query.limit && query.limit > 0 ? query.limit : 10;
     const startIndex = (page - 1) * limit;
@@ -155,28 +176,44 @@ export class AnalyticsService {
     return ids.size;
   }
 
-  private applySearch<T extends { title?: string }>(items: T[], query: PaginationQueryDto): T[] {
+  private applySearch<T extends { title?: string }>(
+    items: T[],
+    query: PaginationQueryDto,
+  ): T[] {
     const searchTerm = this.parseSearch(query.search);
     if (!searchTerm) {
       return items;
     }
 
-    return items.filter((item) => (item.title || '').toLowerCase().includes(searchTerm));
+    return items.filter((item) =>
+      (item.title || '').toLowerCase().includes(searchTerm),
+    );
   }
 
-  private sortStats<T extends { title?: string; views: number; change: string }>(items: T[], query: PaginationQueryDto): T[] {
+  private sortStats<
+    T extends { title?: string; views: number; change: string },
+  >(items: T[], query: PaginationQueryDto): T[] {
     const sorted = [...items];
     const sort = this.parseSort(query.sort);
 
     if (!sort) {
-      sorted.sort((a, b) => this.parseChangeToNumber(b.change) - this.parseChangeToNumber(a.change));
+      sorted.sort(
+        (a, b) =>
+          this.parseChangeToNumber(b.change) -
+          this.parseChangeToNumber(a.change),
+      );
       return sorted;
     }
 
     const direction = sort.direction === 'DESC' ? 1 : -1;
 
     if (sort.key === 'change') {
-      sorted.sort((a, b) => direction * (this.parseChangeToNumber(b.change) - this.parseChangeToNumber(a.change)));
+      sorted.sort(
+        (a, b) =>
+          direction *
+          (this.parseChangeToNumber(b.change) -
+            this.parseChangeToNumber(a.change)),
+      );
       return sorted;
     }
 
@@ -186,29 +223,46 @@ export class AnalyticsService {
     }
 
     if (sort.key === 'title') {
-      sorted.sort((a, b) => direction * (b.title || '').localeCompare(a.title || ''));
+      sorted.sort(
+        (a, b) => direction * (b.title || '').localeCompare(a.title || ''),
+      );
       return sorted;
     }
 
     return sorted;
   }
 
-  private sortTrending<T extends { title: string; views: number; rating: number; change: string; engagement: number }>(
-    items: T[],
-    query: PaginationQueryDto,
-  ): T[] {
+  private sortTrending<
+    T extends {
+      title: string;
+      views: number;
+      rating: number;
+      change: string;
+      engagement: number;
+    },
+  >(items: T[], query: PaginationQueryDto): T[] {
     const sorted = [...items];
     const sort = this.parseSort(query.sort);
 
     if (!sort) {
-      sorted.sort((a, b) => (b.engagement + this.parseChangeToNumber(b.change)) - (a.engagement + this.parseChangeToNumber(a.change)));
+      sorted.sort(
+        (a, b) =>
+          b.engagement +
+          this.parseChangeToNumber(b.change) -
+          (a.engagement + this.parseChangeToNumber(a.change)),
+      );
       return sorted;
     }
 
     const direction = sort.direction === 'DESC' ? 1 : -1;
 
     if (sort.key === 'change') {
-      sorted.sort((a, b) => direction * (this.parseChangeToNumber(b.change) - this.parseChangeToNumber(a.change)));
+      sorted.sort(
+        (a, b) =>
+          direction *
+          (this.parseChangeToNumber(b.change) -
+            this.parseChangeToNumber(a.change)),
+      );
       return sorted;
     }
 
@@ -235,6 +289,40 @@ export class AnalyticsService {
     return sorted;
   }
 
+  private sortForecast(
+    items: ViewForecastRecord[],
+    query: PaginationQueryDto,
+  ): ViewForecastRecord[] {
+    const sorted = [...items];
+    const sort = this.parseSort(query.sort);
+
+    if (!sort) {
+      sorted.sort((a, b) => b.totalForecast7d - a.totalForecast7d);
+      return sorted;
+    }
+
+    const direction = sort.direction === 'DESC' ? 1 : -1;
+
+    if (sort.key === 'totalForecast7d') {
+      sorted.sort(
+        (a, b) => direction * (b.totalForecast7d - a.totalForecast7d),
+      );
+      return sorted;
+    }
+
+    if (sort.key === 'last7Avg') {
+      sorted.sort((a, b) => direction * (b.last7Avg - a.last7Avg));
+      return sorted;
+    }
+
+    if (sort.key === 'title') {
+      sorted.sort((a, b) => direction * b.title.localeCompare(a.title));
+      return sorted;
+    }
+
+    return sorted;
+  }
+
   private async fetchAllContent<T>(command: string): Promise<T[]> {
     const allItems: T[] = [];
     const limit = 200;
@@ -243,10 +331,10 @@ export class AnalyticsService {
 
     do {
       const response = await firstValueFrom(
-        this.contentClient.send<{ data: T[]; total: number }, Record<string, number>>(
-          { cmd: command },
-          { page, limit },
-        ),
+        this.contentClient.send<
+          { data: T[]; total: number },
+          Record<string, number>
+        >({ cmd: command }, { page, limit }),
       );
 
       const batch = response?.data || [];
@@ -266,10 +354,10 @@ export class AnalyticsService {
 
     do {
       const response = await firstValueFrom(
-        this.auditClient.send<{ result: AuditLogRecord[]; total: number }, Record<string, number>>(
-          { cmd: 'get_audit_logs' },
-          { page, limit },
-        ),
+        this.auditClient.send<
+          { result: AuditLogRecord[]; total: number },
+          Record<string, number>
+        >({ cmd: 'get_audit_logs' }, { page, limit }),
       );
 
       const batch = response?.result || [];
@@ -281,7 +369,10 @@ export class AnalyticsService {
     return allLogs;
   }
 
-  private calculateTrending(contentId: string, logs: AuditLogRecord[]): { trending: TrendDirection; change: string } {
+  private calculateTrending(
+    contentId: string,
+    logs: AuditLogRecord[],
+  ): { trending: TrendDirection; change: string } {
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -318,7 +409,10 @@ export class AnalyticsService {
     };
   }
 
-  private calculateCategoryTrending(contentIds: string[], logs: AuditLogRecord[]): { trending: TrendDirection; change: string } {
+  private calculateCategoryTrending(
+    contentIds: string[],
+    logs: AuditLogRecord[],
+  ): { trending: TrendDirection; change: string } {
     if (!contentIds.length) {
       return { trending: 'up', change: '+0.0%' };
     }
@@ -360,7 +454,10 @@ export class AnalyticsService {
     };
   }
 
-  private calculateEngagement(contentId: string, logs: AuditLogRecord[]): number {
+  private calculateEngagement(
+    contentId: string,
+    logs: AuditLogRecord[],
+  ): number {
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
@@ -392,7 +489,19 @@ export class AnalyticsService {
     return Math.round((contentEngagementCount / totalEngagementCount) * 100);
   }
 
-  async getMoviesStats(query: PaginationQueryDto): Promise<{ data: Array<{ id: string; title: string; views: number; trending: TrendDirection; change: string; percentage: number }>; total: number }> {
+  async getMoviesStats(
+    query: PaginationQueryDto,
+  ): Promise<{
+    data: Array<{
+      id: string;
+      title: string;
+      views: number;
+      trending: TrendDirection;
+      change: string;
+      percentage: number;
+    }>;
+    total: number;
+  }> {
     const [movies, logs] = await Promise.all([
       this.fetchAllContent<Record<string, any>>('content.getMovies'),
       this.fetchAllAuditLogs(),
@@ -415,16 +524,32 @@ export class AnalyticsService {
     const sorted = this.sortStats(searched, query);
     const paginated = this.paginate(sorted, query);
 
-    const totalViews = paginated.data.reduce((sum, item) => sum + item.views, 0);
+    const totalViews = paginated.data.reduce(
+      (sum, item) => sum + item.views,
+      0,
+    );
     const data = paginated.data.map((item) => ({
       ...item,
-      percentage: totalViews > 0 ? Math.round((item.views / totalViews) * 100) : 0,
+      percentage:
+        totalViews > 0 ? Math.round((item.views / totalViews) * 100) : 0,
     }));
 
     return { data, total: paginated.total };
   }
 
-  async getTVSeriesStats(query: PaginationQueryDto): Promise<{ data: Array<{ id: string; title: string; views: number; trending: TrendDirection; change: string; percentage: number }>; total: number }> {
+  async getTVSeriesStats(
+    query: PaginationQueryDto,
+  ): Promise<{
+    data: Array<{
+      id: string;
+      title: string;
+      views: number;
+      trending: TrendDirection;
+      change: string;
+      percentage: number;
+    }>;
+    total: number;
+  }> {
     const [tvSeries, logs] = await Promise.all([
       this.fetchAllContent<Record<string, any>>('content.getTvSeries'),
       this.fetchAllAuditLogs(),
@@ -447,25 +572,49 @@ export class AnalyticsService {
     const sorted = this.sortStats(searched, query);
     const paginated = this.paginate(sorted, query);
 
-    const totalViews = paginated.data.reduce((sum, item) => sum + item.views, 0);
+    const totalViews = paginated.data.reduce(
+      (sum, item) => sum + item.views,
+      0,
+    );
     const data = paginated.data.map((item) => ({
       ...item,
-      percentage: totalViews > 0 ? Math.round((item.views / totalViews) * 100) : 0,
+      percentage:
+        totalViews > 0 ? Math.round((item.views / totalViews) * 100) : 0,
     }));
 
     return { data, total: paginated.total };
   }
 
-  async getCategoriesStats(query: PaginationQueryDto): Promise<{ data: Array<{ id: string; title: string; views: number; trending: TrendDirection; change: string; percentage: number }>; total: number }> {
+  async getCategoriesStats(
+    query: PaginationQueryDto,
+  ): Promise<{
+    data: Array<{
+      id: string;
+      title: string;
+      views: number;
+      trending: TrendDirection;
+      change: string;
+      percentage: number;
+    }>;
+    total: number;
+  }> {
     const [categories, logs] = await Promise.all([
       this.fetchAllContent<Record<string, any>>('content.getCategories'),
       this.fetchAllAuditLogs(),
     ]);
 
     const stats = categories.map((category) => {
-      const contents = Array.isArray(category?.contents) ? category.contents : [];
-      const contentIds = contents.map((content: Record<string, any>) => String(content?.id || '')).filter(Boolean);
-      const views = contents.reduce((sum: number, content: Record<string, any>) => sum + Number(content?.viewCount || 0), 0);
+      const contents = Array.isArray(category?.contents)
+        ? category.contents
+        : [];
+      const contentIds = contents
+        .map((content: Record<string, any>) => String(content?.id || ''))
+        .filter(Boolean);
+      const views = contents.reduce(
+        (sum: number, content: Record<string, any>) =>
+          sum + Number(content?.viewCount || 0),
+        0,
+      );
       const trendingData = this.calculateCategoryTrending(contentIds, logs);
 
       return {
@@ -482,16 +631,34 @@ export class AnalyticsService {
     const sorted = this.sortStats(searched, query);
     const paginated = this.paginate(sorted, query);
 
-    const totalViews = paginated.data.reduce((sum, item) => sum + item.views, 0);
+    const totalViews = paginated.data.reduce(
+      (sum, item) => sum + item.views,
+      0,
+    );
     const data = paginated.data.map((item) => ({
       ...item,
-      percentage: totalViews > 0 ? Math.round((item.views / totalViews) * 100) : 0,
+      percentage:
+        totalViews > 0 ? Math.round((item.views / totalViews) * 100) : 0,
     }));
 
     return { data, total: paginated.total };
   }
 
-  async getTrendingMovies(query: PaginationQueryDto): Promise<{ data: Array<{ id: string; title: string; poster: string; rating: number; views: number; trend: TrendDirection; change: string; engagement: number }>; total: number }> {
+  async getTrendingMovies(
+    query: PaginationQueryDto,
+  ): Promise<{
+    data: Array<{
+      id: string;
+      title: string;
+      poster: string;
+      rating: number;
+      views: number;
+      trend: TrendDirection;
+      change: string;
+      engagement: number;
+    }>;
+    total: number;
+  }> {
     const [movies, logs] = await Promise.all([
       this.fetchAllContent<Record<string, any>>('content.getMovies'),
       this.fetchAllAuditLogs(),
@@ -503,7 +670,10 @@ export class AnalyticsService {
       return {
         id: String(movie?.id || ''),
         title: String(movie?.metaData?.title || 'Unknown'),
-        poster: String(movie?.metaData?.thumbnail || 'https://via.placeholder.com/50x75?text=Movie'),
+        poster: String(
+          movie?.metaData?.thumbnail ||
+            'https://via.placeholder.com/50x75?text=Movie',
+        ),
         rating: Number(movie?.metaData?.avgRating || 0),
         views: Number(movie?.metaData?.viewCount || 0),
         trend: trendingData.trending,
@@ -519,7 +689,21 @@ export class AnalyticsService {
     return { data: paginated.data, total: paginated.total };
   }
 
-  async getTrendingTVSeries(query: PaginationQueryDto): Promise<{ data: Array<{ id: string; title: string; poster: string; rating: number; views: number; trend: TrendDirection; change: string; engagement: number }>; total: number }> {
+  async getTrendingTVSeries(
+    query: PaginationQueryDto,
+  ): Promise<{
+    data: Array<{
+      id: string;
+      title: string;
+      poster: string;
+      rating: number;
+      views: number;
+      trend: TrendDirection;
+      change: string;
+      engagement: number;
+    }>;
+    total: number;
+  }> {
     const [tvSeries, logs] = await Promise.all([
       this.fetchAllContent<Record<string, any>>('content.getTvSeries'),
       this.fetchAllAuditLogs(),
@@ -531,7 +715,10 @@ export class AnalyticsService {
       return {
         id: String(series?.id || ''),
         title: String(series?.metaData?.title || 'Unknown'),
-        poster: String(series?.metaData?.thumbnail || 'https://via.placeholder.com/50x75?text=TV'),
+        poster: String(
+          series?.metaData?.thumbnail ||
+            'https://via.placeholder.com/50x75?text=TV',
+        ),
         rating: Number(series?.metaData?.avgRating || 0),
         views: Number(series?.metaData?.viewCount || 0),
         trend: trendingData.trending,
@@ -556,7 +743,12 @@ export class AnalyticsService {
     };
     userMetrics: {
       dau: Array<{ day: string; users: number; trend: TrendDirection }>;
-      mau: Array<{ month: string; users: number; trend: TrendDirection; change: string }>;
+      mau: Array<{
+        month: string;
+        users: number;
+        trend: TrendDirection;
+        change: string;
+      }>;
       churnRate: Array<{ month: string; rate: number; trend: TrendDirection }>;
     };
   }> {
@@ -578,7 +770,10 @@ export class AnalyticsService {
       );
     });
 
-    const registrationActions = [LOG_ACTION.CREATE_USER, LOG_ACTION.USER_REGISTRATION];
+    const registrationActions = [
+      LOG_ACTION.CREATE_USER,
+      LOG_ACTION.USER_REGISTRATION,
+    ];
     const newUsers = this.countDistinctUsers(logs, (log) => {
       const createdAt = this.toDate(log.createdAt);
       return (
@@ -600,11 +795,20 @@ export class AnalyticsService {
 
     const churnRate = totalUsers > 0 ? (churnedUsers / totalUsers) * 100 : 0;
 
-    const dau: Array<{ day: string; users: number; trend: TrendDirection }> = [];
+    const dau: Array<{ day: string; users: number; trend: TrendDirection }> =
+      [];
     for (let i = 6; i >= 0; i -= 1) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+      const startOfDay = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+      );
+      const endOfDay = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate() + 1,
+      );
 
       const usersCount = this.countDistinctUsers(logs, (log) => {
         const createdAt = this.toDate(log.createdAt);
@@ -625,7 +829,12 @@ export class AnalyticsService {
       });
     }
 
-    const mau: Array<{ month: string; users: number; trend: TrendDirection; change: string }> = [];
+    const mau: Array<{
+      month: string;
+      users: number;
+      trend: TrendDirection;
+      change: string;
+    }> = [];
     const currentMonth = now.getMonth();
     for (let i = 0; i <= currentMonth; i += 1) {
       const monthStart = new Date(now.getFullYear(), i, 1);
@@ -643,7 +852,12 @@ export class AnalyticsService {
       });
 
       const prevUsers = mau.length > 0 ? mau[mau.length - 1].users : usersCount;
-      const change = prevUsers > 0 ? this.formatChangePercent(((usersCount - prevUsers) / prevUsers) * 100) : '+0.0%';
+      const change =
+        prevUsers > 0
+          ? this.formatChangePercent(
+              ((usersCount - prevUsers) / prevUsers) * 100,
+            )
+          : '+0.0%';
       mau.push({
         month: monthStart.toLocaleDateString('en-US', { month: 'long' }),
         users: usersCount,
@@ -652,11 +866,19 @@ export class AnalyticsService {
       });
     }
 
-    const churnRateMetrics: Array<{ month: string; rate: number; trend: TrendDirection }> = [];
+    const churnRateMetrics: Array<{
+      month: string;
+      rate: number;
+      trend: TrendDirection;
+    }> = [];
     for (let i = 3; i >= 0; i -= 1) {
       const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-      const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - i - 1, 1);
+      const prevMonthStart = new Date(
+        now.getFullYear(),
+        now.getMonth() - i - 1,
+        1,
+      );
       const prevMonthEnd = monthStart;
 
       const activeThisMonth = this.countDistinctUsers(logs, (log) => {
@@ -681,8 +903,14 @@ export class AnalyticsService {
         );
       });
 
-      const rate = activePrevMonth > 0 ? ((activePrevMonth - activeThisMonth) / activePrevMonth) * 100 : 0;
-      const previousRate = churnRateMetrics.length > 0 ? churnRateMetrics[churnRateMetrics.length - 1].rate : rate;
+      const rate =
+        activePrevMonth > 0
+          ? ((activePrevMonth - activeThisMonth) / activePrevMonth) * 100
+          : 0;
+      const previousRate =
+        churnRateMetrics.length > 0
+          ? churnRateMetrics[churnRateMetrics.length - 1].rate
+          : rate;
 
       churnRateMetrics.push({
         month: monthStart.toLocaleDateString('en-US', { month: 'long' }),
@@ -703,6 +931,56 @@ export class AnalyticsService {
         mau,
         churnRate: churnRateMetrics,
       },
+    };
+  }
+
+  getViewForecast(query: PaginationQueryDto): {
+    generatedAt: string | null;
+    horizonDays: number;
+    lookbackDays: number;
+    metrics: { mae: number | null; mape: number | null };
+    total: number;
+    data: ViewForecastRecord[];
+  } {
+    const filePath = resolve(
+      process.cwd(),
+      'exports/analytics/view-forecast.json',
+    );
+    if (!existsSync(filePath)) {
+      return {
+        generatedAt: null,
+        horizonDays: 0,
+        lookbackDays: 0,
+        metrics: { mae: null, mape: null },
+        total: 0,
+        data: [],
+      };
+    }
+
+    const raw = readFileSync(filePath, 'utf8');
+    const parsed = JSON.parse(raw) as {
+      generatedAt?: string;
+      horizonDays?: number;
+      lookbackDays?: number;
+      metrics?: { mae?: number | null; mape?: number | null };
+      records?: ViewForecastRecord[];
+    };
+
+    const records = parsed.records || [];
+    const searched = this.applySearch(records, query);
+    const sorted = this.sortForecast(searched, query);
+    const paginated = this.paginate(sorted, query);
+
+    return {
+      generatedAt: parsed.generatedAt || null,
+      horizonDays: parsed.horizonDays || 0,
+      lookbackDays: parsed.lookbackDays || 0,
+      metrics: {
+        mae: parsed.metrics?.mae ?? null,
+        mape: parsed.metrics?.mape ?? null,
+      },
+      total: paginated.total,
+      data: paginated.data,
     };
   }
 }

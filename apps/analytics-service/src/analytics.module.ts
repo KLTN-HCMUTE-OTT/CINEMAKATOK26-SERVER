@@ -3,6 +3,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 
 import { AnalyticsController } from './controller/analytics.controller';
 import { AnalyticsService } from './service/analytics.service';
+import { ForecastTrainingScheduler } from './scheduler/forecast-training.scheduler';
 
 @Module({
   imports: [
@@ -27,6 +28,6 @@ import { AnalyticsService } from './service/analytics.service';
     ]),
   ],
   controllers: [AnalyticsController],
-  providers: [AnalyticsService],
+  providers: [AnalyticsService, ForecastTrainingScheduler],
 })
 export class AnalyticsModule {}

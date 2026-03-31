@@ -49,6 +49,18 @@ export class AnalyticsService {
       .pipe(catchRpcError());
   }
 
+  getViewForecast(query: PaginationQueryDto): Observable<any> {
+    return this.analyticsClient
+      .send({ cmd: 'analytics.getViewForecast' }, query)
+      .pipe(catchRpcError());
+  }
+
+  retrainForecast(): Observable<any> {
+    return this.analyticsClient
+      .send({ cmd: 'analytics.retrainForecast' }, {})
+      .pipe(catchRpcError());
+  }
+
   /**
    * Fire-and-forget: publish a tracking event to the analytics queue.
    */

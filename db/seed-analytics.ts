@@ -312,14 +312,59 @@ function buildAuditLogs(contents: SeedContent[]): AuditLogSeed[] {
     }
   };
 
-  pushViews(recentBoostContent, 90, 0, 6);
-  pushViews(recentBoostContent, 20, 7, 13);
+  // High-performing content: 80 views/day avg for 90 days = ~7200 total
+  for (let day = 0; day < 90; day += 1) {
+    const dailyViews = randomInt(60, 100);
+    for (let i = 0; i < dailyViews; i += 1) {
+      const userId = pickOne(users);
+      logs.push({
+        userId,
+        sessionId: randomUUID(),
+        action: LOG_ACTION.CONTENT_VIEW_INCREASED,
+        resourceType: recentBoostContent.type,
+        resourceId: recentBoostContent.id,
+        signalWeight: 2,
+        metadata: { contentId: recentBoostContent.id, title: recentBoostContent.title },
+        createdAt: buildPastDate(day),
+      });
+    }
+  }
 
-  pushViews(stableContent, 35, 0, 6);
-  pushViews(stableContent, 34, 7, 13);
+  // Medium-performing content: 40 views/day avg for 90 days = ~3600 total
+  for (let day = 0; day < 90; day += 1) {
+    const dailyViews = randomInt(30, 50);
+    for (let i = 0; i < dailyViews; i += 1) {
+      const userId = pickOne(users);
+      logs.push({
+        userId,
+        sessionId: randomUUID(),
+        action: LOG_ACTION.CONTENT_VIEW_INCREASED,
+        resourceType: stableContent.type,
+        resourceId: stableContent.id,
+        signalWeight: 2,
+        metadata: { contentId: stableContent.id, title: stableContent.title },
+        createdAt: buildPastDate(day),
+      });
+    }
+  }
 
-  pushViews(downTrendContent, 18, 0, 6);
-  pushViews(downTrendContent, 60, 7, 13);
+  // Declining content: 50 views/day early, 20 views/day late for 90 days = ~3150 total
+  for (let day = 0; day < 90; day += 1) {
+    const dailyViews = day < 45 ? randomInt(40, 60) : randomInt(10, 30);
+    for (let i = 0; i < dailyViews; i += 1) {
+      const userId = pickOne(users);
+      logs.push({
+        userId,
+        sessionId: randomUUID(),
+        action: LOG_ACTION.CONTENT_VIEW_INCREASED,
+        resourceType: downTrendContent.type,
+        resourceId: downTrendContent.id,
+        signalWeight: 2,
+        metadata: { contentId: downTrendContent.id, title: downTrendContent.title },
+        createdAt: buildPastDate(day),
+      });
+    }
+  }
 
   const engagementActions = [
     LOG_ACTION.LIKE_MOVIE,
@@ -366,7 +411,13 @@ async function seedAudit(auditDs: DataSource, contents: SeedContent[]) {
   await auditDs.query('TRUNCATE TABLE "audit_logs" CASCADE;');
 
   const logs = buildAuditLogs(contents);
-  await repo.save(repo.create(logs));
+  
+  // Batch insert to avoid PostgreSQL parameter limit (65535)
+  const BATCH_SIZE = 500;
+  for (let i = 0; i < logs.length; i += BATCH_SIZE) {
+    const batch = logs.slice(i, i + BATCH_SIZE);
+    await repo.save(repo.create(batch));
+  }
 
   return logs.length;
 }
