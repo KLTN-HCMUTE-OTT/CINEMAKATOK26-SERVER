@@ -108,6 +108,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/notification-service/tsconfig.app.json"
       }
+    },
+    "analytics-service": {
+      "type": "application",
+      "root": "apps/analytics-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/analytics-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/analytics-service/tsconfig.app.json"
+      }
     }
   }
 }

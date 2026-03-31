@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+
+import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 
 @Module({
@@ -7,15 +9,15 @@ import { AnalyticsService } from './analytics.service';
     ClientsModule.register([
       {
         name: 'ANALYTICS_SERVICE',
-        transport: Transport.RMQ,
+        transport: Transport.TCP,
         options: {
-          urls: [process.env.RABBITMQ_URL ?? 'amqp://localhost:5672'],
-          queue: 'analytics_queue',
-          queueOptions: { durable: true },
+          host: process.env.ANALYTICS_SERVICE_HOST ?? 'localhost',
+          port: Number(process.env.ANALYTICS_SERVICE_PORT ?? 3008),
         },
       },
     ]),
   ],
+  controllers: [AnalyticsController],
   providers: [AnalyticsService],
   exports: [AnalyticsService],
 })
