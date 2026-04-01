@@ -55,9 +55,21 @@ export class AnalyticsService {
       .pipe(catchRpcError());
   }
 
+  getChurnPrediction(query: PaginationQueryDto): Observable<any> {
+    return this.analyticsClient
+      .send({ cmd: 'analytics.getChurnPrediction' }, query)
+      .pipe(catchRpcError());
+  }
+
   retrainForecast(): Observable<any> {
     return this.analyticsClient
       .send({ cmd: 'analytics.retrainForecast' }, {})
+      .pipe(catchRpcError());
+  }
+
+  retrainChurnPrediction(): Observable<any> {
+    return this.analyticsClient
+      .send({ cmd: 'analytics.retrainChurnPrediction' }, {})
       .pipe(catchRpcError());
   }
 

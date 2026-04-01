@@ -33,3 +33,58 @@ export class ViewForecastItemDto {
   @ApiProperty({ enum: ['up', 'down'] })
   predictedTrend: 'up' | 'down';
 }
+
+export class ChurnFeatureDto {
+  @ApiProperty()
+  userId: string;
+
+  @ApiProperty()
+  accountAgeDays: number;
+
+  @ApiProperty()
+  daysSinceLastActivity: number;
+
+  @ApiProperty()
+  watchProgressCount30d: number;
+
+  @ApiProperty()
+  watchedDuration30d: number;
+
+  @ApiProperty()
+  completedVideos30d: number;
+
+  @ApiProperty()
+  watchlistAdds30d: number;
+
+  @ApiProperty()
+  favoriteAdds30d: number;
+
+  @ApiProperty()
+  reviews30d: number;
+
+  @ApiProperty()
+  auditEvents30d: number;
+}
+
+export class ChurnPredictionItemDto {
+  @ApiProperty()
+  userId: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty({ nullable: true })
+  email: string | null;
+
+  @ApiProperty()
+  churnProbability: number;
+
+  @ApiProperty()
+  returnProbability: number;
+
+  @ApiProperty({ enum: ['high', 'medium', 'low'] })
+  riskLevel: 'high' | 'medium' | 'low';
+
+  @ApiProperty({ type: ChurnFeatureDto })
+  features: ChurnFeatureDto;
+}

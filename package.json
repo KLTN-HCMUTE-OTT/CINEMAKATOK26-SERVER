@@ -30,7 +30,9 @@
     "start:streaming": "cross-env SERVICE_NAME=streaming-service nest start streaming-service --watch",
     "worker:video": "cross-env SERVICE_NAME=streaming-service ts-node -r tsconfig-paths/register apps/streaming-service/src/queue/video-worker.ts",
     "seed:analytics": "ts-node -r tsconfig-paths/register db/seed-analytics.ts",
-    "ml:forecast:views": "ts-node -r tsconfig-paths/register ml/forecast-views-ml.ts"
+    "seed:churn:return": "ts-node -r tsconfig-paths/register db/seed-churn-return.ts",
+    "ml:forecast:views": "ts-node -r tsconfig-paths/register ml/forecast-views-ml.ts",
+    "ml:predict:churn": "ts-node -r tsconfig-paths/register ml/churn-return-ml.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.910.0",
@@ -57,9 +59,9 @@
     "archiver": "^7.0.1",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^5.61.0",
     "cache-manager": "^7.2.8",
     "cache-manager-redis-yet": "^5.1.5",
-    "bullmq": "^5.61.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "config": "^4.4.1",
@@ -68,6 +70,7 @@
     "fluent-ffmpeg": "^2.1.3",
     "ioredis": "^5.8.1",
     "lodash": "^4.17.23",
+    "ml-xgboost": "^1.1.2",
     "multer": "^2.0.2",
     "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.2",

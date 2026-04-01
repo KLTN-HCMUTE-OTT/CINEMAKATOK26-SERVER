@@ -37,6 +37,29 @@ type ViewForecastRecord = {
   mape: number | null;
 };
 
+type ChurnFeatureRecord = {
+  userId: string;
+  accountAgeDays: number;
+  daysSinceLastActivity: number;
+  watchProgressCount30d: number;
+  watchedDuration30d: number;
+  completedVideos30d: number;
+  watchlistAdds30d: number;
+  favoriteAdds30d: number;
+  reviews30d: number;
+  auditEvents30d: number;
+};
+
+type ChurnPredictionRecord = {
+  userId: string;
+  name: string;
+  email: string | null;
+  churnProbability: number;
+  returnProbability: number;
+  riskLevel: 'high' | 'medium' | 'low';
+  features: ChurnFeatureRecord;
+};
+
 @Injectable()
 export class AnalyticsService {
   constructor(
@@ -323,6 +346,72 @@ export class AnalyticsService {
     return sorted;
   }
 
+  private applyChurnSearch(
+    items: ChurnPredictionRecord[],
+    query: PaginationQueryDto,
+  ): ChurnPredictionRecord[] {
+    const searchTerm = this.parseSearch(query.search);
+    if (!searchTerm) {
+      return items;
+    }
+
+    return items.filter((item) => {
+      const name = (item.name || '').toLowerCase();
+      const email = (item.email || '').toLowerCase();
+      const userId = (item.userId || '').toLowerCase();
+      return (
+        name.includes(searchTerm) ||
+        email.includes(searchTerm) ||
+        userId.includes(searchTerm)
+      );
+    });
+  }
+
+  private sortChurnPrediction(
+    items: ChurnPredictionRecord[],
+    query: PaginationQueryDto,
+  ): ChurnPredictionRecord[] {
+    const sorted = [...items];
+    const sort = this.parseSort(query.sort);
+
+    if (!sort) {
+      sorted.sort((a, b) => b.churnProbability - a.churnProbability);
+      return sorted;
+    }
+
+    const direction = sort.direction === 'DESC' ? 1 : -1;
+
+    if (sort.key === 'churnProbability') {
+      sorted.sort(
+        (a, b) => direction * (b.churnProbability - a.churnProbability),
+      );
+      return sorted;
+    }
+
+    if (sort.key === 'returnProbability') {
+      sorted.sort(
+        (a, b) => direction * (b.returnProbability - a.returnProbability),
+      );
+      return sorted;
+    }
+
+    if (sort.key === 'daysSinceLastActivity') {
+      sorted.sort(
+        (a, b) =>
+          direction *
+          (b.features.daysSinceLastActivity - a.features.daysSinceLastActivity),
+      );
+      return sorted;
+    }
+
+    if (sort.key === 'name') {
+      sorted.sort((a, b) => direction * b.name.localeCompare(a.name));
+      return sorted;
+    }
+
+    return sorted;
+  }
+
   private async fetchAllContent<T>(command: string): Promise<T[]> {
     const allItems: T[] = [];
     const limit = 200;
@@ -489,9 +578,7 @@ export class AnalyticsService {
     return Math.round((contentEngagementCount / totalEngagementCount) * 100);
   }
 
-  async getMoviesStats(
-    query: PaginationQueryDto,
-  ): Promise<{
+  async getMoviesStats(query: PaginationQueryDto): Promise<{
     data: Array<{
       id: string;
       title: string;
@@ -537,9 +624,7 @@ export class AnalyticsService {
     return { data, total: paginated.total };
   }
 
-  async getTVSeriesStats(
-    query: PaginationQueryDto,
-  ): Promise<{
+  async getTVSeriesStats(query: PaginationQueryDto): Promise<{
     data: Array<{
       id: string;
       title: string;
@@ -585,9 +670,7 @@ export class AnalyticsService {
     return { data, total: paginated.total };
   }
 
-  async getCategoriesStats(
-    query: PaginationQueryDto,
-  ): Promise<{
+  async getCategoriesStats(query: PaginationQueryDto): Promise<{
     data: Array<{
       id: string;
       title: string;
@@ -644,9 +727,7 @@ export class AnalyticsService {
     return { data, total: paginated.total };
   }
 
-  async getTrendingMovies(
-    query: PaginationQueryDto,
-  ): Promise<{
+  async getTrendingMovies(query: PaginationQueryDto): Promise<{
     data: Array<{
       id: string;
       title: string;
@@ -689,9 +770,7 @@ export class AnalyticsService {
     return { data: paginated.data, total: paginated.total };
   }
 
-  async getTrendingTVSeries(
-    query: PaginationQueryDto,
-  ): Promise<{
+  async getTrendingTVSeries(query: PaginationQueryDto): Promise<{
     data: Array<{
       id: string;
       title: string;
@@ -978,6 +1057,94 @@ export class AnalyticsService {
       metrics: {
         mae: parsed.metrics?.mae ?? null,
         mape: parsed.metrics?.mape ?? null,
+      },
+      total: paginated.total,
+      data: paginated.data,
+    };
+  }
+
+  getChurnPrediction(query: PaginationQueryDto): {
+    generatedAt: string | null;
+    metrics: {
+      accuracy: number | null;
+      precision: number | null;
+      recall: number | null;
+      f1: number | null;
+      logLoss: number | null;
+    };
+    summary: {
+      totalUsersScored: number;
+      highRiskUsers: number;
+      mediumRiskUsers: number;
+      lowRiskUsers: number;
+    };
+    total: number;
+    data: ChurnPredictionRecord[];
+  } {
+    const filePath = resolve(
+      process.cwd(),
+      'exports/analytics/user-churn-prediction.json',
+    );
+    if (!existsSync(filePath)) {
+      return {
+        generatedAt: null,
+        metrics: {
+          accuracy: null,
+          precision: null,
+          recall: null,
+          f1: null,
+          logLoss: null,
+        },
+        summary: {
+          totalUsersScored: 0,
+          highRiskUsers: 0,
+          mediumRiskUsers: 0,
+          lowRiskUsers: 0,
+        },
+        total: 0,
+        data: [],
+      };
+    }
+
+    const raw = readFileSync(filePath, 'utf8');
+    const parsed = JSON.parse(raw) as {
+      generatedAt?: string;
+      metrics?: {
+        accuracy?: number | null;
+        precision?: number | null;
+        recall?: number | null;
+        f1?: number | null;
+        logLoss?: number | null;
+      };
+      summary?: {
+        totalUsersScored?: number;
+        highRiskUsers?: number;
+        mediumRiskUsers?: number;
+        lowRiskUsers?: number;
+      };
+      predictions?: ChurnPredictionRecord[];
+    };
+
+    const predictions = parsed.predictions || [];
+    const searched = this.applyChurnSearch(predictions, query);
+    const sorted = this.sortChurnPrediction(searched, query);
+    const paginated = this.paginate(sorted, query);
+
+    return {
+      generatedAt: parsed.generatedAt || null,
+      metrics: {
+        accuracy: parsed.metrics?.accuracy ?? null,
+        precision: parsed.metrics?.precision ?? null,
+        recall: parsed.metrics?.recall ?? null,
+        f1: parsed.metrics?.f1 ?? null,
+        logLoss: parsed.metrics?.logLoss ?? null,
+      },
+      summary: {
+        totalUsersScored:
+          parsed.summary?.totalUsersScored || predictions.length,
+        highRiskUsers: parsed.summary?.highRiskUsers || 0,
+        mediumRiskUsers: parsed.summary?.mediumRiskUsers || 0,
+        lowRiskUsers: parsed.summary?.lowRiskUsers || 0,
       },
       total: paginated.total,
       data: paginated.data,
