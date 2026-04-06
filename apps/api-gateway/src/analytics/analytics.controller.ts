@@ -1,6 +1,7 @@
 import { firstValueFrom } from 'rxjs';
 
 import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -21,7 +22,10 @@ import {
   UserStatsDto,
   ViewStatsItemDto,
 } from '@app/common/dtos/analytics/analytics.dto';
-import { ViewForecastItemDto } from '@app/common/dtos/analytics/forecast.dto';
+import {
+  ChurnPredictionItemDto,
+  ViewForecastItemDto,
+} from '@app/common/dtos/analytics/forecast.dto';
 
 import { AnalyticsService } from './analytics.service';
 
@@ -229,6 +233,45 @@ export class AnalyticsController {
     });
   }
 
+  @Get('forecast/churn')
+  @ApiOperation({ summary: 'Get ML churn and return prediction for users' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    type: String,
+    example: '{ "churnProbability": "DESC" }',
+  })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Churn prediction retrieved successfully',
+    type: PaginatedApiResponseDto(ChurnPredictionItemDto),
+  })
+  async getChurnPrediction(@Query() query: PaginationQueryDto) {
+    const result = await firstValueFrom(
+      this.analyticsService.getChurnPrediction(query),
+    );
+
+    const f1Text =
+      result.metrics?.f1 !== null && result.metrics?.f1 !== undefined
+        ? `F1=${result.metrics.f1}`
+        : 'F1=NA';
+    const logLossText =
+      result.metrics?.logLoss !== null && result.metrics?.logLoss !== undefined
+        ? `logLoss=${result.metrics.logLoss}`
+        : 'logLoss=NA';
+
+    return ResponseBuilder.createPaginatedResponse({
+      data: result.data,
+      totalItems: result.total,
+      currentPage: query.page || 1,
+      itemsPerPage: query.limit || 10,
+      message: `Churn prediction retrieved successfully. Generated at ${result.generatedAt || 'unknown'}. ${f1Text}, ${logLossText}`,
+    });
+  }
+
   @Post('forecast/retrain')
   @ApiOperation({ summary: 'Manually trigger forecast model retraining' })
   @ApiResponse({
@@ -249,6 +292,29 @@ export class AnalyticsController {
     return ResponseBuilder.createResponse({
       data: result,
       message: 'Forecast model retraining triggered successfully',
+    });
+  }
+
+  @Post('forecast/churn/retrain')
+  @ApiOperation({ summary: 'Manually trigger churn model retraining' })
+  @ApiResponse({
+    status: 200,
+    description: 'Churn retraining triggered successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        data: { success: true, message: 'Churn retraining completed' },
+        message: 'Churn model retraining triggered successfully',
+      },
+    },
+  })
+  async retrainChurnPrediction() {
+    const result = await firstValueFrom(
+      this.analyticsService.retrainChurnPrediction(),
+    );
+    return ResponseBuilder.createResponse({
+      data: result,
+      message: 'Churn model retraining triggered successfully',
     });
   }
 }

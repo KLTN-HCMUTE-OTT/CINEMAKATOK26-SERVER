@@ -4,6 +4,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { AnalyticsController } from './controller/analytics.controller';
 import { AnalyticsService } from './service/analytics.service';
 import { ForecastTrainingScheduler } from './scheduler/forecast-training.scheduler';
+import { ChurnTrainingScheduler } from './scheduler/churn-training.scheduler';
 
 @Module({
   imports: [
@@ -28,6 +29,10 @@ import { ForecastTrainingScheduler } from './scheduler/forecast-training.schedul
     ]),
   ],
   controllers: [AnalyticsController],
-  providers: [AnalyticsService, ForecastTrainingScheduler],
+  providers: [
+    AnalyticsService,
+    ForecastTrainingScheduler,
+    ChurnTrainingScheduler,
+  ],
 })
 export class AnalyticsModule {}

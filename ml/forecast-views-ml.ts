@@ -28,9 +28,64 @@ type ForecastRecord = {
   confidence: number;
 };
 
+type TrainingSample = {
+  features: number[];
+  target: number;
+};
+
+type XGBoostModelPayload = {
+  name: 'ml-xgboost';
+  model: number[];
+  options: Record<string, unknown>;
+};
+
+type XGBoostForecastModel = {
+  modelType: 'xgboost';
+  featureNames: string[];
+  lagDays: number[];
+  targetTransform: 'log1p';
+  trainedSamples: number;
+  trainedAt: string;
+  params: Record<string, string | number>;
+  booster: XGBoostModelPayload;
+};
+
+type ModelRecord = {
+  contentId: string;
+  title: string;
+  contentType: string;
+  model: XGBoostForecastModel | null;
+};
+
+type XGBoostBooster = {
+  train: (trainingSet: number[][], trainingValues: number[]) => void;
+  predict: (toPredict: number[][]) => number[];
+  toJSON: () => XGBoostModelPayload;
+  free: () => void;
+};
+
+type XGBoostCtor = {
+  new (options: Record<string, unknown>): XGBoostBooster;
+  load: (model: XGBoostModelPayload) => XGBoostBooster;
+};
+
 const LOOKBACK_DAYS = 30;
 const HORIZON_DAYS = 7;
 const ROLLING_BACKTEST_WINDOWS = 3;
+const MIN_TRAIN_SAMPLES = 10;
+const MODEL_LAG_DAYS = [1, 2, 3, 7, 14];
+
+const XGB_PARAMS = {
+  booster: 'gbtree',
+  objective: 'reg:linear',
+  max_depth: 4,
+  eta: 0.08,
+  min_child_weight: 1,
+  subsample: 0.85,
+  colsample_bytree: 0.85,
+  silent: 1,
+  iterations: 160,
+};
 
 const requiredEnv = [
   'CONTENT_DB_HOST',
@@ -44,6 +99,8 @@ const requiredEnv = [
   'AUDIT_DB_PASSWORD',
   'AUDIT_DB_NAME',
 ];
+
+let xgboostLoader: Promise<XGBoostCtor> | null = null;
 
 function loadEnvFile(filePath: string) {
   if (!existsSync(filePath)) {
@@ -116,99 +173,124 @@ function movingAverage(values: number[], window: number): number {
   return segment.reduce((acc, x) => acc + x, 0) / Math.max(1, segment.length);
 }
 
-function exponentialSmoothing(values: number[], alpha = 0.35): number {
-  if (values.length === 0) {
-    return 0;
-  }
-
-  let smoothed = values[0];
-  for (let i = 1; i < values.length; i += 1) {
-    smoothed = alpha * values[i] + (1 - alpha) * smoothed;
-  }
-  return smoothed;
+function baseFeatureNames(): string[] {
+  return [
+    ...MODEL_LAG_DAYS.map((lag) => `lag_${lag}`),
+    'ma_3',
+    'ma_7',
+    'momentum_1_7',
+    'weekday_sin',
+    'weekday_cos',
+  ];
 }
 
-function linearTrend(values: number[]): { slope: number; intercept: number } {
-  const n = values.length;
-  if (n <= 1) {
-    return { slope: 0, intercept: values[0] || 0 };
-  }
+function buildFeatureVector(history: number[], targetIndex: number): number[] {
+  const lastKnown = history[targetIndex - 1] ?? 0;
+  const lagFeatures = MODEL_LAG_DAYS.map((lag) => {
+    const idx = targetIndex - lag;
+    return idx >= 0 ? history[idx] : lastKnown;
+  });
 
-  const xs = values.map((_, idx) => idx + 1);
-  const ys = values;
+  const recent = history.slice(Math.max(0, targetIndex - 7), targetIndex);
+  const ma3 = movingAverage(recent, 3);
+  const ma7 = movingAverage(recent, 7);
+  const lag1 = lagFeatures[0] ?? 0;
+  const lag7 = lagFeatures[3] ?? lag1;
+  const momentum = lag1 - lag7;
+  const weekday = targetIndex % 7;
+  const angle = (2 * Math.PI * weekday) / 7;
 
-  const sumX = xs.reduce((acc, x) => acc + x, 0);
-  const sumY = ys.reduce((acc, y) => acc + y, 0);
-  const sumXY = xs.reduce((acc, x, i) => acc + x * ys[i], 0);
-  const sumXX = xs.reduce((acc, x) => acc + x * x, 0);
-
-  const denominator = n * sumXX - sumX * sumX;
-  const slope = denominator === 0 ? 0 : (n * sumXY - sumX * sumY) / denominator;
-  const intercept = (sumY - slope * sumX) / n;
-
-  return {
-    slope: denominator === 0 ? 0 : (n * sumXY - sumX * sumY) / denominator,
-    intercept:
-      (sumY -
-        (denominator === 0 ? 0 : (n * sumXY - sumX * sumY) / denominator) *
-          sumX) /
-      n,
-  };
+  return [...lagFeatures, ma3, ma7, momentum, Math.sin(angle), Math.cos(angle)];
 }
 
-function weekdaySeasonalityFactors(values: number[]): number[] {
-  const factors = Array.from({ length: 7 }, () => 1);
-  if (values.length < 14) {
-    return factors;
+function createTrainingSet(values: number[]): TrainingSample[] {
+  const maxLag = Math.max(...MODEL_LAG_DAYS);
+  const samples: TrainingSample[] = [];
+  for (let i = maxLag; i < values.length; i += 1) {
+    samples.push({
+      features: buildFeatureVector(values, i),
+      target: values[i],
+    });
   }
-
-  const sums = Array.from({ length: 7 }, () => 0);
-  const counts = Array.from({ length: 7 }, () => 0);
-  for (let i = 0; i < values.length; i += 1) {
-    const weekday = i % 7;
-    sums[weekday] += values[i];
-    counts[weekday] += 1;
-  }
-
-  const globalAvg = values.reduce((acc, x) => acc + x, 0) / values.length;
-  if (globalAvg <= 0) {
-    return factors;
-  }
-
-  for (let i = 0; i < 7; i += 1) {
-    const weekdayAvg = counts[i] > 0 ? sums[i] / counts[i] : globalAvg;
-    factors[i] = Math.max(0.6, Math.min(1.5, weekdayAvg / globalAvg));
-  }
-
-  return factors;
+  return samples;
 }
 
-function blendedForecast(values: number[], horizon: number): number[] {
+function fallbackForecast(values: number[], horizon: number): number[] {
+  const avg = Math.round(movingAverage(values, Math.min(7, values.length)));
+  return Array.from({ length: horizon }, () => Math.max(0, avg));
+}
+
+async function getXGBoostCtor(): Promise<XGBoostCtor> {
+  if (!xgboostLoader) {
+    const modulePromise = require('ml-xgboost') as Promise<XGBoostCtor>;
+    xgboostLoader = modulePromise;
+  }
+  return xgboostLoader;
+}
+
+async function trainXGBoostForecastModel(
+  values: number[],
+): Promise<XGBoostForecastModel | null> {
+  const samples = createTrainingSet(values);
+  if (samples.length < MIN_TRAIN_SAMPLES) {
+    return null;
+  }
+
+  const X = samples.map((sample) => sample.features);
+  const y = samples.map((sample) => Math.log1p(sample.target));
+  const XGBoost = await getXGBoostCtor();
+  const booster = new XGBoost(XGB_PARAMS);
+
+  try {
+    booster.train(X, y);
+    return {
+      modelType: 'xgboost',
+      featureNames: baseFeatureNames(),
+      lagDays: [...MODEL_LAG_DAYS],
+      targetTransform: 'log1p',
+      trainedSamples: samples.length,
+      trainedAt: new Date().toISOString(),
+      params: XGB_PARAMS,
+      booster: booster.toJSON(),
+    };
+  } finally {
+    booster.free();
+  }
+}
+
+async function predictFromModel(
+  values: number[],
+  horizon: number,
+  model: XGBoostForecastModel | null,
+): Promise<number[]> {
   if (values.length === 0) {
     return Array.from({ length: horizon }, () => 0);
   }
 
-  if (values.length < 10) {
-    const avg = Math.round(movingAverage(values, Math.min(7, values.length)));
-    return Array.from({ length: horizon }, () => Math.max(0, avg));
+  if (!model) {
+    return fallbackForecast(values, horizon);
   }
 
-  const trend = linearTrend(values);
-  const ewma = exponentialSmoothing(values, 0.35);
-  const ma7 = movingAverage(values, 7);
-  const seasonality = weekdaySeasonalityFactors(values);
+  const XGBoost = await getXGBoostCtor();
+  const booster = XGBoost.load(model.booster);
+  const history = [...values];
+  const predictions: number[] = [];
 
-  const forecast: number[] = [];
-  for (let i = 1; i <= horizon; i += 1) {
-    const x = values.length + i;
-    const trendValue = trend.intercept + trend.slope * x;
-    const seasonalFactor = seasonality[(x - 1) % 7];
-    const blended =
-      (0.5 * trendValue + 0.3 * ewma + 0.2 * ma7) * seasonalFactor;
-    forecast.push(Math.max(0, Math.round(blended)));
+  try {
+    for (let step = 0; step < horizon; step += 1) {
+      const targetIndex = history.length;
+      const features = buildFeatureVector(history, targetIndex);
+      const prediction = booster.predict([features]);
+      const raw = Number(prediction[0] ?? 0);
+      const next = Math.max(0, Math.round(Math.expm1(raw)));
+      predictions.push(next);
+      history.push(next);
+    }
+  } finally {
+    booster.free();
   }
 
-  return forecast;
+  return predictions;
 }
 
 function buildTrend(last7Avg: number, next7: number[]): 'up' | 'down' {
@@ -231,13 +313,12 @@ function evaluateForecast(
   let absErrorSum = 0;
   let absPctErrorSum = 0;
   let pctCount = 0;
-  const MAPE_MIN_THRESHOLD = 5; // Only count MAPE for values >= 5 to avoid noise from tiny values
+  const MAPE_MIN_THRESHOLD = 5;
 
   for (let i = 0; i < actual.length; i += 1) {
     const a = actual[i];
     const p = predicted[i];
     absErrorSum += Math.abs(a - p);
-    // Only count % error for meaningful values (>= threshold) to avoid huge % errors on tiny counts
     if (a >= MAPE_MIN_THRESHOLD) {
       absPctErrorSum += Math.abs((a - p) / a) * 100;
       pctCount += 1;
@@ -250,14 +331,14 @@ function evaluateForecast(
   };
 }
 
-function rollingBacktest(
+async function rollingBacktest(
   values: number[],
   horizon: number,
   windows: number,
-): {
+): Promise<{
   mae: number | null;
   mape: number | null;
-} {
+}> {
   if (values.length < horizon * 2) {
     return { mae: null, mape: null };
   }
@@ -274,8 +355,10 @@ function rollingBacktest(
 
     const train = values.slice(0, start);
     const actual = values.slice(start, end);
-    const predicted = blendedForecast(train, horizon);
+    const model = await trainXGBoostForecastModel(train);
+    const predicted = await predictFromModel(train, horizon, model);
     const score = evaluateForecast(actual, predicted);
+
     if (score.mae !== null) {
       maeScores.push(score.mae);
     }
@@ -309,7 +392,6 @@ function confidenceScore(mape: number | null): number {
     return 50;
   }
 
-  // Heuristic confidence based on forecasting error.
   const score = 100 - mape;
   return Math.max(10, Math.min(95, Math.round(score)));
 }
@@ -391,8 +473,10 @@ async function run() {
     );
 
     const records: ForecastRecord[] = [];
+    const trainedModels: ModelRecord[] = [];
     const validMae: number[] = [];
     const validMape: number[] = [];
+
     for (const contentId of contentIds) {
       const content = contentMap.get(contentId);
       if (!content) {
@@ -409,11 +493,17 @@ async function run() {
       const last7 = values.slice(-7);
       const last7Avg =
         last7.reduce((acc, x) => acc + x, 0) / Math.max(1, last7.length);
-      const next7DaysViews = blendedForecast(values, HORIZON_DAYS);
+
+      const trainedModel = await trainXGBoostForecastModel(values);
+      const next7DaysViews = await predictFromModel(
+        values,
+        HORIZON_DAYS,
+        trainedModel,
+      );
       const totalForecast7d = next7DaysViews.reduce((acc, x) => acc + x, 0);
       const predictedTrend = buildTrend(last7Avg, next7DaysViews);
 
-      const rollingEval = rollingBacktest(
+      const rollingEval = await rollingBacktest(
         values,
         HORIZON_DAYS,
         ROLLING_BACKTEST_WINDOWS,
@@ -428,6 +518,13 @@ async function run() {
       if (mape !== null) {
         validMape.push(mape);
       }
+
+      trainedModels.push({
+        contentId,
+        title: content.title,
+        contentType: content.type,
+        model: trainedModel,
+      });
 
       records.push({
         contentId,
@@ -449,6 +546,7 @@ async function run() {
     const outputDir = resolve('exports/analytics');
     mkdirSync(outputDir, { recursive: true });
     const outputPath = resolve(outputDir, 'view-forecast.json');
+    const modelPath = resolve(outputDir, 'view-forecast-models.json');
 
     writeFileSync(
       outputPath,
@@ -460,8 +558,14 @@ async function run() {
           backtestWindows: ROLLING_BACKTEST_WINDOWS,
           totalContents: records.length,
           model: {
-            name: 'blended-trend-seasonal-v2',
-            components: ['linear-trend', 'ewma', 'ma7', 'weekday-seasonality'],
+            name: 'xgboost-gbtree-v1',
+            targetTransform: 'log1p',
+            features: baseFeatureNames(),
+            lagDays: MODEL_LAG_DAYS,
+            training: {
+              minSamples: MIN_TRAIN_SAMPLES,
+              ...XGB_PARAMS,
+            },
           },
           metrics: {
             mae:
@@ -490,7 +594,25 @@ async function run() {
       'utf8',
     );
 
+    writeFileSync(
+      modelPath,
+      JSON.stringify(
+        {
+          generatedAt: new Date().toISOString(),
+          lookbackDays: LOOKBACK_DAYS,
+          horizonDays: HORIZON_DAYS,
+          modelName: 'xgboost-gbtree-v1',
+          features: baseFeatureNames(),
+          records: trainedModels,
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    );
+
     console.log(`ML forecast generated successfully at ${outputPath}`);
+    console.log(`ML model artifacts saved at ${modelPath}`);
     console.log(`Forecast records: ${records.length}`);
   } finally {
     await contentClient.end();

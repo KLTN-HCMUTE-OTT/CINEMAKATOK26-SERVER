@@ -5,12 +5,14 @@ import { PaginationQueryDto } from '@app/common/utils/dto/pagination-query.dto';
 
 import { AnalyticsService } from '../service/analytics.service';
 import { ForecastTrainingScheduler } from '../scheduler/forecast-training.scheduler';
+import { ChurnTrainingScheduler } from '../scheduler/churn-training.scheduler';
 
 @Controller()
 export class AnalyticsController {
   constructor(
     private readonly analyticsService: AnalyticsService,
     private readonly forecastScheduler: ForecastTrainingScheduler,
+    private readonly churnScheduler: ChurnTrainingScheduler,
   ) {}
 
   @MessagePattern({ cmd: 'analytics.getMoviesStats' })
@@ -51,5 +53,15 @@ export class AnalyticsController {
   @MessagePattern({ cmd: 'analytics.retrainForecast' })
   async retrainForecast() {
     return this.forecastScheduler.manualRetrain();
+  }
+
+  @MessagePattern({ cmd: 'analytics.getChurnPrediction' })
+  getChurnPrediction(@Payload() query: PaginationQueryDto) {
+    return this.analyticsService.getChurnPrediction(query || {});
+  }
+
+  @MessagePattern({ cmd: 'analytics.retrainChurnPrediction' })
+  async retrainChurnPrediction() {
+    return this.churnScheduler.manualRetrain();
   }
 }
