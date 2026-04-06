@@ -19,13 +19,7 @@
       "weekday_sin",
       "weekday_cos"
     ],
-    "lagDays": [
-      1,
-      2,
-      3,
-      7,
-      14
-    ],
+    "lagDays": [1, 2, 3, 7, 14],
     "training": {
       "minSamples": 10,
       "booster": "gbtree",
@@ -171,15 +165,7 @@
         }
       ],
       "last7Avg": 43.86,
-      "next7DaysViews": [
-        39,
-        63,
-        43,
-        41,
-        47,
-        55,
-        41
-      ],
+      "next7DaysViews": [39, 63, 43, 41, 47, 55, 41],
       "totalForecast7d": 329,
       "predictedTrend": "up",
       "mae": 8.1905,
@@ -313,15 +299,7 @@
         }
       ],
       "last7Avg": 71.71,
-      "next7DaysViews": [
-        1,
-        1,
-        1,
-        78,
-        1,
-        78,
-        69
-      ],
+      "next7DaysViews": [1, 1, 1, 78, 1, 78, 69],
       "totalForecast7d": 229,
       "predictedTrend": "down",
       "mae": 13.8571,
@@ -455,15 +433,7 @@
         }
       ],
       "last7Avg": 35.14,
-      "next7DaysViews": [
-        35,
-        39,
-        1,
-        38,
-        38,
-        1,
-        38
-      ],
+      "next7DaysViews": [35, 39, 1, 38, 38, 1, 38],
       "totalForecast7d": 190,
       "predictedTrend": "down",
       "mae": 7.1905,
