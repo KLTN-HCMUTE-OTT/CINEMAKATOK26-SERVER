@@ -116,7 +116,7 @@ export class AuthService {
       };
     } catch (error) {
       console.error('Social login error:', error);
-      const message = error.message?.toLowerCase() || '';
+      const message = error instanceof Error ? error.message.toLowerCase() : '';
       if (message.includes('invalid') && message.includes('token')) {
         throw new InvalidCredentialsError('Invalid social access token');
       }
@@ -166,7 +166,17 @@ export class AuthService {
 
       if (hasUpdates) {
         await firstValueFrom(
-          this.userClient.send({ cmd: 'user.update' }, user),
+          this.userClient.send(
+            { cmd: 'user.updateUser' },
+            {
+              userId: user.id,
+              updateUserRequest: {
+                avatar: socialUser.picture,
+                providerId: socialUser.id,
+                isEmailVerified: !!socialUser.email,
+              } as any,
+            },
+          ),
         );
       }
       return user;

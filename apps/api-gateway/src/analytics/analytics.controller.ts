@@ -1,7 +1,6 @@
 import { firstValueFrom } from 'rxjs';
 
 import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
-import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
