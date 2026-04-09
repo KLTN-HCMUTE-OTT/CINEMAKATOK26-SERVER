@@ -2,16 +2,50 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { HttpResponseInterceptor, HttpLoggingInterceptor } from '@app/common/interceptors';
+import {
+  HttpResponseInterceptor,
+  HttpLoggingInterceptor,
+} from '@app/common/interceptors';
 import { GatewayExceptionFilter } from './filters/gateway-exception.filter';
 import { Reflector } from '@nestjs/core';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const defaultClientOrigins = [
+    'http://localhost:3001',
+    'http://localhost:3010',
+    'http://127.0.0.1:3001',
+    'http://127.0.0.1:3010',
+  ];
+
+  const configuredOrigins = (process.env.CLIENT_ORIGIN ?? '')
+    .split(',')
+    .map((origin) =>
+      origin
+        .trim()
+        .replace(/^['\"]|['\"]$/g, '')
+        .replace(/\/$/, ''),
+    )
+    .filter(Boolean);
+
+  const allowedOrigins = Array.from(
+    new Set([...defaultClientOrigins, ...configuredOrigins]),
+  );
+
   // CORS — allow Next.js frontend
   app.enableCors({
-    origin: process.env.CLIENT_ORIGIN ?? 'http://localhost:3001',
+    origin: (origin, callback) => {
+      // Allow tools like Postman/curl that don't send Origin.
+      const normalizedOrigin = origin?.replace(/\/$/, '');
+
+      if (!normalizedOrigin || allowedOrigins.includes(normalizedOrigin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS blocked for origin: ${origin}`), false);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -42,7 +76,9 @@ async function bootstrap() {
   // Swagger
   const config = new DocumentBuilder()
     .setTitle('CinemaKatoK API Gateway')
-    .setDescription('OTT Platform API — single entry point for all client requests')
+    .setDescription(
+      'OTT Platform API — single entry point for all client requests',
+    )
     .setVersion('1.0')
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
