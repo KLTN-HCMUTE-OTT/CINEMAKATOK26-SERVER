@@ -8,6 +8,7 @@ import {
   Post,
   Put,
   Query,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -174,6 +175,25 @@ export class ContentsController {
     return ResponseBuilder.createResponse({
       data: null,
       message: 'Content deleted successfully',
+    });
+  }
+
+  @Patch(':id/view')
+  @ApiOperation({ summary: 'Increase view count for a content' })
+  @ApiResponse({
+    status: 200,
+    description: 'View count increased successfully',
+    type: ApiResponseDto(Boolean),
+  })
+  @ApiNotFoundResponse({
+    description: 'Content not found',
+  })
+  async increaseViewCount(@Param('id', new ParseUUIDPipe()) id: string) {
+    const result = await firstValueFrom(this.contentService.increaseViewCount(id));
+
+    return ResponseBuilder.createResponse({
+      data: result,
+      message: 'View count increased successfully',
     });
   }
 }

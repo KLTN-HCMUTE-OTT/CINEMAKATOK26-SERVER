@@ -39,6 +39,12 @@ export class ContentService {
       .send({ cmd: 'content.deleteContent' }, { id })
       .pipe(catchRpcError());
   }
+
+  increaseViewCount(id: string): Observable<any> {
+    return this.contentClient
+      .send({ cmd: 'content.increaseViewCount' }, { id })
+      .pipe(catchRpcError());
+  }
   // ========================= MOVIES =========================
   getMovies(query: Record<string, any>): Observable<any> {
     return this.contentClient

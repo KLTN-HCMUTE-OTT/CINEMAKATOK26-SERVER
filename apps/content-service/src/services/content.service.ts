@@ -248,7 +248,7 @@ export class ContentService {
   /**
    * Increase view count for content
    */
-  async increaseViewCount(id: string): Promise<void> {
+  async increaseViewCount(id: string): Promise<boolean> {
     const content = await this.findContentById(id);
 
     await this.contentRepository.update(
@@ -262,6 +262,7 @@ export class ContentService {
     //   userId: 'System', // System-generated view count increase
     //   description: `View count increased for content: ${content.title} (ID: ${id})`,
     // });
+    return true;
   }
 
   async getIdOfTVOrMovie(contentId: string): Promise<string> {
