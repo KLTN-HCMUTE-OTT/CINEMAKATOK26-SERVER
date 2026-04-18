@@ -1,6 +1,6 @@
 import type { Cache } from 'cache-manager';
 import { firstValueFrom } from 'rxjs';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 import { Repository } from 'typeorm';
 
@@ -53,7 +53,7 @@ export class AuditLogService {
     let sessionId = await this.cacheManager.get<string>(sessionKey);
 
     if (!sessionId) {
-      sessionId = uuidv4();
+      sessionId = randomUUID();
     }
 
     await this.cacheManager.set(sessionKey, sessionId, 1800000);
