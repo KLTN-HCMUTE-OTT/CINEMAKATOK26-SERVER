@@ -27,6 +27,7 @@ import { firstValueFrom } from 'rxjs';
 import { Public } from '@app/common/decorators/public.decorator';
 import { IsAdminGuard, JwtAuthGuard } from '@app/common/guards';
 import {
+  ApiResponseDto,
   PaginatedApiResponseDto,
   ResponseBuilder,
 } from '@app/common/utils/dto';
@@ -100,7 +101,7 @@ export class VideosController {
   @ApiResponse({
     status: 200,
     description: 'Video detail retrieved successfully',
-    type: VideoDto,
+    type: ApiResponseDto(VideoDto),
   })
   @ApiNotFoundResponse({ description: 'Video not found' })
   async getVideoById(@Param('id', new ParseUUIDPipe()) id: string) {
@@ -120,7 +121,7 @@ export class VideosController {
   @ApiResponse({
     status: 201,
     description: 'Video created successfully',
-    type: VideoDto,
+    type: ApiResponseDto(VideoDto),
   })
   @ApiBadRequestResponse({ description: 'Invalid input' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
@@ -143,7 +144,7 @@ export class VideosController {
   @ApiResponse({
     status: 200,
     description: 'Video updated successfully',
-    type: VideoDto,
+    type: ApiResponseDto(VideoDto),
   })
   @ApiBadRequestResponse({ description: 'Invalid input' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })

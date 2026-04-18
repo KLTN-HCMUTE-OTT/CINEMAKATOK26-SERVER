@@ -249,7 +249,7 @@ export class TvSeriesController {
   @ApiResponse({
     status: 200,
     description: 'TV series detail retrieved successfully',
-    type: TVSeriesDto,
+    type: ApiResponseDto(TVSeriesDto),
   })
   @ApiNotFoundResponse({ description: 'TV series not found' })
   async getTvSeriesById(@Param('id', new ParseUUIDPipe()) id: string) {
@@ -271,7 +271,7 @@ export class TvSeriesController {
   @ApiResponse({
     status: 201,
     description: 'TV series created successfully',
-    type: TVSeriesDto,
+    type: ApiResponseDto(TVSeriesDto),
   })
   @ApiBadRequestResponse({ description: 'Invalid input' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
@@ -296,7 +296,7 @@ export class TvSeriesController {
   @ApiResponse({
     status: 200,
     description: 'TV series updated successfully',
-    type: TVSeriesDto,
+    type: ApiResponseDto(TVSeriesDto),
   })
   @ApiBadRequestResponse({ description: 'Invalid input' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })

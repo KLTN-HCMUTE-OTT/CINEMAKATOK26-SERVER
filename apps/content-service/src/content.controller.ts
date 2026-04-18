@@ -68,6 +68,11 @@ export class ContentController {
     return this.contentService.findAll(query);
   }
 
+  @MessagePattern({ cmd: 'content.increaseViewCount' })
+  increaseViewCount(@Payload() payload: { id: string }) {
+    return this.contentService.increaseViewCount(payload.id);
+  }
+
   @MessagePattern({ cmd: 'content.getContentById' })
   getContentById(@Payload() payload: { id: string }) {
     return this.contentService.findContentById(payload.id);
