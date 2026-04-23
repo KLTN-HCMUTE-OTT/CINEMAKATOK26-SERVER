@@ -127,6 +127,7 @@ export class TagService {
 
     // Then delete the tag itself
     const result = await this.tagRepository.delete(id);
+    console.log('Delete result:', result);
     if (result.affected === 0) {
       this.throwTagNotFound();
     }

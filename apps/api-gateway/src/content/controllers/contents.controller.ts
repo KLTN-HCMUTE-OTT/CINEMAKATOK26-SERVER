@@ -24,10 +24,7 @@ import { plainToInstance } from 'class-transformer';
 import { firstValueFrom } from 'rxjs';
 
 import { Public } from '@app/common/decorators/public.decorator';
-import {
-  ApiResponseDto,
-  ResponseBuilder,
-} from '@app/common/utils/dto';
+import { ApiResponseDto, ResponseBuilder } from '@app/common/utils/dto';
 import {
   ContentDto,
   ContentFilterDto,
@@ -55,7 +52,9 @@ export class ContentsController {
     description: 'Invalid filter parameters',
   })
   async getContents(@Query() query: ContentFilterDto) {
-    const contents = await firstValueFrom(this.contentService.getContents(query));
+    const contents = await firstValueFrom(
+      this.contentService.getContents(query),
+    );
 
     return ResponseBuilder.createResponse({
       data: {
@@ -89,10 +88,14 @@ export class ContentsController {
     description: 'Content not found',
   })
   async getContentById(@Param('id', new ParseUUIDPipe()) id: string) {
-    const content = await firstValueFrom(this.contentService.getContentById(id));
+    const content = await firstValueFrom(
+      this.contentService.getContentById(id),
+    );
 
     return ResponseBuilder.createResponse({
-      data: plainToInstance(ContentDto, content, { excludeExtraneousValues: true }),
+      data: plainToInstance(ContentDto, content, {
+        excludeExtraneousValues: true,
+      }),
       message: 'Content retrieved successfully',
     });
   }
@@ -114,10 +117,14 @@ export class ContentsController {
     description: 'Forbidden - User does not have admin privileges',
   })
   async createContent(@Body() body: CreateContentDto) {
-    const result = await firstValueFrom(this.contentService.createContent(body));
+    const result = await firstValueFrom(
+      this.contentService.createContent(body),
+    );
 
     return ResponseBuilder.createResponse({
-      data: plainToInstance(ContentDto, result, { excludeExtraneousValues: true }),
+      data: plainToInstance(ContentDto, result, {
+        excludeExtraneousValues: true,
+      }),
       message: 'Content created successfully',
       statusCode: 201,
     });
@@ -146,10 +153,14 @@ export class ContentsController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: UpdateContentDto,
   ) {
-    const result = await firstValueFrom(this.contentService.updateContent(id, body));
+    const result = await firstValueFrom(
+      this.contentService.updateContent(id, body),
+    );
 
     return ResponseBuilder.createResponse({
-      data: plainToInstance(ContentDto, result, { excludeExtraneousValues: true }),
+      data: plainToInstance(ContentDto, result, {
+        excludeExtraneousValues: true,
+      }),
       message: 'Content updated successfully',
     });
   }
@@ -170,7 +181,9 @@ export class ContentsController {
     description: 'Forbidden - User does not have admin privileges',
   })
   async deleteContent(@Param('id', new ParseUUIDPipe()) id: string) {
-    await this.contentService.deleteContent(id);
+    await firstValueFrom(this.contentService.deleteContent(id), {
+      defaultValue: null,
+    });
 
     return ResponseBuilder.createResponse({
       data: null,
@@ -189,7 +202,9 @@ export class ContentsController {
     description: 'Content not found',
   })
   async increaseViewCount(@Param('id', new ParseUUIDPipe()) id: string) {
-    const result = await firstValueFrom(this.contentService.increaseViewCount(id));
+    const result = await firstValueFrom(
+      this.contentService.increaseViewCount(id),
+    );
 
     return ResponseBuilder.createResponse({
       data: result,

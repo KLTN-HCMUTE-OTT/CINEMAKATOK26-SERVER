@@ -66,13 +66,17 @@ export class DirectorsController {
     description: 'Search directors by name or nationality',
   })
   async getDirectors(@Query() query: PaginationQueryDto) {
-    const result = await firstValueFrom(this.contentService.getDirectors(query));
+    const result = await firstValueFrom(
+      this.contentService.getDirectors(query),
+    );
     const directors = result?.data ?? [];
     const total = result?.total ?? 0;
 
     return ResponseBuilder.createPaginatedResponse({
       data: directors.map((director: any) =>
-        plainToInstance(DirectorDto, director, { excludeExtraneousValues: true }),
+        plainToInstance(DirectorDto, director, {
+          excludeExtraneousValues: true,
+        }),
       ),
       totalItems: total,
       currentPage: query.page || 1,
@@ -97,7 +101,9 @@ export class DirectorsController {
 
     return ResponseBuilder.createResponse({
       data: (directors || []).map((director: any) =>
-        plainToInstance(DirectorDto, director, { excludeExtraneousValues: true }),
+        plainToInstance(DirectorDto, director, {
+          excludeExtraneousValues: true,
+        }),
       ),
       message: 'Directors retrieved successfully',
     });
@@ -112,10 +118,14 @@ export class DirectorsController {
     type: String,
   })
   async getDirectorById(@Param('id') id: string) {
-    const director = await firstValueFrom(this.contentService.getDirectorById(id));
+    const director = await firstValueFrom(
+      this.contentService.getDirectorById(id),
+    );
 
     const directorDetail = {
-      ...plainToInstance(DirectorDto, director, { excludeExtraneousValues: true }),
+      ...plainToInstance(DirectorDto, director, {
+        excludeExtraneousValues: true,
+      }),
       contents:
         director?.contents?.map((content: any) =>
           plainToInstance(
@@ -147,11 +157,15 @@ export class DirectorsController {
   @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiOperation({ summary: '[ADMIN] Create a new director' })
   async createDirector(@Body() body: CreateDirectorDto) {
-    const director = await firstValueFrom(this.contentService.createDirector(body));
+    const director = await firstValueFrom(
+      this.contentService.createDirector(body),
+    );
 
     return ResponseBuilder.createResponse({
       message: 'Director created successfully',
-      data: plainToInstance(DirectorDto, director, { excludeExtraneousValues: true }),
+      data: plainToInstance(DirectorDto, director, {
+        excludeExtraneousValues: true,
+      }),
     });
   }
 
@@ -163,12 +177,19 @@ export class DirectorsController {
     description: 'Director ID',
     type: String,
   })
-  async updateDirector(@Param('id') id: string, @Body() body: UpdateDirectorDto) {
-    const director = await firstValueFrom(this.contentService.updateDirector(id, body));
+  async updateDirector(
+    @Param('id') id: string,
+    @Body() body: UpdateDirectorDto,
+  ) {
+    const director = await firstValueFrom(
+      this.contentService.updateDirector(id, body),
+    );
 
     return ResponseBuilder.createResponse({
       message: 'Director updated successfully',
-      data: plainToInstance(DirectorDto, director, { excludeExtraneousValues: true }),
+      data: plainToInstance(DirectorDto, director, {
+        excludeExtraneousValues: true,
+      }),
     });
   }
 
@@ -181,7 +202,9 @@ export class DirectorsController {
     type: String,
   })
   async deleteDirector(@Param('id') id: string) {
-    await this.contentService.deleteDirector(id);
+    await firstValueFrom(this.contentService.deleteDirector(id), {
+      defaultValue: null,
+    });
 
     return ResponseBuilder.createResponse({
       message: 'Director deleted successfully',

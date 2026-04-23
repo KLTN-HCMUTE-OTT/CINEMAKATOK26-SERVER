@@ -203,7 +203,9 @@ export class ActorsController {
     type: String,
   })
   async deleteActor(@Param('id') id: string) {
-    await this.contentService.deleteActor(id);
+    await firstValueFrom(this.contentService.deleteActor(id), {
+      defaultValue: null,
+    });
 
     return ResponseBuilder.createResponse({
       message: 'Actor deleted successfully',
