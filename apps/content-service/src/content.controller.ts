@@ -138,7 +138,6 @@ export class ContentController {
     return this.tvSeriesService.findEpisodeById(payload.id);
   }
 
-
   @MessagePattern({ cmd: 'content.createMovie' })
   createMovie(@Payload() payload: CreateMovieDto) {
     return this.movieService.create(payload);

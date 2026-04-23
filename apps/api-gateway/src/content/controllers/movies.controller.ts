@@ -355,7 +355,9 @@ export class MoviesController {
     description: 'Forbidden - User does not have admin privileges',
   })
   async deleteMovie(@Param('id', new ParseUUIDPipe()) id: string) {
-    await this.contentService.deleteMovie(id);
+    await firstValueFrom(this.contentService.deleteMovie(id), {
+      defaultValue: null,
+    });
 
     return ResponseBuilder.createResponse({
       data: null,

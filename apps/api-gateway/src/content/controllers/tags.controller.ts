@@ -197,7 +197,10 @@ export class TagsController {
   @ApiForbiddenResponse({
     description: 'Forbidden - User does not have admin privileges',
   })
-  async updateTag(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: UpdateTagDto) {
+  async updateTag(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: UpdateTagDto,
+  ) {
     const tag = await firstValueFrom(this.contentService.updateTag(id, body));
 
     return ResponseBuilder.createResponse({
@@ -228,8 +231,9 @@ export class TagsController {
     description: 'Forbidden - User does not have admin privileges',
   })
   async deleteTag(@Param('id', new ParseUUIDPipe()) id: string) {
-    await this.contentService.deleteTag(id);
-
+    await firstValueFrom(this.contentService.deleteTag(id), {
+      defaultValue: null,
+    });
     return ResponseBuilder.createResponse({
       data: null,
       message: 'Tag deleted successfully',

@@ -41,6 +41,7 @@ import { PaginationQueryDto } from '@app/common/utils/dto/pagination-query.dto';
 
 import { UserService } from '../../user/user.service';
 import { ContentService } from '../content.service';
+import { fi } from 'zod/v4/locales';
 
 class CreateNewsBySessionDto extends OmitType(CreateNewsDto, [
   'author_name',
@@ -256,7 +257,9 @@ export class NewsController {
     description: 'Forbidden - User does not have admin privileges',
   })
   async deleteNews(@Param('id', new ParseUUIDPipe()) id: string) {
-    await this.contentService.deleteNews(id);
+    await firstValueFrom(this.contentService.deleteNews(id), {
+      defaultValue: null,
+    });
 
     return ResponseBuilder.createResponse({
       data: null,

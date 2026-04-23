@@ -329,7 +329,9 @@ export class TvSeriesController {
   @ApiForbiddenResponse({ description: 'Forbidden' })
   @ApiNotFoundResponse({ description: 'TV series not found' })
   async deleteTvSeries(@Param('id', new ParseUUIDPipe()) id: string) {
-    await this.contentService.deleteTvSeries(id);
+    await firstValueFrom(this.contentService.deleteTvSeries(id), {
+      defaultValue: null,
+    });
 
     return ResponseBuilder.createResponse({
       data: null,

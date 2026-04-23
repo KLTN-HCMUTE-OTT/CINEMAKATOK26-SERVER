@@ -273,7 +273,9 @@ export class CategoriesController {
     description: 'Forbidden - User does not have admin privileges',
   })
   async deleteCategory(@Param('id', new ParseUUIDPipe()) id: string) {
-    await this.contentService.deleteCategory(id);
+    await firstValueFrom(this.contentService.deleteCategory(id), {
+      defaultValue: null,
+    });
 
     return ResponseBuilder.createResponse({
       message: 'Category deleted successfully',

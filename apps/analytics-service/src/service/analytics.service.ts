@@ -1,9 +1,6 @@
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
-import { existsSync, readFileSync } from 'fs';
-import { resolve } from 'path';
-
 import { firstValueFrom } from 'rxjs';
 
 import { LOG_ACTION } from '@app/common/enums/log.enum';
@@ -113,9 +110,6 @@ export class AnalyticsService {
       const rawDirection = String(
         (parsed as Record<string, unknown>)[key] || 'DESC',
       ).toUpperCase();
-      const rawDirection = String(
-        (parsed as Record<string, unknown>)[key] || 'DESC',
-      ).toUpperCase();
       return {
         key,
         direction: rawDirection === 'ASC' ? 'ASC' : 'DESC',
@@ -157,10 +151,6 @@ export class AnalyticsService {
     return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
   }
 
-  private paginate<T>(
-    items: T[],
-    query: PaginationQueryDto,
-  ): { data: T[]; total: number; page: number; limit: number } {
   private paginate<T>(
     items: T[],
     query: PaginationQueryDto,
@@ -213,10 +203,6 @@ export class AnalyticsService {
     items: T[],
     query: PaginationQueryDto,
   ): T[] {
-  private applySearch<T extends { title?: string }>(
-    items: T[],
-    query: PaginationQueryDto,
-  ): T[] {
     const searchTerm = this.parseSearch(query.search);
     if (!searchTerm) {
       return items;
@@ -225,14 +211,8 @@ export class AnalyticsService {
     return items.filter((item) =>
       (item.title || '').toLowerCase().includes(searchTerm),
     );
-    return items.filter((item) =>
-      (item.title || '').toLowerCase().includes(searchTerm),
-    );
   }
 
-  private sortStats<
-    T extends { title?: string; views: number; change: string },
-  >(items: T[], query: PaginationQueryDto): T[] {
   private sortStats<
     T extends { title?: string; views: number; change: string },
   >(items: T[], query: PaginationQueryDto): T[] {
@@ -245,23 +225,12 @@ export class AnalyticsService {
           this.parseChangeToNumber(b.change) -
           this.parseChangeToNumber(a.change),
       );
-      sorted.sort(
-        (a, b) =>
-          this.parseChangeToNumber(b.change) -
-          this.parseChangeToNumber(a.change),
-      );
       return sorted;
     }
 
     const direction = sort.direction === 'DESC' ? 1 : -1;
 
     if (sort.key === 'change') {
-      sorted.sort(
-        (a, b) =>
-          direction *
-          (this.parseChangeToNumber(b.change) -
-            this.parseChangeToNumber(a.change)),
-      );
       sorted.sort(
         (a, b) =>
           direction *
@@ -280,24 +249,12 @@ export class AnalyticsService {
       sorted.sort(
         (a, b) => direction * (b.title || '').localeCompare(a.title || ''),
       );
-      sorted.sort(
-        (a, b) => direction * (b.title || '').localeCompare(a.title || ''),
-      );
       return sorted;
     }
 
     return sorted;
   }
 
-  private sortTrending<
-    T extends {
-      title: string;
-      views: number;
-      rating: number;
-      change: string;
-      engagement: number;
-    },
-  >(items: T[], query: PaginationQueryDto): T[] {
   private sortTrending<
     T extends {
       title: string;
@@ -317,24 +274,12 @@ export class AnalyticsService {
           this.parseChangeToNumber(b.change) -
           (a.engagement + this.parseChangeToNumber(a.change)),
       );
-      sorted.sort(
-        (a, b) =>
-          b.engagement +
-          this.parseChangeToNumber(b.change) -
-          (a.engagement + this.parseChangeToNumber(a.change)),
-      );
       return sorted;
     }
 
     const direction = sort.direction === 'DESC' ? 1 : -1;
 
     if (sort.key === 'change') {
-      sorted.sort(
-        (a, b) =>
-          direction *
-          (this.parseChangeToNumber(b.change) -
-            this.parseChangeToNumber(a.change)),
-      );
       sorted.sort(
         (a, b) =>
           direction *
@@ -479,10 +424,6 @@ export class AnalyticsService {
           { data: T[]; total: number },
           Record<string, number>
         >({ cmd: command }, { page, limit }),
-        this.contentClient.send<
-          { data: T[]; total: number },
-          Record<string, number>
-        >({ cmd: command }, { page, limit }),
       );
 
       const batch = response?.data || [];
@@ -506,10 +447,6 @@ export class AnalyticsService {
           { result: AuditLogRecord[]; total: number },
           Record<string, number>
         >({ cmd: 'get_audit_logs' }, { page, limit }),
-        this.auditClient.send<
-          { result: AuditLogRecord[]; total: number },
-          Record<string, number>
-        >({ cmd: 'get_audit_logs' }, { page, limit }),
       );
 
       const batch = response?.result || [];
@@ -521,10 +458,6 @@ export class AnalyticsService {
     return allLogs;
   }
 
-  private calculateTrending(
-    contentId: string,
-    logs: AuditLogRecord[],
-  ): { trending: TrendDirection; change: string } {
   private calculateTrending(
     contentId: string,
     logs: AuditLogRecord[],
@@ -565,10 +498,6 @@ export class AnalyticsService {
     };
   }
 
-  private calculateCategoryTrending(
-    contentIds: string[],
-    logs: AuditLogRecord[],
-  ): { trending: TrendDirection; change: string } {
   private calculateCategoryTrending(
     contentIds: string[],
     logs: AuditLogRecord[],
@@ -614,10 +543,6 @@ export class AnalyticsService {
     };
   }
 
-  private calculateEngagement(
-    contentId: string,
-    logs: AuditLogRecord[],
-  ): number {
   private calculateEngagement(
     contentId: string,
     logs: AuditLogRecord[],
@@ -690,14 +615,8 @@ export class AnalyticsService {
       (sum, item) => sum + item.views,
       0,
     );
-    const totalViews = paginated.data.reduce(
-      (sum, item) => sum + item.views,
-      0,
-    );
     const data = paginated.data.map((item) => ({
       ...item,
-      percentage:
-        totalViews > 0 ? Math.round((item.views / totalViews) * 100) : 0,
       percentage:
         totalViews > 0 ? Math.round((item.views / totalViews) * 100) : 0,
     }));
@@ -742,14 +661,8 @@ export class AnalyticsService {
       (sum, item) => sum + item.views,
       0,
     );
-    const totalViews = paginated.data.reduce(
-      (sum, item) => sum + item.views,
-      0,
-    );
     const data = paginated.data.map((item) => ({
       ...item,
-      percentage:
-        totalViews > 0 ? Math.round((item.views / totalViews) * 100) : 0,
       percentage:
         totalViews > 0 ? Math.round((item.views / totalViews) * 100) : 0,
     }));
@@ -785,17 +698,6 @@ export class AnalyticsService {
           sum + Number(content?.viewCount || 0),
         0,
       );
-      const contents = Array.isArray(category?.contents)
-        ? category.contents
-        : [];
-      const contentIds = contents
-        .map((content: Record<string, any>) => String(content?.id || ''))
-        .filter(Boolean);
-      const views = contents.reduce(
-        (sum: number, content: Record<string, any>) =>
-          sum + Number(content?.viewCount || 0),
-        0,
-      );
       const trendingData = this.calculateCategoryTrending(contentIds, logs);
 
       return {
@@ -816,14 +718,8 @@ export class AnalyticsService {
       (sum, item) => sum + item.views,
       0,
     );
-    const totalViews = paginated.data.reduce(
-      (sum, item) => sum + item.views,
-      0,
-    );
     const data = paginated.data.map((item) => ({
       ...item,
-      percentage:
-        totalViews > 0 ? Math.round((item.views / totalViews) * 100) : 0,
       percentage:
         totalViews > 0 ? Math.round((item.views / totalViews) * 100) : 0,
     }));
@@ -855,10 +751,6 @@ export class AnalyticsService {
       return {
         id: String(movie?.id || ''),
         title: String(movie?.metaData?.title || 'Unknown'),
-        poster: String(
-          movie?.metaData?.thumbnail ||
-            'https://via.placeholder.com/50x75?text=Movie',
-        ),
         poster: String(
           movie?.metaData?.thumbnail ||
             'https://via.placeholder.com/50x75?text=Movie',
@@ -906,10 +798,6 @@ export class AnalyticsService {
           series?.metaData?.thumbnail ||
             'https://via.placeholder.com/50x75?text=TV',
         ),
-        poster: String(
-          series?.metaData?.thumbnail ||
-            'https://via.placeholder.com/50x75?text=TV',
-        ),
         rating: Number(series?.metaData?.avgRating || 0),
         views: Number(series?.metaData?.viewCount || 0),
         trend: trendingData.trending,
@@ -934,12 +822,6 @@ export class AnalyticsService {
     };
     userMetrics: {
       dau: Array<{ day: string; users: number; trend: TrendDirection }>;
-      mau: Array<{
-        month: string;
-        users: number;
-        trend: TrendDirection;
-        change: string;
-      }>;
       mau: Array<{
         month: string;
         users: number;
@@ -971,10 +853,6 @@ export class AnalyticsService {
       LOG_ACTION.CREATE_USER,
       LOG_ACTION.USER_REGISTRATION,
     ];
-    const registrationActions = [
-      LOG_ACTION.CREATE_USER,
-      LOG_ACTION.USER_REGISTRATION,
-    ];
     const newUsers = this.countDistinctUsers(logs, (log) => {
       const createdAt = this.toDate(log.createdAt);
       return (
@@ -998,20 +876,8 @@ export class AnalyticsService {
 
     const dau: Array<{ day: string; users: number; trend: TrendDirection }> =
       [];
-    const dau: Array<{ day: string; users: number; trend: TrendDirection }> =
-      [];
     for (let i = 6; i >= 0; i -= 1) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      const startOfDay = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate(),
-      );
-      const endOfDay = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate() + 1,
-      );
       const startOfDay = new Date(
         date.getFullYear(),
         date.getMonth(),
@@ -1048,12 +914,6 @@ export class AnalyticsService {
       trend: TrendDirection;
       change: string;
     }> = [];
-    const mau: Array<{
-      month: string;
-      users: number;
-      trend: TrendDirection;
-      change: string;
-    }> = [];
     const currentMonth = now.getMonth();
     for (let i = 0; i <= currentMonth; i += 1) {
       const monthStart = new Date(now.getFullYear(), i, 1);
@@ -1077,12 +937,6 @@ export class AnalyticsService {
               ((usersCount - prevUsers) / prevUsers) * 100,
             )
           : '+0.0%';
-      const change =
-        prevUsers > 0
-          ? this.formatChangePercent(
-              ((usersCount - prevUsers) / prevUsers) * 100,
-            )
-          : '+0.0%';
       mau.push({
         month: monthStart.toLocaleDateString('en-US', { month: 'long' }),
         users: usersCount,
@@ -1096,19 +950,9 @@ export class AnalyticsService {
       rate: number;
       trend: TrendDirection;
     }> = [];
-    const churnRateMetrics: Array<{
-      month: string;
-      rate: number;
-      trend: TrendDirection;
-    }> = [];
     for (let i = 3; i >= 0; i -= 1) {
       const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-      const prevMonthStart = new Date(
-        now.getFullYear(),
-        now.getMonth() - i - 1,
-        1,
-      );
       const prevMonthStart = new Date(
         now.getFullYear(),
         now.getMonth() - i - 1,
@@ -1138,14 +982,6 @@ export class AnalyticsService {
         );
       });
 
-      const rate =
-        activePrevMonth > 0
-          ? ((activePrevMonth - activeThisMonth) / activePrevMonth) * 100
-          : 0;
-      const previousRate =
-        churnRateMetrics.length > 0
-          ? churnRateMetrics[churnRateMetrics.length - 1].rate
-          : rate;
       const rate =
         activePrevMonth > 0
           ? ((activePrevMonth - activeThisMonth) / activePrevMonth) * 100
