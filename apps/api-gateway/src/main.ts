@@ -18,7 +18,6 @@ async function bootstrap() {
     'http://localhost:3011',
     'http://127.0.0.1:3001',
     'http://127.0.0.1:3010',
-    'http://127.0.0.1:3011',
     'http://localhost:3000',
     'http://localhost:3003',
     'http://127.0.0.1:3000',

@@ -718,6 +718,7 @@ export class AnalyticsService {
       (sum, item) => sum + item.views,
       0,
     );
+
     const data = paginated.data.map((item) => ({
       ...item,
       percentage:

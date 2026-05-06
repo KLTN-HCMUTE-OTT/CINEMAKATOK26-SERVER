@@ -202,9 +202,7 @@ export class ContentsController {
     description: 'Content not found',
   })
   async increaseViewCount(@Param('id', new ParseUUIDPipe()) id: string) {
-    const result = await firstValueFrom(
-      this.contentService.increaseViewCount(id),
-    );
+    const result = await firstValueFrom(this.contentService.increaseViewCount(id));
 
     return ResponseBuilder.createResponse({
       data: result,
