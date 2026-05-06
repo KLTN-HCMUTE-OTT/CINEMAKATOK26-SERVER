@@ -211,9 +211,6 @@ export class AnalyticsService {
     return items.filter((item) =>
       (item.title || '').toLowerCase().includes(searchTerm),
     );
-    return items.filter((item) =>
-      (item.title || '').toLowerCase().includes(searchTerm),
-    );
   }
 
   private sortStats<
@@ -223,11 +220,6 @@ export class AnalyticsService {
     const sort = this.parseSort(query.sort);
 
     if (!sort) {
-      sorted.sort(
-        (a, b) =>
-          this.parseChangeToNumber(b.change) -
-          this.parseChangeToNumber(a.change),
-      );
       sorted.sort(
         (a, b) =>
           this.parseChangeToNumber(b.change) -
@@ -245,12 +237,6 @@ export class AnalyticsService {
           (this.parseChangeToNumber(b.change) -
             this.parseChangeToNumber(a.change)),
       );
-      sorted.sort(
-        (a, b) =>
-          direction *
-          (this.parseChangeToNumber(b.change) -
-            this.parseChangeToNumber(a.change)),
-      );
       return sorted;
     }
 
@@ -260,9 +246,6 @@ export class AnalyticsService {
     }
 
     if (sort.key === 'title') {
-      sorted.sort(
-        (a, b) => direction * (b.title || '').localeCompare(a.title || ''),
-      );
       sorted.sort(
         (a, b) => direction * (b.title || '').localeCompare(a.title || ''),
       );
@@ -291,24 +274,12 @@ export class AnalyticsService {
           this.parseChangeToNumber(b.change) -
           (a.engagement + this.parseChangeToNumber(a.change)),
       );
-      sorted.sort(
-        (a, b) =>
-          b.engagement +
-          this.parseChangeToNumber(b.change) -
-          (a.engagement + this.parseChangeToNumber(a.change)),
-      );
       return sorted;
     }
 
     const direction = sort.direction === 'DESC' ? 1 : -1;
 
     if (sort.key === 'change') {
-      sorted.sort(
-        (a, b) =>
-          direction *
-          (this.parseChangeToNumber(b.change) -
-            this.parseChangeToNumber(a.change)),
-      );
       sorted.sort(
         (a, b) =>
           direction *
