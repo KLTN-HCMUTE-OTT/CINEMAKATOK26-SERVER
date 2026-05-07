@@ -1,0 +1,124 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
+
+import {
+  EntitySubscription,
+  SubscriptionPlan,
+  SubscriptionStatus,
+} from '../entities/subscription.entity';
+
+@Injectable()
+export class SubscriptionService {
+  private readonly logger = new Logger(SubscriptionService.name);
+
+  constructor(
+    @InjectRepository(EntitySubscription, 'order')
+    private readonly subscriptionRepo: Repository<EntitySubscription>,
+  ) {}
+
+  /**
+   * Check if a user has an active, non-expired subscription.
+   * Used by the DRM license server for entitlement validation.
+   */
+  async checkSubscription(
+    userId: string,
+  ): Promise<{ isActive: boolean; plan?: string; expiresAt?: Date }> {
+    const subscription = await this.subscriptionRepo.findOne({
+      where: {
+        userId,
+        status: SubscriptionStatus.ACTIVE,
+        expiresAt: MoreThanOrEqual(new Date()),
+      },
+      order: { expiresAt: 'DESC' },
+    });
+
+    if (!subscription) {
+      this.logger.debug(`No active subscription found for user ${userId}`);
+      return { isActive: false };
+    }
+
+    this.logger.debug(
+      `Active subscription found for user ${userId}: plan=${subscription.plan}, expires=${subscription.expiresAt}`,
+    );
+
+    return {
+      isActive: true,
+      plan: subscription.plan,
+      expiresAt: subscription.expiresAt,
+    };
+  }
+
+  /**
+   * Create or renew a subscription for a user.
+   * For the academic project, this is a simplified subscription creation.
+   */
+  async createSubscription(
+    userId: string,
+    plan: SubscriptionPlan = SubscriptionPlan.BASIC,
+    durationDays: number = 30,
+  ): Promise<EntitySubscription> {
+    // Check for existing active subscription
+    const existing = await this.subscriptionRepo.findOne({
+      where: {
+        userId,
+        status: SubscriptionStatus.ACTIVE,
+        expiresAt: MoreThanOrEqual(new Date()),
+      },
+    });
+
+    if (existing) {
+      this.logger.log(
+        `User ${userId} already has an active subscription until ${existing.expiresAt}`,
+      );
+      return existing;
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
+    const subscription = this.subscriptionRepo.create({
+      userId,
+      plan,
+      status: SubscriptionStatus.ACTIVE,
+      startsAt: now,
+      expiresAt,
+    });
+
+    const saved = await this.subscriptionRepo.save(subscription);
+    this.logger.log(
+      `Created ${plan} subscription for user ${userId}, expires ${expiresAt}`,
+    );
+
+    return saved;
+  }
+
+  /**
+   * Get the current subscription for a user.
+   */
+  async getSubscription(userId: string): Promise<EntitySubscription | null> {
+    return this.subscriptionRepo.findOne({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Cancel a user's subscription.
+   */
+  async cancelSubscription(userId: string): Promise<EntitySubscription | null> {
+    const subscription = await this.subscriptionRepo.findOne({
+      where: {
+        userId,
+        status: SubscriptionStatus.ACTIVE,
+      },
+    });
+
+    if (!subscription) {
+      return null;
+    }
+
+    subscription.status = SubscriptionStatus.CANCELLED;
+    return this.subscriptionRepo.save(subscription);
+  }
+}

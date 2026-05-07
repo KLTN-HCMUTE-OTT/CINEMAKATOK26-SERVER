@@ -12,13 +12,15 @@ import { spawn, spawnSync } from 'child_process';
 import { VIDEO_STATUS } from '@app/common/enums/global.enum';
 import { UpdateVideoDto } from '@app/common/dtos/content/video.dto';
 import { getConfig } from '@app/common/utils/get-config';
-import { processVideoHLS } from '@app/common/utils/hls/video-hls';
+import { processVideoDASH } from '@app/common/utils/dash/video-dash';
 import { NestFactory } from '@nestjs/core';
 
 import { StreamingModule } from '../streaming.module';
 import { ContentVideoService } from '../services/content-video.service';
 import { R2StorageService } from '../services/r2.service';
 import { S3Service } from '../services/s3.service';
+import { DrmKeyService } from '../services/drm-key.service';
+import { ShakaPackagerService } from '../services/shaka-packager.service';
 
 async function generateSpritesAndVTT(
   videoId: string,
@@ -156,36 +158,6 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-function resolveLocalOutputPaths(inputPath: string): {
-  fileName: string;
-  uploadBaseDir: string;
-  hlsDirectory: string;
-  masterPath: string;
-  thumbnailPath: string;
-} {
-  const fileName = path.parse(inputPath).name;
-  const configuredUploadDir = String(getConfig('uploadDir', 'uploads'));
-  const uploadBaseDir = path.isAbsolute(configuredUploadDir)
-    ? configuredUploadDir
-    : path.resolve(process.cwd(), configuredUploadDir);
-
-  const hlsDirectory = path.join(uploadBaseDir, 'videos', fileName);
-  const masterPath = path.join(hlsDirectory, 'master.m3u8');
-  const thumbnailPath = path.join(
-    uploadBaseDir,
-    'thumbnails',
-    `${fileName}.png`,
-  );
-
-  return {
-    fileName,
-    uploadBaseDir,
-    hlsDirectory,
-    masterPath,
-    thumbnailPath,
-  };
-}
-
 const resolveFfmpegExecutable = (): string => {
   // First try system ffmpeg
   try {
@@ -258,6 +230,8 @@ async function bootstrap() {
   const videoService = appContext.get(ContentVideoService);
   const s3Service = appContext.get(S3Service);
   const r2Service = appContext.get(R2StorageService);
+  const drmKeyService = appContext.get(DrmKeyService);
+  const shakaPackager = appContext.get(ShakaPackagerService);
 
   // ✅ Worker chạy với DI support
   const worker = new Worker(
@@ -270,129 +244,166 @@ async function bootstrap() {
       const isFinalAttempt = job.attemptsMade + 1 >= attempts;
 
       try {
-        // Xử lý HLS
-        console.log('📹 Processing HLS...');
-        const hlsResult = await processVideoHLS(inputPath);
-        console.log(`✅ HLS processing completed: ${hlsResult.videoUrl}`);
+        // ────────────────────────────────────────────────────────────────────
+        // STEP 1: Generate DRM encryption keys
+        // ────────────────────────────────────────────────────────────────────
+        console.log('🔑 Generating DRM keys...');
+        const drmKey = await drmKeyService.generateKeysForVideo(videoId);
+        console.log(
+          `✅ DRM keys ready: keyId=${drmKey.keyId.substring(0, 8)}...`,
+        );
 
-        const { hlsDirectory, masterPath, thumbnailPath } =
-          resolveLocalOutputPaths(inputPath);
+        // ────────────────────────────────────────────────────────────────────
+        // STEP 2: Transcode to fragmented MP4 (multiple bitrates + audio)
+        // ────────────────────────────────────────────────────────────────────
+        console.log('📹 Processing DASH (fragmented MP4)...');
+        const dashResult = await processVideoDASH(inputPath);
+        console.log(
+          `✅ DASH transcode completed: ${dashResult.videoPaths.length} variants + audio`,
+        );
 
-        // Upload thumbnail FIRST (before HLS files)
+        // ────────────────────────────────────────────────────────────────────
+        // STEP 3: Encrypt with Shaka Packager (CENC + DASH manifest)
+        // ────────────────────────────────────────────────────────────────────
+        console.log('🔒 Running Shaka Packager (CENC encryption)...');
+
+        const dashOutputDir = path.join(dashResult.outputDir, 'encrypted');
+        if (!fs.existsSync(dashOutputDir)) {
+          fs.mkdirSync(dashOutputDir, { recursive: true });
+        }
+
+        const mpdOutputPath = path.join(dashOutputDir, 'manifest.mpd');
+
+        // Build input descriptors for Shaka Packager
+        const shakaInputs = [
+          // Video variants
+          ...dashResult.videoPaths.map((videoPath, index) => ({
+            filePath: videoPath,
+            stream: 'video' as const,
+            outputPath: path.join(
+              dashOutputDir,
+              `video_${['1080p', '720p', '480p'][index] || index}.mp4`,
+            ),
+          })),
+          // Audio
+          {
+            filePath: dashResult.audioPath,
+            stream: 'audio' as const,
+            outputPath: path.join(dashOutputDir, 'audio.mp4'),
+          },
+        ];
+
+        const shakaResult = await shakaPackager.packageDash({
+          inputs: shakaInputs,
+          keyId: drmKey.keyId,
+          contentKey: drmKey.contentKey,
+          mpdOutputPath,
+        });
+
+        console.log(`✅ Shaka Packager completed: ${shakaResult.mpdPath}`);
+
+        // ────────────────────────────────────────────────────────────────────
+        // STEP 4: Upload thumbnail to R2
+        // ────────────────────────────────────────────────────────────────────
         let thumbnailUrl = '';
-        if (fs.existsSync(thumbnailPath)) {
+        if (fs.existsSync(dashResult.thumbnailPath)) {
           console.log('📸 Uploading thumbnail to R2...');
-          console.log(`   Source: ${thumbnailPath}`);
-
           try {
-            // ✅ FIX: Ensure R2 bucket name is valid
-            // Check your R2Service configuration for bucket name
             thumbnailUrl = await r2Service.uploadImage(
-              thumbnailPath,
+              dashResult.thumbnailPath,
               `videos/${videoId}/thumbnails`,
             );
             console.log(`✅ Uploaded thumbnail to R2: ${thumbnailUrl}`);
-
-            // Clean up local thumbnail after successful upload
-            await fsPromises.unlink(thumbnailPath);
-            console.log(`🗑️  Deleted local thumbnail: ${thumbnailPath}`);
+            await fsPromises.unlink(dashResult.thumbnailPath);
           } catch (error) {
             console.error('❌ Failed to upload thumbnail to R2:', error);
-            console.error('   Error details:', error.message);
-            // Keep configured thumbnail URL as fallback
-            thumbnailUrl = hlsResult.thumbnailUrl ?? '';
+            thumbnailUrl = '';
           }
         } else {
-          console.warn(`⚠️  Thumbnail file not found: ${thumbnailPath}`);
+          console.warn(
+            `⚠️  Thumbnail file not found: ${dashResult.thumbnailPath}`,
+          );
         }
 
-        // Upload HLS files to S3
-        console.log('☁️  Uploading HLS files to S3...');
-        const s3BaseKey = `videos/${videoId}/hls`;
+        // ────────────────────────────────────────────────────────────────────
+        // STEP 5: Upload encrypted DASH files to S3
+        // ────────────────────────────────────────────────────────────────────
+        console.log('☁️  Uploading encrypted DASH files to S3...');
+        const s3BaseKey = `videos/${videoId}/dash`;
 
-        if (!fs.existsSync(masterPath)) {
-          throw new Error(`HLS master file not found: ${masterPath}`);
-        }
-
-        // Upload master.m3u8
-        const masterFile = {
-          path: masterPath,
-          originalname: 'master.m3u8',
-          mimetype: 'application/vnd.apple.mpegurl',
-          size: fs.statSync(masterPath).size,
+        // Upload manifest.mpd
+        const mpdFile = {
+          path: mpdOutputPath,
+          originalname: 'manifest.mpd',
+          mimetype: 'application/dash+xml',
+          size: fs.statSync(mpdOutputPath).size,
         } as Express.Multer.File;
 
-        const masterResult = await s3Service.uploadLargeFile(
-          masterFile,
-          `${s3BaseKey}/master.m3u8`,
+        const mpdUploadResult = await s3Service.uploadLargeFile(
+          mpdFile,
+          `${s3BaseKey}/manifest.mpd`,
         );
-        console.log(`✅ Uploaded master.m3u8 to S3: ${masterResult.url}`);
+        console.log(`✅ Uploaded manifest.mpd to S3: ${mpdUploadResult.url}`);
 
-        // Upload tất cả thư mục stream_0, stream_1, stream_2
-        const directoryEntries = await fsPromises.readdir(hlsDirectory, {
-          withFileTypes: true,
-        });
-        const streamDirs = directoryEntries
-          .filter(
-            (entry) => entry.isDirectory() && entry.name.startsWith('stream_'),
-          )
-          .map((entry) => entry.name);
+        // Upload all encrypted output files (video segments, audio, init segments)
+        const encryptedFiles = await fsPromises.readdir(dashOutputDir);
+        for (const fileName of encryptedFiles) {
+          if (fileName === 'manifest.mpd') continue; // Already uploaded
 
-        for (const streamDir of streamDirs) {
-          const streamPath = path.join(hlsDirectory, streamDir);
+          const filePath = path.join(dashOutputDir, fileName);
+          const fileStats = await fsPromises.stat(filePath);
+          if (!fileStats.isFile()) continue;
 
-          if (!fs.existsSync(streamPath)) {
-            console.warn(`⚠️  Directory not found: ${streamPath}`);
-            continue;
+          // Determine MIME type
+          let mimetype = 'application/octet-stream';
+          if (fileName.endsWith('.mp4') || fileName.endsWith('.m4s')) {
+            mimetype = 'video/mp4';
+          } else if (fileName.endsWith('.m4a')) {
+            mimetype = 'audio/mp4';
           }
 
-          console.log(`📂 Uploading ${streamDir}...`);
+          const file = {
+            path: filePath,
+            originalname: fileName,
+            mimetype,
+            size: fileStats.size,
+          } as Express.Multer.File;
 
-          // Đọc tất cả file trong thư mục stream_X
-          const files = await fsPromises.readdir(streamPath);
-
-          for (const fileName of files) {
-            const filePath = path.join(streamPath, fileName);
-            const fileStats = await fsPromises.stat(filePath);
-
-            // Bỏ qua nếu là thư mục
-            if (!fileStats.isFile()) continue;
-
-            const file = {
-              path: filePath,
-              originalname: fileName,
-              mimetype: fileName.endsWith('.m3u8')
-                ? 'application/vnd.apple.mpegurl'
-                : 'video/MP2T',
-              size: fileStats.size,
-            } as Express.Multer.File;
-
-            // Upload với đường dẫn đúng: videos/{videoId}/hls/stream_0/data000.ts
-            const s3Key = `${s3BaseKey}/${streamDir}/${fileName}`;
-            await s3Service.uploadLargeFile(file, s3Key);
-            console.log(`✅ Uploaded ${streamDir}/${fileName} to S3`);
-          }
+          const s3Key = `${s3BaseKey}/${fileName}`;
+          await s3Service.uploadLargeFile(file, s3Key);
+          console.log(`✅ Uploaded ${fileName} to S3`);
         }
 
-        // 4Cleanup - ONLY after all uploads succeed
+        // ────────────────────────────────────────────────────────────────────
+        // STEP 6: Cleanup local files
+        // ────────────────────────────────────────────────────────────────────
         console.log('🗑️  Cleaning up local files...');
 
-        // Delete HLS directory
-        await fsPromises.rm(hlsDirectory, { recursive: true, force: true });
-        console.log('✅ Local HLS files deleted');
+        // Delete the entire DASH temp directory (includes both unencrypted + encrypted)
+        await fsPromises.rm(dashResult.outputDir, {
+          recursive: true,
+          force: true,
+        });
+        console.log('✅ Local DASH files deleted');
 
-        // Update video entity
+        // ────────────────────────────────────────────────────────────────────
+        // STEP 7: Update video entity with S3 URL + READY status
+        // ────────────────────────────────────────────────────────────────────
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         const updatedVideo = await videoService.updateVideo(videoId, {
           id: videoId,
-          videoUrl: masterResult.url,
+          videoUrl: mpdUploadResult.url,
           status: VIDEO_STATUS.READY,
           thumbnailUrl: thumbnailUrl,
         } as Partial<UpdateVideoDto>);
 
-        console.log(`✅ Updated video ${videoId} successfully in ${duration}s`);
+        console.log(
+          `✅ Updated video ${videoId} successfully in ${duration}s`,
+        );
 
-        // Generate sprites and VTT
+        // ────────────────────────────────────────────────────────────────────
+        // STEP 8: Generate sprites and VTT (non-blocking)
+        // ────────────────────────────────────────────────────────────────────
         console.log('🎨 Generating sprites and VTT...');
         try {
           const { spriteUrls, vttUrls } = await generateSpritesAndVTT(
@@ -439,13 +450,15 @@ async function bootstrap() {
           `✅ [Worker] Job ${job.id} completed successfully in ${duration}s`,
         );
         console.log(`   Updated video entity: ${updatedVideo.id}`);
-        console.log(`   Video URL: ${masterResult.url}`);
+        console.log(`   Video URL (DASH): ${mpdUploadResult.url}`);
+        console.log(`   DRM: CENC encrypted, keyId=${drmKey.keyId.substring(0, 8)}...`);
 
         return {
           updatedVideo,
           duration,
           videoId,
-          s3Url: masterResult.url,
+          s3Url: mpdUploadResult.url,
+          drmKeyId: drmKey.keyId,
         };
       } catch (error) {
         console.error(`❌ [Worker] Job ${job.id} failed:`, error);

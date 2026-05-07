@@ -1,5 +1,5 @@
 import { plainToInstance } from 'class-transformer';
-import type { Response } from 'express';
+import type { Response, Request } from 'express';
 import { firstValueFrom } from 'rxjs';
 
 import { Public } from '@app/common/decorators/public.decorator';
@@ -7,10 +7,12 @@ import { IsAdminGuard, JwtAuthGuard } from '@app/common/guards';
 import { ResponseBuilder } from '@app/common/utils/dto';
 import { VideoDto } from '@app/common/dtos/content/video.dto';
 import {
+  Body,
   Controller,
   Get,
   Param,
   Post,
+  Req,
   Res,
   UploadedFile,
   UseGuards,
@@ -121,6 +123,63 @@ export class StreamingController {
     return ResponseBuilder.createResponse({
       data: { fileUrl: result.fileUrl },
       message: 'Signed cookies generated successfully',
+    });
+  }
+
+  // ─── DRM Endpoints ────────────────────────────────────────────────────────────
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':videoId/manifest')
+  @ApiOperation({
+    summary: 'Get signed DASH manifest URL for DRM-protected video',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Signed manifest URL generated',
+  })
+  async getManifestUrl(
+    @Param('videoId') videoId: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const result = (await firstValueFrom(
+      this.streamingService.getManifestUrl(videoId),
+    )) as any;
+
+    // Also set signed cookies for segment access
+    const cookieResult = (await firstValueFrom(
+      this.streamingService.getFileAccess(`videos/${videoId}/dash/manifest.mpd`),
+    )) as any;
+
+    Object.keys(cookieResult.cookies || {}).forEach((key) => {
+      const cookie = cookieResult.cookies[key];
+      response.cookie(key, cookie.value, cookie.options ?? {});
+    });
+
+    return ResponseBuilder.createResponse({
+      data: result,
+      message: 'Manifest URL generated successfully',
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':videoId/drm-info')
+  @ApiOperation({
+    summary: 'Get DRM key info (keyId) for a video',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'DRM key info returned',
+  })
+  async getDrmKeyInfo(@Param('videoId') videoId: string) {
+    const result = (await firstValueFrom(
+      this.streamingService.getDrmKeyInfo(videoId),
+    )) as any;
+
+    return ResponseBuilder.createResponse({
+      data: result,
+      message: result
+        ? 'DRM key info retrieved successfully'
+        : 'No DRM key found for this video',
     });
   }
 }

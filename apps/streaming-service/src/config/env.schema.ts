@@ -7,6 +7,9 @@ export const streamingEnvSchema = z.object({
   CONTENT_SERVICE_HOST: z.string().default('localhost'),
   CONTENT_SERVICE_PORT: z.coerce.number().default(3003),
 
+  ORDER_SERVICE_HOST: z.string().default('localhost'),
+  ORDER_SERVICE_PORT: z.coerce.number().default(3004),
+
   REDIS_HOST: z.string().default('localhost'),
   REDIS_PORT: z.coerce.number().default(6379),
   REDIS_PASSWORD: z.string().optional(),
@@ -25,6 +28,20 @@ export const streamingEnvSchema = z.object({
   R2_BUCKET_NAME: z.string().optional(),
   R2_ENDPOINT: z.string().optional(),
   R2_PUBLIC_URL: z.string().optional(),
+
+  // Database for DRM keys
+  STREAMING_DB_HOST: z.string().default('localhost'),
+  STREAMING_DB_PORT: z.coerce.number().default(5432),
+  STREAMING_DB_USERNAME: z.string().optional(),
+  STREAMING_DB_PASSWORD: z.string().optional(),
+  STREAMING_DB_NAME: z.string().optional(),
+  STREAMING_DB_SYNCHRONIZE: z
+    .string()
+    .default('false')
+    .transform((v) => v === 'true'),
+
+  // Shaka Packager
+  SHAKA_PACKAGER_PATH: z.string().optional(),
 });
 
 export type StreamingEnv = z.infer<typeof streamingEnvSchema>;

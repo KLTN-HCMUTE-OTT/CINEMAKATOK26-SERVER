@@ -1,12 +1,58 @@
-import { Controller, Get } from '@nestjs/common';
-import { OrderServiceService } from './order-service.service';
+import { Controller } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+
+import { SubscriptionService } from './services/subscription.service';
+import { SubscriptionPlan } from './entities/subscription.entity';
 
 @Controller()
 export class OrderServiceController {
-  constructor(private readonly orderServiceService: OrderServiceService) {}
+  constructor(
+    private readonly subscriptionService: SubscriptionService,
+  ) {}
 
-  @Get()
-  getHello(): string {
-    return this.orderServiceService.getHello();
+  // ─── Subscription ─────────────────────────────────────────────────────────────
+
+  /**
+   * Check if a user has an active subscription.
+   * Called by streaming-service DrmLicenseService during license issuance.
+   */
+  @MessagePattern({ cmd: 'order.checkSubscription' })
+  checkSubscription(@Payload() payload: { userId: string }) {
+    return this.subscriptionService.checkSubscription(payload.userId);
+  }
+
+  /**
+   * Get the current subscription details for a user.
+   */
+  @MessagePattern({ cmd: 'order.getSubscription' })
+  getSubscription(@Payload() payload: { userId: string }) {
+    return this.subscriptionService.getSubscription(payload.userId);
+  }
+
+  /**
+   * Create or renew a subscription.
+   */
+  @MessagePattern({ cmd: 'order.createSubscription' })
+  createSubscription(
+    @Payload()
+    payload: {
+      userId: string;
+      plan?: SubscriptionPlan;
+      durationDays?: number;
+    },
+  ) {
+    return this.subscriptionService.createSubscription(
+      payload.userId,
+      payload.plan,
+      payload.durationDays,
+    );
+  }
+
+  /**
+   * Cancel a user's subscription.
+   */
+  @MessagePattern({ cmd: 'order.cancelSubscription' })
+  cancelSubscription(@Payload() payload: { userId: string }) {
+    return this.subscriptionService.cancelSubscription(payload.userId);
   }
 }

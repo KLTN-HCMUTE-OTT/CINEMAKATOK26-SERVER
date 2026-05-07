@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 
 import { StreamingController } from './streaming.controller';
+import { DrmController } from './drm.controller';
 import { StreamingGatewayService } from './streaming.service';
 
 @Module({
@@ -17,7 +18,7 @@ import { StreamingGatewayService } from './streaming.service';
       },
     ]),
   ],
-  controllers: [StreamingController],
+  controllers: [StreamingController, DrmController],
   providers: [StreamingGatewayService],
   exports: [StreamingGatewayService],
 })
