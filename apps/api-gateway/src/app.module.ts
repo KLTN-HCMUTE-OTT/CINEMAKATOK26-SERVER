@@ -21,7 +21,7 @@ import { ConfigModule } from '@nestjs/config';
     UserModule,
     ContentModule,
     UserActivityModule,
-    PaymentModule,
+    // PaymentModule,
     StreamingModule,
     AuditLogModule,
     AnalyticsModule,
