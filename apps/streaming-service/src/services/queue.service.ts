@@ -27,6 +27,8 @@ export class QueueService {
   private videoQueue: Queue | null = null;
   private readonly logger = new Logger(QueueService.name);
   private isRedisAvailable = false;
+  private readonly localOutputDir = process.env.LOCAL_STORAGE_DIR || 'uploads';
+  private readonly uploadBaseDir = process.env.UPLOAD_DIR || 'uploads';
 
   constructor(
     private readonly contentVideoService: ContentVideoService,
@@ -42,23 +44,25 @@ export class QueueService {
    * Synchronous fallback: process video when Redis is unavailable.
    * Uses DASH + CENC pipeline (same as the async worker).
    */
+  //test-local
+
   private async processSyncAndUpload(inputPath: string, videoId: string) {
     // Step 1: Generate DRM keys
-    this.logger.log(`🔑 Generating DRM keys for video ${videoId}...`);
+    this.logger.log(`Generating DRM keys for video ${videoId}...`);
     const drmKey = await this.drmKeyService.generateKeysForVideo(videoId);
     this.logger.log(
-      `✅ DRM keys ready: keyId=${drmKey.keyId.substring(0, 8)}...`,
+      `DRM keys ready: keyId=${drmKey.keyId.substring(0, 8)}...`,
     );
 
     // Step 2: Transcode to fragmented MP4
-    this.logger.log(`📹 Processing DASH transcode for video ${videoId}...`);
+    this.logger.log(`Processing DASH transcode for video ${videoId}...`);
     const dashResult = await processVideoDASH(inputPath);
     this.logger.log(
-      `✅ DASH transcode completed: ${dashResult.videoPaths.length} variants`,
+      `DASH transcode completed: ${dashResult.videoPaths.length} variants`,
     );
 
     // Step 3: Encrypt with Shaka Packager
-    this.logger.log(`🔒 Running Shaka Packager (CENC) for video ${videoId}...`);
+    this.logger.log(`Running Shaka Packager (CENC) for video ${videoId}...`);
     const dashOutputDir = path.join(dashResult.outputDir, 'encrypted');
     if (!fs.existsSync(dashOutputDir)) {
       fs.mkdirSync(dashOutputDir, { recursive: true });
@@ -88,31 +92,45 @@ export class QueueService {
       contentKey: drmKey.contentKey,
       mpdOutputPath,
     });
-    this.logger.log(`✅ Shaka Packager completed`);
+    this.logger.log(`Shaka Packager completed`);
 
     // Step 4: Upload thumbnail
     let thumbnailUrl = '';
     const fileName = path.parse(inputPath).name;
-    const uploadBaseDir = String(getConfig('uploadDir', 'uploads'));
     const localThumbnailPath = path.join(
-      uploadBaseDir,
+      this.uploadBaseDir,
       'thumbnails',
       `${fileName}.png`,
     );
-    if (fs.existsSync(localThumbnailPath)) {
-      try {
-        thumbnailUrl = await this.r2Service.uploadImage(
-          localThumbnailPath,
-          `videos/${videoId}/thumbnails`,
-        );
-        await fsPromises.unlink(localThumbnailPath);
-      } catch {
-        thumbnailUrl = '';
-      }
-    }
+    // // Step 5: Copy encrypted DASH files to local output directory
+    // this.logger.log(`Copying encrypted DASH files to local directory...`);
+    // const localBaseDir = path.join(this.localOutputDir, 'videos', videoId, 'dash');
+
+    // // Ensure output directory exists
+    // await fsPromises.mkdir(localBaseDir, { recursive: true });
+
+    // // Copy manifest.mpd
+    // const mpdDestPath = path.join(localBaseDir, 'manifest.mpd');
+    // await fsPromises.copyFile(mpdOutputPath, mpdDestPath);
+    // this.logger.log(`Copied manifest.mpd to ${mpdDestPath}`);
+
+    // // Copy all encrypted segments
+    // const encryptedFiles = await fsPromises.readdir(dashOutputDir);
+    // for (const fileNameInDir of encryptedFiles) {
+    //   if (fileNameInDir === 'manifest.mpd') continue;
+
+    //   const filePath = path.join(dashOutputDir, fileNameInDir);
+    //   const fileStats = await fsPromises.stat(filePath);
+    //   if (!fileStats.isFile()) continue;
+
+    //   const destPath = path.join(localBaseDir, fileNameInDir);
+    //   await fsPromises.copyFile(filePath, destPath);
+    // }
+
+    // this.logger.log(`All DASH files copied to ${localBaseDir}`);
 
     // Step 5: Upload encrypted DASH files to S3
-    this.logger.log(`☁️  Uploading encrypted DASH files to S3...`);
+    this.logger.log(`Uploading encrypted DASH files to S3...`);
     const s3BaseKey = `videos/${videoId}/dash`;
 
     // Upload manifest.mpd
@@ -157,6 +175,7 @@ export class QueueService {
       const s3Key = `${s3BaseKey}/${fileNameInDir}`;
       await this.s3Service.uploadLargeFile(file, s3Key);
     }
+    
 
     // Step 6: Cleanup local files
     await fsPromises.rm(dashResult.outputDir, {
@@ -176,6 +195,7 @@ export class QueueService {
       thumbnailUrl,
     });
   }
+
 
   private async initializeQueue() {
     try {

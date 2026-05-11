@@ -117,7 +117,7 @@ export class ShakaPackagerService {
 
       process.on('close', (code) => {
         if (code === 0) {
-          this.logger.log('✅ Shaka Packager completed successfully');
+          this.logger.log('Shaka Packager completed successfully');
           resolve({
             mpdPath: mpdOutputPath,
             outputDir,
@@ -125,7 +125,7 @@ export class ShakaPackagerService {
           });
         } else {
           this.logger.error(
-            `❌ Shaka Packager failed with code ${code}`,
+            `Shaka Packager failed with code ${code}`,
           );
           this.logger.error(`stderr: ${stderrOutput}`);
           reject(
@@ -159,8 +159,9 @@ export class ShakaPackagerService {
     // 1. Environment variable
     const envPath = process.env.SHAKA_PACKAGER_PATH;
     if (envPath && existsSync(envPath)) {
-      this.logger.log(`Using Shaka Packager from env: ${envPath}`);
-      return envPath;
+      const absolutePath = path.resolve(envPath);
+      this.logger.log(`Using Shaka Packager from env: ${absolutePath}`);
+      return absolutePath;
     }
 
     // 2. Project tools directory

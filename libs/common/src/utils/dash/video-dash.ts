@@ -117,12 +117,12 @@ export const processVideoDASH = async (
       outputPath,
     ]);
 
-    console.log(`✅ ${variant.outputName} done`);
+    console.log(`${variant.outputName} done`);
   }
 
   // Step 2: Extract audio as fragmented MP4
   const audioPath = join(outputDir, 'audio.mp4');
-  console.log('🔊 Extracting audio...');
+  console.log('Extracting audio...');
 
   await runFfmpeg(ffmpegExecutable, [
     '-i',
@@ -140,11 +140,11 @@ export const processVideoDASH = async (
     'mp4',
     audioPath,
   ]);
-  console.log('✅ Audio extraction done');
+  console.log('Audio extraction done');
 
   // Step 3: Generate thumbnail
   const thumbnailPath = join(thumbnailDir, `${fileName}.png`);
-  console.log('🖼️ Generating thumbnail...');
+  console.log('Generating thumbnail...');
 
   try {
     await runFfmpeg(ffmpegExecutable, [
@@ -158,9 +158,9 @@ export const processVideoDASH = async (
       'scale=320:-1',
       thumbnailPath,
     ]);
-    console.log(`✅ Thumbnail generated: ${thumbnailPath}`);
+    console.log(`Thumbnail generated: ${thumbnailPath}`);
   } catch (err) {
-    console.error('❌ Thumbnail generation failed (non-fatal):', err);
+    console.error('Thumbnail generation failed (non-fatal):', err);
   }
 
   console.log(`✅ DASH transcode complete. Output: ${outputDir}`);
@@ -187,7 +187,7 @@ function runFfmpeg(executable: string, args: string[]): Promise<void> {
       stderrOutput += msg;
 
       if (msg.includes('frame=') || msg.includes('time=')) {
-        process.stdout.write(`\r🎞️ ${msg.trim()}`);
+        process.stdout.write(`\r${msg.trim()}`);
       }
     });
 

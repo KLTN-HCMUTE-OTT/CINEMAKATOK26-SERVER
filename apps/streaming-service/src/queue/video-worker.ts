@@ -22,6 +22,8 @@ import { S3Service } from '../services/s3.service';
 import { DrmKeyService } from '../services/drm-key.service';
 import { ShakaPackagerService } from '../services/shaka-packager.service';
 
+
+//r2
 async function generateSpritesAndVTT(
   videoId: string,
   inputPath: string,
@@ -166,12 +168,12 @@ const resolveFfmpegExecutable = (): string => {
     if (result.status === 0) {
       const path = result.stdout.trim().split('\n')[0];
       if (path && existsSync(path)) {
-        console.log(`✅ Using system FFmpeg: ${path}`);
+        console.log(`Using system FFmpeg: ${path}`);
         return path;
       }
     }
   } catch (error) {
-    console.log('⚠️  System FFmpeg not found via where command');
+    console.log('System FFmpeg not found via where command');
   }
 
   // Then try static binaries
@@ -189,14 +191,14 @@ const resolveFfmpegExecutable = (): string => {
         `🔍 Checking FFmpeg binary candidate: ${candidate} (exists: ${exists})`,
       );
       if (exists) {
-        console.log(`✅ Using FFmpeg binary: ${candidate}`);
+        console.log(`Using FFmpeg binary: ${candidate}`);
         return candidate;
       }
     }
   }
 
   console.warn(
-    '⚠️  Falling back to system "ffmpeg" executable. Set FFMPEG_PATH env variable if FFmpeg is not on PATH.',
+    'Falling back to system "ffmpeg" executable. Set FFMPEG_PATH env variable if FFmpeg is not on PATH.',
   );
   console.warn('   ffmpeg-static returned:', ffmpegStatic);
   console.warn(
@@ -215,57 +217,116 @@ export const connection = {
     process.env.REDIS_PASSWORD || String(getConfig('redis.password', '')),
 };
 
-console.log('🚀 Starting Video Encoding Worker...');
-console.log('📡 Redis connection:', connection);
+console.log('Starting Video Encoding Worker...');
+
+async function cleanupTempFiles(paths: string[]) {
+  for (const p of paths) {
+    if (!p) continue;
+    try {
+      if (fs.existsSync(p)) {
+        const stats = await fsPromises.stat(p);
+        if (stats.isDirectory()) {
+          await fsPromises.rm(p, { recursive: true, force: true });
+          console.log(`Cleaned up directory: ${p}`);
+        } else {
+          await fsPromises.unlink(p);
+          console.log(`Cleaned up file: ${p}`);
+        }
+      }
+    } catch (err) {
+      console.warn(`Failed to clean up ${p}:`, err);
+    }
+  }
+}
+
+async function cleanupStaleFiles() {
+  console.log('Scanning for stale temp files (> 24h)...');
+  const uploadBaseDir = process.env.UPLOAD_DIR || 'E:/uploads';
+  const dirsToScan = [
+    path.join(uploadBaseDir, 'dash-temp'),
+    path.join(uploadBaseDir, 'thumbnails'),
+  ];
+
+  const now = Date.now();
+  const maxAgeMs = 24 * 60 * 60 * 1000;
+
+  for (const dir of dirsToScan) {
+    if (!fs.existsSync(dir)) continue;
+    try {
+      const entries = await fsPromises.readdir(dir);
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry);
+        const stats = await fsPromises.stat(fullPath);
+        if (now - stats.mtimeMs > maxAgeMs) {
+          if (stats.isDirectory()) {
+            await fsPromises.rm(fullPath, { recursive: true, force: true });
+            console.log(`Removed stale directory: ${fullPath}`);
+          } else {
+            await fsPromises.unlink(fullPath);
+            console.log(`Removed stale file: ${fullPath}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`Failed to scan directory ${dir}:`, err);
+    }
+  }
+}
 
 async function bootstrap() {
-  console.log('🚀 Starting Video Encoding Worker...');
-  console.log('📡 Redis connection:', connection);
+  console.log('Starting Video Encoding Worker...');
 
-  // ✅ Tạo Application Context thay vì HTTP App
+  // Tạo Application Context thay vì HTTP App
   const appContext =
     await NestFactory.createApplicationContext(StreamingModule);
 
-  // ✅ Lấy instance service từ DI container
+  //Lấy instance service từ DI container
   const videoService = appContext.get(ContentVideoService);
   const s3Service = appContext.get(S3Service);
   const r2Service = appContext.get(R2StorageService);
   const drmKeyService = appContext.get(DrmKeyService);
   const shakaPackager = appContext.get(ShakaPackagerService);
 
-  // ✅ Worker chạy với DI support
+  // Clean up stale files on startup
+  await cleanupStaleFiles();
+
+  //Worker chạy với DI support
   const worker = new Worker(
     'video-queue',
     async (job) => {
       const { inputPath, videoId } = job.data;
-      console.log(`🎬 [Worker] Start encoding for job ${job.id}`);
+      console.log(`[Worker] Start encoding for job ${job.id}`);
       const startTime = Date.now();
       const attempts = Number(job.opts.attempts ?? 1);
       const isFinalAttempt = job.attemptsMade + 1 >= attempts;
+
+      const pathsToCleanup: string[] = [];
 
       try {
         // ────────────────────────────────────────────────────────────────────
         // STEP 1: Generate DRM encryption keys
         // ────────────────────────────────────────────────────────────────────
-        console.log('🔑 Generating DRM keys...');
+        console.log('Generating DRM keys...');
         const drmKey = await drmKeyService.generateKeysForVideo(videoId);
         console.log(
-          `✅ DRM keys ready: keyId=${drmKey.keyId.substring(0, 8)}...`,
+          `DRM keys ready: keyId=${drmKey.keyId.substring(0, 8)}...`,
         );
 
         // ────────────────────────────────────────────────────────────────────
         // STEP 2: Transcode to fragmented MP4 (multiple bitrates + audio)
         // ────────────────────────────────────────────────────────────────────
-        console.log('📹 Processing DASH (fragmented MP4)...');
+        console.log('Processing DASH (fragmented MP4)...');
         const dashResult = await processVideoDASH(inputPath);
+        pathsToCleanup.push(dashResult.outputDir);
+        pathsToCleanup.push(dashResult.thumbnailPath);
         console.log(
-          `✅ DASH transcode completed: ${dashResult.videoPaths.length} variants + audio`,
+          `DASH transcode completed: ${dashResult.videoPaths.length} variants + audio`,
         );
 
         // ────────────────────────────────────────────────────────────────────
         // STEP 3: Encrypt with Shaka Packager (CENC + DASH manifest)
         // ────────────────────────────────────────────────────────────────────
-        console.log('🔒 Running Shaka Packager (CENC encryption)...');
+        console.log('Running Shaka Packager (CENC encryption)...');
 
         const dashOutputDir = path.join(dashResult.outputDir, 'encrypted');
         if (!fs.existsSync(dashOutputDir)) {
@@ -300,35 +361,34 @@ async function bootstrap() {
           mpdOutputPath,
         });
 
-        console.log(`✅ Shaka Packager completed: ${shakaResult.mpdPath}`);
+        console.log(`Shaka Packager completed: ${shakaResult.mpdPath}`);
 
         // ────────────────────────────────────────────────────────────────────
         // STEP 4: Upload thumbnail to R2
         // ────────────────────────────────────────────────────────────────────
         let thumbnailUrl = '';
         if (fs.existsSync(dashResult.thumbnailPath)) {
-          console.log('📸 Uploading thumbnail to R2...');
+          console.log('Uploading thumbnail to R2...');
           try {
             thumbnailUrl = await r2Service.uploadImage(
               dashResult.thumbnailPath,
               `videos/${videoId}/thumbnails`,
             );
-            console.log(`✅ Uploaded thumbnail to R2: ${thumbnailUrl}`);
-            await fsPromises.unlink(dashResult.thumbnailPath);
+            console.log(`Uploaded thumbnail to R2: ${thumbnailUrl}`);
           } catch (error) {
-            console.error('❌ Failed to upload thumbnail to R2:', error);
+            console.error('Failed to upload thumbnail to R2:', error);
             thumbnailUrl = '';
           }
         } else {
           console.warn(
-            `⚠️  Thumbnail file not found: ${dashResult.thumbnailPath}`,
+            `Thumbnail file not found: ${dashResult.thumbnailPath}`,
           );
         }
 
         // ────────────────────────────────────────────────────────────────────
         // STEP 5: Upload encrypted DASH files to S3
         // ────────────────────────────────────────────────────────────────────
-        console.log('☁️  Uploading encrypted DASH files to S3...');
+        console.log('Uploading encrypted DASH files to S3...');
         const s3BaseKey = `videos/${videoId}/dash`;
 
         // Upload manifest.mpd
@@ -343,7 +403,7 @@ async function bootstrap() {
           mpdFile,
           `${s3BaseKey}/manifest.mpd`,
         );
-        console.log(`✅ Uploaded manifest.mpd to S3: ${mpdUploadResult.url}`);
+        console.log(`Uploaded manifest.mpd to S3: ${mpdUploadResult.url}`);
 
         // Upload all encrypted output files (video segments, audio, init segments)
         const encryptedFiles = await fsPromises.readdir(dashOutputDir);
@@ -371,20 +431,8 @@ async function bootstrap() {
 
           const s3Key = `${s3BaseKey}/${fileName}`;
           await s3Service.uploadLargeFile(file, s3Key);
-          console.log(`✅ Uploaded ${fileName} to S3`);
+          console.log(`Uploaded ${fileName} to S3`);
         }
-
-        // ────────────────────────────────────────────────────────────────────
-        // STEP 6: Cleanup local files
-        // ────────────────────────────────────────────────────────────────────
-        console.log('🗑️  Cleaning up local files...');
-
-        // Delete the entire DASH temp directory (includes both unencrypted + encrypted)
-        await fsPromises.rm(dashResult.outputDir, {
-          recursive: true,
-          force: true,
-        });
-        console.log('✅ Local DASH files deleted');
 
         // ────────────────────────────────────────────────────────────────────
         // STEP 7: Update video entity with S3 URL + READY status
@@ -398,21 +446,21 @@ async function bootstrap() {
         } as Partial<UpdateVideoDto>);
 
         console.log(
-          `✅ Updated video ${videoId} successfully in ${duration}s`,
+          `Updated video ${videoId} successfully in ${duration}s`,
         );
 
         // ────────────────────────────────────────────────────────────────────
         // STEP 8: Generate sprites and VTT (non-blocking)
         // ────────────────────────────────────────────────────────────────────
-        console.log('🎨 Generating sprites and VTT...');
+        console.log('Generating sprites and VTT...');
         try {
           const { spriteUrls, vttUrls } = await generateSpritesAndVTT(
             videoId,
             inputPath,
-            r2Service,
+            r2Service
           );
           console.log(
-            `✅ Generated ${spriteUrls.length} sprites and ${vttUrls.length} VTT files`,
+            `Generated ${spriteUrls.length} sprites and ${vttUrls.length} VTT files`,
           );
 
           // Update video entity with sprites and VTT
@@ -434,24 +482,21 @@ async function bootstrap() {
             vttFiles: updatedVideoWithSprites.vttFiles,
           });
 
-          console.log(`✅ Updated video ${videoId} with sprites and VTT`);
+          console.log(`Updated video ${videoId} with sprites and VTT`);
         } catch (error) {
-          console.error('❌ Failed to generate sprites and VTT:', error);
+          console.error('Failed to generate sprites and VTT:', error);
           // Continue, don't fail the job
         }
 
-        // Cleanup original uploaded input to avoid disk growth on worker host.
-        if (fs.existsSync(inputPath)) {
-          await fsPromises.unlink(inputPath);
-          console.log(`🗑️  Deleted original uploaded file: ${inputPath}`);
-        }
+        // Mark input for cleanup on success
+        pathsToCleanup.push(inputPath);
 
         console.log(
-          `✅ [Worker] Job ${job.id} completed successfully in ${duration}s`,
+          `[Worker] Job ${job.id} completed successfully in ${duration}s`,
         );
-        console.log(`   Updated video entity: ${updatedVideo.id}`);
-        console.log(`   Video URL (DASH): ${mpdUploadResult.url}`);
-        console.log(`   DRM: CENC encrypted, keyId=${drmKey.keyId.substring(0, 8)}...`);
+        console.log(`Updated video entity: ${updatedVideo.id}`);
+        console.log(`Video URL (DASH): ${mpdUploadResult.url}`);
+        console.log(`DRM: CENC encrypted, keyId=${drmKey.keyId.substring(0, 8)}...`);
 
         return {
           updatedVideo,
@@ -461,17 +506,12 @@ async function bootstrap() {
           drmKeyId: drmKey.keyId,
         };
       } catch (error) {
-        console.error(`❌ [Worker] Job ${job.id} failed:`, error);
+        console.error(`[Worker] Job ${job.id} failed:`, error);
 
-        if (isFinalAttempt && fs.existsSync(inputPath)) {
-          await fsPromises.unlink(inputPath);
-          console.log(
-            `🗑️  Deleted failed input file (final attempt): ${inputPath}`,
-          );
-        }
-
-        // Mark FAILED only on final attempt to allow retry to continue processing.
+        // On final attempt, mark the input file for cleanup so it doesn't stay forever
         if (isFinalAttempt) {
+          pathsToCleanup.push(inputPath);
+
           await videoService.updateVideo(videoId, {
             id: videoId,
             status: VIDEO_STATUS.FAILED,
@@ -480,6 +520,10 @@ async function bootstrap() {
         }
 
         throw error;
+      } finally {
+        // Always execute cleanup
+        console.log('Executing temp file cleanup...');
+        await cleanupTempFiles(pathsToCleanup);
       }
     },
     {
@@ -493,32 +537,31 @@ async function bootstrap() {
   // Logging các event
   worker.on('completed', (job) => {
     console.log(
-      `\n✅ [Worker] Job ${job.id} for videoId=${job.data.videoId} completed!`,
+      `\n[Worker] Job ${job.id} for videoId=${job.data.videoId} completed!`,
     );
   });
 
   worker.on('failed', (job, err) => {
-    console.error(`\n❌ [Worker] Job ${job?.id} failed:`, err.message);
+    console.error(`\n[Worker] Job ${job?.id} failed:`, err.message);
   });
 
   worker.on('error', (err) => {
-    console.error('\n💥 [Worker] Worker error:', err);
+    console.error('\n[Worker] Worker error:', err);
   });
 
-  console.log('✅ Video Encoding Worker is ready and listening for jobs...');
-  console.log('📝 Press Ctrl+C to stop\n');
+  console.log('Video Encoding Worker is ready and listening for jobs...');
 
   // Graceful shutdown
   process.on('SIGINT', async () => {
-    console.log('\n⏹️  Shutting down worker gracefully...');
+    console.log('\nShutting down worker gracefully...');
     await worker.close();
-    await appContext.close(); // ✅ đóng Nest context
-    console.log('👋 Worker stopped');
+    await appContext.close();
+    console.log('Worker stopped');
     process.exit(0);
   });
 
   process.on('SIGTERM', async () => {
-    console.log('\n⏹️  Received SIGTERM, shutting down...');
+    console.log('\nReceived SIGTERM, shutting down...');
     await worker.close();
     await appContext.close();
     process.exit(0);
