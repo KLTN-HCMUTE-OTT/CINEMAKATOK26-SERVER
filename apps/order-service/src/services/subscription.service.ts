@@ -7,6 +7,7 @@ import {
   SubscriptionPlan,
   SubscriptionStatus,
 } from '../entities/subscription.entity';
+import { EntitySubscriptionPlan } from '../entities/subscription-plan.entity';
 
 @Injectable()
 export class SubscriptionService {
@@ -15,6 +16,8 @@ export class SubscriptionService {
   constructor(
     @InjectRepository(EntitySubscription, 'order')
     private readonly subscriptionRepo: Repository<EntitySubscription>,
+    @InjectRepository(EntitySubscriptionPlan, 'order')
+    private readonly planRepo: Repository<EntitySubscriptionPlan>,
   ) {}
 
   /**
@@ -31,6 +34,7 @@ export class SubscriptionService {
         expiresAt: MoreThanOrEqual(new Date()),
       },
       order: { expiresAt: 'DESC' },
+      relations: ['plan'],
     });
 
     if (!subscription) {
@@ -39,12 +43,12 @@ export class SubscriptionService {
     }
 
     this.logger.debug(
-      `Active subscription found for user ${userId}: plan=${subscription.plan}, expires=${subscription.expiresAt}`,
+      `Active subscription found for user ${userId}: plan=${subscription.plan?.name}, expires=${subscription.expiresAt}`,
     );
 
     return {
       isActive: true,
-      plan: subscription.plan,
+      plan: subscription.plan?.name,
       expiresAt: subscription.expiresAt,
     };
   }
@@ -77,9 +81,17 @@ export class SubscriptionService {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
+    const planEntity = await this.planRepo.findOne({
+      where: { name: plan },
+    });
+
+    if (!planEntity) {
+      throw new Error(`Subscription plan ${plan} not found in database`);
+    }
+
     const subscription = this.subscriptionRepo.create({
       userId,
-      plan,
+      plan: planEntity,
       status: SubscriptionStatus.ACTIVE,
       startsAt: now,
       expiresAt,

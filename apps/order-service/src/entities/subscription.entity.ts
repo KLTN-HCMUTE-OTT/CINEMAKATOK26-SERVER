@@ -1,6 +1,7 @@
-import { Column, Entity, Index } from 'typeorm';
+import { Column, Entity, Index, ManyToOne, JoinColumn } from 'typeorm';
 
 import { BaseEntity } from '@app/common/base/base-entity';
+import { EntitySubscriptionPlan } from './subscription-plan.entity';
 
 export enum SubscriptionPlan {
   BASIC = 'basic',
@@ -19,18 +20,21 @@ export enum SubscriptionStatus {
  * The DRM license server checks this entity to determine
  * whether a user is entitled to receive decryption keys.
  */
-@Entity({ name: 'subscription' })
+@Entity('subscription')
 export class EntitySubscription extends BaseEntity {
   @Column({ type: 'uuid' })
   @Index()
   userId: string;
 
-  @Column({
-    type: 'enum',
-    enum: SubscriptionPlan,
-    default: SubscriptionPlan.BASIC,
-  })
-  plan: SubscriptionPlan;
+  @ManyToOne(
+    () => EntitySubscriptionPlan,
+    (plan) => plan.subscriptions,
+  )
+  @JoinColumn({ name: 'plan_id' })
+  plan: EntitySubscriptionPlan;
+
+  @Column({ type: 'uuid', name: 'plan_id' })
+  planId: string;
 
   @Column({
     type: 'enum',
@@ -44,4 +48,10 @@ export class EntitySubscription extends BaseEntity {
 
   @Column({ type: 'timestamptz' })
   expiresAt: Date;
+
+  @Column({ name: 'auto_renew', default: false })
+  autoRenew: boolean;
+
+  @Column({ type: 'varchar', name: 'payment_id', nullable: true })
+  paymentId: string | null;
 }

@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 
 import { BaseEntity } from '@app/common/base/base-entity';
-import { MaturityRating } from '@app/common/enums/global.enum';
+import { MaturityRating, AccessTier } from '@app/common/enums/global.enum';
 
 import { EntityActor, EntityDirector } from './actor.entity';
 import { EntityCategory } from './category.entity';
@@ -53,6 +53,13 @@ export class EntityContent extends BaseEntity {
 
   @Column({ type: 'int', default: 0 })
   viewCount: number;
+
+  @Column({
+    type: 'enum',
+    default: AccessTier.BASIC,
+    enum: AccessTier,
+  })
+  accessTier: AccessTier;
 
   @ManyToMany(() => EntityCategory, (category) => category.contents)
   @JoinTable({

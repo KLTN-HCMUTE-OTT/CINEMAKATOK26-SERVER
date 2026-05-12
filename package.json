@@ -28,6 +28,8 @@
     "start:audit-log": "nest start audit-log-service --watch",
     "start:analytics": "nest start analytics-service --watch",
     "start:streaming": "cross-env SERVICE_NAME=streaming-service nest start streaming-service --watch",
+    "start:payment": "nest start payment-service --watch",
+    "start:order": "nest start order-service --watch",
     "worker:video": "cross-env SERVICE_NAME=streaming-service ts-node -r tsconfig-paths/register apps/streaming-service/src/queue/video-worker.ts",
     "seed:analytics": "ts-node -r tsconfig-paths/register db/seed-analytics.ts",
     "seed:churn:return": "ts-node -r tsconfig-paths/register db/seed-churn-return.ts",

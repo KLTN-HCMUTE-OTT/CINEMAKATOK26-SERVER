@@ -66,3 +66,8 @@ export enum REPORT_REASON {
   INAPPROPRIATE_CONTENT = 'INAPPROPRIATE_CONTENT',
   OTHER = 'OTHER',
 }
+
+export enum AccessTier {
+  BASIC = 'basic',
+  PREMIUM = 'premium',
+}
