@@ -14,7 +14,7 @@ import {
 } from 'class-validator';
 
 import { BaseEntityDto } from '@app/common/base/base-entity-dto';
-import { MaturityRating } from '@app/common/enums/global.enum';
+import { AccessTier, MaturityRating } from '@app/common/enums/global.enum';
 import { ApiProperty, OmitType } from '@nestjs/swagger';
 
 import { ContentType } from 'apps/content-service/src/entities/content.entity';
@@ -131,6 +131,16 @@ export class ContentDto extends BaseEntityDto {
   @Type(() => Number)
   @Expose()
   imdbRating: number;
+
+  @ApiProperty({
+    description: 'Access tier of the content',
+    enum: AccessTier,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(AccessTier)
+  @Expose()
+  accessTier: AccessTier;
 
   @ApiProperty({
     description: 'Categories of the content',

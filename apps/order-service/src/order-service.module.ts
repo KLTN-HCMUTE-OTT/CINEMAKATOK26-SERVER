@@ -8,6 +8,7 @@ import { DatabaseModule } from '@app/core/database/database.module';
 import { OrderServiceController } from './order-service.controller';
 import { SubscriptionService } from './services/subscription.service';
 import { EntitySubscription } from './entities/subscription.entity';
+import { EntitySubscriptionPlan } from './entities/subscription-plan.entity';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { EntitySubscription } from './entities/subscription.entity';
       isGlobal: true,
     }),
     DatabaseModule.forRoot({ service: 'order' }),
-    TypeOrmModule.forFeature([EntitySubscription], 'order'),
+    TypeOrmModule.forFeature([EntitySubscription, EntitySubscriptionPlan], 'order'),
   ],
   controllers: [OrderServiceController],
   providers: [SubscriptionService],

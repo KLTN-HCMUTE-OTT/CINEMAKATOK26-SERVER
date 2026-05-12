@@ -9,7 +9,8 @@ export type DatabaseServiceName =
   | 'content'
   | 'activity'
   | 'audit'
-  | 'streaming';
+  | 'streaming'
+  | 'payment';
 
 export interface DatabaseModuleOptions {
   service: DatabaseServiceName;
@@ -32,7 +33,8 @@ export class DatabaseModule {
             const get = <T>(key: string, fallback: T): T =>
               config.get<T>(`${prefix}_${key}`) ?? fallback;
 
-            const sslEnabled = get<boolean>('DB_SSL_ENABLED', false); 
+            const rawSslEnabled = get<boolean | string>('DB_SSL_ENABLED', false);
+            const sslEnabled = rawSslEnabled === true || rawSslEnabled === 'true';
 
             return {
               name: service,

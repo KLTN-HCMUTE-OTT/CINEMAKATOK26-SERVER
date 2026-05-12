@@ -18,5 +18,5 @@ describe('OrderServiceController', () => {
     it('should return "Hello World!"', () => {
       expect(orderServiceController.getHello()).toBe('Hello World!');
     });
-  });
+  })
 });
