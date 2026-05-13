@@ -8,12 +8,11 @@ import { SubscriptionController } from './subscription.controller';
   imports: [
     ClientsModule.register([
       {
-        name: 'PAYMENT_SERVICE_MQ',
-        transport: Transport.RMQ,
+        name: 'PAYMENT_SERVICE',
+        transport: Transport.TCP,
         options: {
-          urls: [process.env.RABBITMQ_URL ?? 'amqp://localhost:5672'],
-          queue: 'payment_queue',
-          queueOptions: { durable: true },
+          host: process.env.PAYMENT_SERVICE_HOST ?? 'localhost',
+          port: Number(process.env.PAYMENT_SERVICE_PORT ?? 3008),
         },
       },
       {

@@ -133,4 +133,53 @@ export class SubscriptionService {
     subscription.status = SubscriptionStatus.CANCELLED;
     return this.subscriptionRepo.save(subscription);
   }
+
+  /**
+   * Activate a subscription from PaymentSaga.
+   * Handles new, renewal, and upgrade payment types.
+   */
+  async activateSubscription(payload: {
+    userId: string;
+    plan: string;
+    durationDays: number;
+    paymentId: string;
+    paymentType: string;
+    previousPlan?: string;
+  }): Promise<EntitySubscription> {
+    const { userId, plan, durationDays, paymentId, paymentType } = payload;
+    
+    // Find plan entity
+    const planEntity = await this.planRepo.findOne({ where: { name: plan } });
+    if (!planEntity) throw new Error(`Plan ${plan} not found`);
+
+    if (paymentType === 'upgrade') {
+      // Cancel existing active subscription
+      await this.subscriptionRepo.update(
+        { userId, status: SubscriptionStatus.ACTIVE },
+        { status: SubscriptionStatus.CANCELLED }
+      );
+    } else if (paymentType === 'renewal') {
+      const existing = await this.subscriptionRepo.findOne({
+        where: { userId, status: SubscriptionStatus.ACTIVE },
+        order: { expiresAt: 'DESC' }
+      });
+      if (existing) {
+        existing.expiresAt = new Date(existing.expiresAt.getTime() + durationDays * 24 * 60 * 60 * 1000);
+        return this.subscriptionRepo.save(existing);
+      }
+    }
+
+    // Default 'new' or fallback if renewal found nothing
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    const sub = this.subscriptionRepo.create({
+      userId,
+      plan: planEntity,
+      status: SubscriptionStatus.ACTIVE,
+      startsAt: now,
+      expiresAt,
+      paymentId,
+    });
+    return this.subscriptionRepo.save(sub);
+  }
 }

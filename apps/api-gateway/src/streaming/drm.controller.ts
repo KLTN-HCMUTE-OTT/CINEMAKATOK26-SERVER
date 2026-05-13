@@ -72,6 +72,7 @@ export class DrmController {
       this.streamingService.issueClearKeyLicense({
         keyIds,
         userId,
+        contentId: body.contentId,
       }),
     );
 

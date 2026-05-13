@@ -67,7 +67,7 @@ export enum REPORT_REASON {
   OTHER = 'OTHER',
 }
 
-export enum AccessTier {
-  BASIC = 'basic',
-  PREMIUM = 'premium',
+export enum ACCESS_TIER {
+  BASIC = 'BASIC',
+  PREMIUM = 'PREMIUM',
 }
