@@ -3,6 +3,7 @@ import {
   ArrayNotEmpty,
   IsArray,
   IsString,
+  IsUUID
 } from 'class-validator';
 
 export class ClearKeyLicenseRequestDto {
@@ -19,6 +20,13 @@ export class ClearKeyLicenseRequestDto {
   @ArrayNotEmpty()
   @IsString({ each: true })
   kids: string[];
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Content ID',
+  })
+  @IsUUID()
+  contentId: string;
 }
 
 export class ClearKeyKeyDto {

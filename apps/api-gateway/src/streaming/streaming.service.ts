@@ -27,7 +27,13 @@ export class StreamingGatewayService {
    * Issue a ClearKey DRM license.
    * Delegates to streaming-service which validates entitlement via order-service.
    */
-  issueClearKeyLicense(payload: { keyIds: string[]; userId: string }) {
+  issueClearKeyLicense(
+    payload: {
+      keyIds: string[];
+      userId: string;
+      contentId: string;
+    },
+  ) {
     return this.streamingClient
       .send({ cmd: 'streaming.drm.issueLicense' }, payload)
       .pipe(catchRpcError());

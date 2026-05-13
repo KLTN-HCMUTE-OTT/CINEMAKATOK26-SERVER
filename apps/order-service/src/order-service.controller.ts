@@ -55,4 +55,22 @@ export class OrderServiceController {
   cancelSubscription(@Payload() payload: { userId: string }) {
     return this.subscriptionService.cancelSubscription(payload.userId);
   }
+
+  /**
+   * Activate, extend or upgrade a subscription (called by PaymentSaga).
+   */
+  @MessagePattern('subscription.activate')
+  activateSubscription(
+    @Payload()
+    payload: {
+      userId: string;
+      plan: string;
+      durationDays: number;
+      paymentId: string;
+      paymentType: string;
+      previousPlan?: string;
+    },
+  ) {
+    return this.subscriptionService.activateSubscription(payload);
+  }
 }

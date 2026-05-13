@@ -1,8 +1,8 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
-import { StreamingService } from './services';
 import { DrmLicenseService } from './services/drm-license.service';
+import { StreamingService } from './services';
 import { DrmKeyService } from './services/drm-key.service';
 
 @Controller()
@@ -31,11 +31,12 @@ export class StreamingController {
    */
   @MessagePattern({ cmd: 'streaming.drm.issueLicense' })
   issueLicense(
-    @Payload() payload: { keyIds: string[]; userId: string },
+    @Payload() payload: { keyIds: string[]; userId: string; contentId: string },
   ) {
     return this.drmLicenseService.issueClearKeyLicense(
       payload.keyIds,
       payload.userId,
+      payload.contentId,
     );
   }
 

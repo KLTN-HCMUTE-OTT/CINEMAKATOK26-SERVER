@@ -21,16 +21,16 @@ async function bootstrap() {
   });
 
   // RMQ Microservice
-  // app.connectMicroservice<MicroserviceOptions>({
-  //   transport: Transport.RMQ,
-  //   options: {
-  //     urls: [rmqUrl],
-  //     queue: 'payment_queue',
-  //     queueOptions: {
-  //       durable: true,
-  //     },
-  //   },
-  // });
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [rmqUrl],
+      queue: 'payment_queue',
+      queueOptions: {
+        durable: true,
+      },
+    },
+  });
 
   // Order matters: DomainError filter runs first (more specific), HttpException filter second
   app.useGlobalFilters(

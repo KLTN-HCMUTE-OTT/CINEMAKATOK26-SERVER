@@ -6,13 +6,13 @@ import * as path from 'path';
 
 import { DatabaseModule } from '@app/core/database/database.module';
 
-import { StreamingController } from './streaming.controller';
 import { validateStreamingEnv } from './config/env.schema';
 import { EntityDrmKey } from './entities/drm-key.entity';
+import { StreamingController } from './streaming.controller';
+import { DrmLicenseService } from './services/drm-license.service';
 import {
   ContentVideoService,
   DrmKeyService,
-  DrmLicenseService,
   QueueService,
   R2StorageService,
   S3Service,

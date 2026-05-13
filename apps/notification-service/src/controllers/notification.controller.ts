@@ -5,6 +5,9 @@ import {
   Payload,
   RmqContext,
 } from '@nestjs/microservices';
+import { Inject } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 
 import { EmailService } from '../services/email.service';
 
@@ -12,7 +15,10 @@ import { EmailService } from '../services/email.service';
 export class NotificationController {
   private readonly logger = new Logger(NotificationController.name);
 
-  constructor(private readonly emailService: EmailService) {}
+  constructor(
+    private readonly emailService: EmailService,
+    @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
+  ) {}
 
   @EventPattern('notification.sendOtp')
   async sendOtp(
@@ -189,6 +195,54 @@ export class NotificationController {
       channel.ack(msg);
     } catch (error) {
       this.logger.error('sendReviewRestore failed', error?.message);
+      channel.nack(msg, false, false);
+    }
+  }
+
+  @EventPattern('subscription.expired')
+  async handleSubscriptionExpired(
+    @Payload() data: { userId: string; plan: string },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const msg = context.getMessage();
+    try {
+      const user = await firstValueFrom(
+        this.userClient.send({ cmd: 'user.getById' }, { id: data.userId }),
+      );
+      if (user) {
+        await this.emailService.sendSubscriptionExpiredEmail(user.email, user.name, data.plan);
+      }
+      channel.ack(msg);
+    } catch (error) {
+      this.logger.error('handleSubscriptionExpired failed', error?.message);
+      channel.nack(msg, false, false);
+    }
+  }
+
+  @EventPattern('subscription.expiring_soon')
+  async handleSubscriptionExpiringSoon(
+    @Payload() data: { userId: string; plan: string; daysLeft: number; expiresAt: Date },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const msg = context.getMessage();
+    try {
+      const user = await firstValueFrom(
+        this.userClient.send({ cmd: 'user.getById' }, { id: data.userId }),
+      );
+      if (user) {
+        await this.emailService.sendSubscriptionExpiringSoonEmail(
+          user.email,
+          user.name,
+          data.plan,
+          data.daysLeft,
+          data.expiresAt,
+        );
+      }
+      channel.ack(msg);
+    } catch (error) {
+      this.logger.error('handleSubscriptionExpiringSoon failed', error?.message);
       channel.nack(msg, false, false);
     }
   }
