@@ -37,8 +37,13 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return result === 'OK';
   }
 
-  async delete(key: string): Promise<void> {
+  async del(key: string): Promise<void> {
     await this.redisClient.del(key);
+  }
+
+  /** @deprecated Use del() instead */
+  async delete(key: string): Promise<void> {
+    return this.del(key);
   }
 
   async acquireLock(lockKey: string, ttlSeconds: number): Promise<boolean> {
@@ -46,6 +51,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async releaseLock(lockKey: string): Promise<void> {
-    await this.delete(lockKey);
+    await this.del(lockKey);
   }
 }

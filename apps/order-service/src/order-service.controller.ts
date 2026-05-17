@@ -39,8 +39,20 @@ export class OrderServiceController {
       userId: string;
       plan?: SubscriptionPlan;
       durationDays?: number;
+      paymentId?: string;
+      paymentType?: string;
     },
   ) {
+    // If paymentType is upgrade or renewal, use activateSubscription for proper handling
+    if (payload.paymentType === 'upgrade' || payload.paymentType === 'renewal') {
+      return this.subscriptionService.activateSubscription({
+        userId: payload.userId,
+        plan: payload.plan as string,
+        durationDays: payload.durationDays ?? 30,
+        paymentId: payload.paymentId ?? '',
+        paymentType: payload.paymentType,
+      });
+    }
     return this.subscriptionService.createSubscription(
       payload.userId,
       payload.plan,
