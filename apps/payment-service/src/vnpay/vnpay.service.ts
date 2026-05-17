@@ -30,6 +30,7 @@ export class VnpayService {
     }
 
     const createDate = dayjs().format('YYYYMMDDHHmmss');
+    const expireDate = dayjs().add(15, 'minute').format('YYYYMMDDHHmmss');
     const orderId = params.orderCode;
     const amount = params.amount * 100; // VNPAY requires amount * 100
     const orderInfo = params.orderInfo || `Thanh toan don hang ${orderId}`;
@@ -42,11 +43,12 @@ export class VnpayService {
       vnp_CurrCode: 'VND',
       vnp_TxnRef: orderId,
       vnp_OrderInfo: orderInfo,
-      vnp_OrderType: 'other',
+      vnp_OrderType: 'subscription',
       vnp_Amount: amount,
       vnp_ReturnUrl: params.returnUrl,
       vnp_IpAddr: params.ipAddress,
       vnp_CreateDate: createDate,
+      vnp_ExpireDate: expireDate,
     };
 
     const signData = this.buildQueryString(vnp_Params);
@@ -105,6 +107,21 @@ export class VnpayService {
    */
   isSuccessResponse(responseCode: string): boolean {
     return responseCode === '00';
+  }
+
+  /**
+   * Checks if the full payment was successful by verifying BOTH
+   * vnp_ResponseCode AND vnp_TransactionStatus equal '00'.
+   * Use this for IPN handling — the design doc mandates both fields.
+   *
+   * @param vnpParams Full VNPay callback params map
+   * @returns true only when both codes are '00'
+   */
+  isPaymentSuccess(vnpParams: Record<string, string>): boolean {
+    return (
+      vnpParams['vnp_ResponseCode'] === '00' &&
+      vnpParams['vnp_TransactionStatus'] === '00'
+    );
   }
 
   /**
