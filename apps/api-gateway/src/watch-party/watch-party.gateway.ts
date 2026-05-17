@@ -30,6 +30,8 @@ import {
   VideoEndPayloadDto,
   VideoSyncPayloadDto,
 } from '../../../../libs/common/src/dtos/watch-party/watch-party.dto';
+import { LOG_ACTION } from '@app/common/enums/log.enum';
+import { AuditLogService } from '../audit-log/audit-log.service';
 import { WATCH_PARTY_EVENTS } from './watch-party.constants';
 import { WatchPartyService } from './watch-party.service';
 import { WatchPartySocketUser, WsJwtGuard } from './ws-jwt.guard';
@@ -70,6 +72,7 @@ export class WatchPartyGateway
   constructor(
     private readonly service: WatchPartyService,
     private readonly wsJwtGuard: WsJwtGuard,
+    private readonly auditLog: AuditLogService,
     config: ConfigService,
   ) {
     this.hostGracePeriodMs =
@@ -128,6 +131,11 @@ export class WatchPartyGateway
     this.server
       .to(roomId)
       .emit(WATCH_PARTY_EVENTS.ROOM_MEMBER_LEFT, { userId: user.id });
+    this.auditLog.logWatchPartyAction({
+      userId: user.id,
+      action: LOG_ACTION.LEAVE_WATCH_PARTY_ROOM,
+      roomId,
+    });
   }
 
   @UseGuards(WsJwtGuard)
@@ -156,6 +164,11 @@ export class WatchPartyGateway
         });
 
       client.emit(WATCH_PARTY_EVENTS.ROOM_STATE, state);
+      this.auditLog.logWatchPartyAction({
+        userId: user.id,
+        action: LOG_ACTION.JOIN_WATCH_PARTY_ROOM,
+        roomId: body.roomId,
+      });
       return { ok: true };
     } catch (err) {
       this.emitError(client, err);
@@ -172,7 +185,7 @@ export class WatchPartyGateway
 
     const isHost = await this.service.isHost(roomId, user.id);
     if (isHost) {
-      await this.closeRoomAndBroadcast(roomId, 'host_closed');
+      await this.closeRoomAndBroadcast(roomId, 'host_closed', user.id);
     } else {
       await this.service.leaveRoom(roomId, user.id);
       this.server
@@ -180,6 +193,11 @@ export class WatchPartyGateway
         .emit(WATCH_PARTY_EVENTS.ROOM_MEMBER_LEFT, { userId: user.id });
       await client.leave(roomId);
       (client.data as SocketData).roomId = undefined;
+      this.auditLog.logWatchPartyAction({
+        userId: user.id,
+        action: LOG_ACTION.LEAVE_WATCH_PARTY_ROOM,
+        roomId,
+      });
     }
     return { ok: true };
   }
@@ -556,7 +574,7 @@ export class WatchPartyGateway
     }
   }
 
-  async closeRoomAndBroadcast(roomId: string, reason: RoomCloseReason) {
+  async closeRoomAndBroadcast(roomId: string, reason: RoomCloseReason, hostId?: string) {
     this.cancelIdleGrace(roomId);
     const namespace = this.server;
     namespace.to(roomId).emit(WATCH_PARTY_EVENTS.ROOM_CLOSED, { reason });
@@ -566,6 +584,14 @@ export class WatchPartyGateway
       s.leave(roomId);
     }
     await this.service.closeRoom(roomId, reason);
+    if (hostId) {
+      this.auditLog.logWatchPartyAction({
+        userId: hostId,
+        action: LOG_ACTION.CLOSE_WATCH_PARTY_ROOM,
+        roomId,
+        metadata: { reason },
+      });
+    }
   }
 
   private async advanceQueue(roomId: string, hostId: string): Promise<void> {
@@ -617,7 +643,7 @@ export class WatchPartyGateway
     );
     const t = setTimeout(() => {
       this.hostGraceTimers.delete(roomId);
-      this.closeRoomAndBroadcast(roomId, 'host_left').catch((err) =>
+      this.closeRoomAndBroadcast(roomId, 'host_left', hostId).catch((err) =>
         this.logger.error(
           `Failed to auto-close room ${roomId}: ${(err as Error).message}`,
         ),

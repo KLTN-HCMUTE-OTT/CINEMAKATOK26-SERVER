@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
+import { LOG_ACTION } from '@app/common/enums/log.enum';
 import { PaginationQueryDto } from '@app/common/utils/dto/pagination-query.dto';
 import { AuditLogService } from '../service/audit-log.service';
 
@@ -26,5 +27,18 @@ export class AuditLogController {
   @MessagePattern({ cmd: 'get_transactions' })
   async getTransactionsForFPGrowth() {
     return await this.auditLogService.getTransactionsForFPGrowth();
+  }
+
+  @MessagePattern({ cmd: 'create_watch_party_log' })
+  async createWatchPartyLog(
+    @Payload()
+    data: {
+      userId: string;
+      action: LOG_ACTION;
+      roomId: string;
+      metadata?: Record<string, unknown>;
+    },
+  ) {
+    return await this.auditLogService.logWatchPartyAction(data);
   }
 }

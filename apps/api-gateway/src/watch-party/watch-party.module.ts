@@ -6,6 +6,7 @@ import { PassportModule } from '@nestjs/passport';
 
 import { WATCH_PARTY_CLIENT } from '@app/common/dtos/watch-party';
 
+import { AuditLogModule } from '../audit-log/audit-log.module';
 import { UserModule } from '../user/user.module';
 import { WatchPartyService } from './watch-party.service';
 import { WatchPartyController } from './watch-party.controller';
@@ -17,6 +18,7 @@ import { WsJwtGuard } from './ws-jwt.guard';
     ConfigModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({}),
+    AuditLogModule,
     UserModule,
     ClientsModule.registerAsync([
       {

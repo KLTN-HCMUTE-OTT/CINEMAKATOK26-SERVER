@@ -29,6 +29,8 @@ import {
   RoomListQueryDto,
   RoomListResponse,
 } from '../../../../libs/common/src/dtos/watch-party/watch-party.dto';
+import { LOG_ACTION } from '@app/common/enums/log.enum';
+import { AuditLogService } from '../audit-log/audit-log.service';
 import { WatchPartyService } from './watch-party.service';
 import { WatchPartyGateway } from './watch-party.gateway';
 
@@ -39,6 +41,7 @@ export class WatchPartyController {
   constructor(
     private readonly service: WatchPartyService,
     private readonly gateway: WatchPartyGateway,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   @Post('rooms')
@@ -53,6 +56,12 @@ export class WatchPartyController {
     const result = await this.service.createRoom(user.id, body, {
       displayName: user.fullName ?? `user-${user.id.slice(0, 6)}`,
       avatarUrl: user.avatarUrl,
+    });
+    this.auditLog.logWatchPartyAction({
+      userId: user.id,
+      action: LOG_ACTION.CREATE_WATCH_PARTY_ROOM,
+      roomId: result.roomId,
+      metadata: { title: body.title, videoId: body.videoId, inviteCode: result.inviteCode },
     });
     return ResponseBuilder.createResponse({
       data: result,
@@ -97,6 +106,12 @@ export class WatchPartyController {
       });
     }
     await this.gateway.closeRoomAndBroadcast(roomId, 'host_closed');
+    this.auditLog.logWatchPartyAction({
+      userId,
+      action: LOG_ACTION.CLOSE_WATCH_PARTY_ROOM,
+      roomId,
+      metadata: { reason: 'host_closed' },
+    });
     return ResponseBuilder.createResponse({
       data: null,
       message: 'Room closed',
