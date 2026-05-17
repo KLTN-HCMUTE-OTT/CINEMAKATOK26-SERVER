@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { VnpayService } from '../vnpay/vnpay.service';
 import { PaymentEntity, PaymentStatus } from '../entities/payment.entity';
 import { PaymentSaga } from '../saga/payment.saga';
-import { RedisService } from './redis.service';
+import { RedisService } from '@app/common';
 
 /**
  * Handles VNPAY IPN (Instant Payment Notification) and return-URL callbacks.

@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import { EntitySubscription, SubscriptionStatus } from '../entities/subscription.entity';
 import { EntitySubscriptionPlan } from '../entities/subscription-plan.entity';
-import { RedisService } from '../common/redis/redis.service';
+import { RedisService } from '@app/common';
 
 @Injectable()
 export class SubscriptionScheduler {

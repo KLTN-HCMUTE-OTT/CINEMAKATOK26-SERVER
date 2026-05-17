@@ -3,12 +3,12 @@ import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { firstValueFrom, timeout } from 'rxjs';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 import { PaymentEntity, PaymentStatus } from '../entities/payment.entity';
 import { SagaEventLogEntity } from '../entities/saga-event-log.entity';
 import { OutboxEvent } from '../entities/outbox-event.entity';
-import { RedisService } from '../services/redis.service';
+import { RedisService } from '@app/common';
 
 /**
  * Saga status progression:
@@ -67,7 +67,7 @@ export class PaymentSaga {
    * @returns sagaId UUID
    */
   async initializeSaga(payment: PaymentEntity): Promise<string> {
-    const sagaId = uuidv4();
+    const sagaId = randomUUID();
     payment.sagaId = sagaId;
     payment.sagaStatus = SagaStatus.STARTED;
     await this.paymentRepo.save(payment);

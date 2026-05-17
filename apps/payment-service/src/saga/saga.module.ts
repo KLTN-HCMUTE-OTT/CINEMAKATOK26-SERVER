@@ -7,7 +7,6 @@ import { PaymentEntity } from '../entities/payment.entity';
 import { SagaEventLogEntity } from '../entities/saga-event-log.entity';
 import { OutboxEvent } from '../entities/outbox-event.entity';
 import { PaymentSaga } from './payment.saga';
-import { RedisService } from '../services/redis.service';
 
 /**
  * SagaModule wires all dependencies required by PaymentSaga:
@@ -64,7 +63,7 @@ import { RedisService } from '../services/redis.service';
       },
     ]),
   ],
-  providers: [PaymentSaga, RedisService],
+  providers: [PaymentSaga],
   exports: [PaymentSaga],
 })
 export class SagaModule {}

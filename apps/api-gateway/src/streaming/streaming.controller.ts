@@ -34,6 +34,8 @@ import {
 import { multerConfig } from './config/upload.config';
 import { StreamingGatewayService } from './streaming.service';
 
+import { EntitlementGuard } from './guards/entitlement.guard';
+
 @ApiTags('Streaming')
 @ApiBearerAuth()
 @Controller('videos')
@@ -128,7 +130,7 @@ export class StreamingController {
 
   // ─── DRM Endpoints ────────────────────────────────────────────────────────────
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, EntitlementGuard)
   @Get(':videoId/manifest')
   @ApiOperation({
     summary: 'Get signed DASH manifest URL for DRM-protected video',
