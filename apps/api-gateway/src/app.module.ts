@@ -8,6 +8,7 @@ import { PaymentModule } from './payment/payment.module';
 import { StreamingModule } from './streaming/streaming.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { WatchPartyModule } from './watch-party/watch-party.module';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
@@ -25,6 +26,7 @@ import { ConfigModule } from '@nestjs/config';
     StreamingModule,
     AuditLogModule,
     AnalyticsModule,
+    WatchPartyModule,
   ],
 })
 export class AppModule {}

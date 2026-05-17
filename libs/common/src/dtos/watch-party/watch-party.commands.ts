@@ -1,0 +1,55 @@
+export const WATCH_PARTY_CMD = {
+  CREATE_ROOM: 'wp.createRoom',
+  LOOKUP_INVITE: 'wp.lookupInvite',
+  JOIN_ROOM: 'wp.joinRoom',
+  JOIN_ROOM_BY_ID: 'wp.joinRoomById',
+  LEAVE_ROOM: 'wp.leaveRoom',
+  CLOSE_ROOM: 'wp.closeRoom',
+  IS_HOST: 'wp.isHost',
+  GET_ROOM_STATE: 'wp.getRoomState',
+  GET_ROOM_SUMMARY: 'wp.getRoomSummary',
+  GET_ROOM_FOR_USER: 'wp.getRoomIdForUser',
+  GET_MEMBER_NAME: 'wp.getMemberDisplayName',
+  LIST_ACTIVE_ROOMS: 'wp.listActiveRooms',
+  SYNC_VIDEO: 'wp.syncVideo',
+  SEND_MESSAGE: 'wp.sendMessage',
+  PUSH_SYSTEM_MESSAGE: 'wp.pushSystemMessage',
+  SEND_REACTION: 'wp.sendReaction',
+  MUTE_MEMBER: 'wp.muteMember',
+  UNMUTE_MEMBER: 'wp.unmuteMember',
+  IS_MUTED: 'wp.isMuted',
+  BAN_MEMBER: 'wp.banMember',
+  UNBAN_MEMBER: 'wp.unbanMember',
+  IS_BANNED: 'wp.isBanned',
+  ENQUEUE_VIDEO: 'wp.enqueueVideo',
+  REMOVE_FROM_QUEUE: 'wp.removeFromQueue',
+  REORDER_QUEUE: 'wp.reorderQueue',
+  GET_QUEUE: 'wp.getQueue',
+  PLAY_NEXT: 'wp.playNext',
+  PLAY_NOW: 'wp.playNow',
+  HANDLE_VIDEO_END: 'wp.handleVideoEnd',
+} as const;
+
+export type WatchPartyCmd =
+  (typeof WATCH_PARTY_CMD)[keyof typeof WATCH_PARTY_CMD];
+
+export const WATCH_PARTY_EVENTS = {
+  ROOM_STATE: 'room:state',
+  ROOM_MEMBER_JOINED: 'room:member-joined',
+  ROOM_MEMBER_LEFT: 'room:member-left',
+  ROOM_CLOSED: 'room:closed',
+  ROOM_KICKED: 'room:kicked',
+  ROOM_MEMBER_BANNED: 'room:member-banned',
+  ROOM_MEMBER_UNBANNED: 'room:member-unbanned',
+  ROOM_MEMBER_MUTED: 'room:member-muted',
+  ROOM_MEMBER_UNMUTED: 'room:member-unmuted',
+  VIDEO_SYNC_UPDATE: 'video:sync-update',
+  VIDEO_CHANGED: 'video:changed',
+  VIDEO_QUEUE_EMPTY: 'video:queue-empty',
+  QUEUE_UPDATED: 'queue:updated',
+  CHAT_NEW_MESSAGE: 'chat:new-message',
+  REACTION_BROADCAST: 'reaction:broadcast',
+  ERROR: 'error',
+} as const;
+
+export const WATCH_PARTY_CLIENT = 'WATCH_PARTY_SERVICE';

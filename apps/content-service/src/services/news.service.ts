@@ -39,7 +39,7 @@ export class NewsService {
         .orderBy('rank', 'DESC');
     }
 
-    if (sort) {
+    if (sort && (typeof sort !== 'string' || sort.trim())) {
       const sortObj = typeof sort === 'string' ? JSON.parse(sort) : sort;
       Object.keys(sortObj).forEach((key) => {
         queryBuilder.addOrderBy(`news.${key}`, sortObj[key]);
@@ -81,7 +81,7 @@ export class NewsService {
       });
     }
 
-    if (sort) {
+    if (sort && (typeof sort !== 'string' || sort.trim())) {
       const sortObj = typeof sort === 'string' ? JSON.parse(sort) : sort;
       Object.keys(sortObj).forEach((key) => {
         queryBuilder.addOrderBy(`news.${key}`, sortObj[key]);

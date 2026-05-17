@@ -115,7 +115,7 @@ export class MovieService {
 
     if (extraSelect) qb.addSelect(extraSelect, extraOrder || undefined);
 
-    if (search) {
+    if (search && (typeof search !== 'string' || search.trim())) {
       const searchObj =
         typeof search === 'string' ? JSON.parse(search) : search;
       const conditions: string[] = [];
@@ -157,7 +157,7 @@ export class MovieService {
       }
     }
 
-    if (sort) {
+    if (sort && (typeof sort !== 'string' || sort.trim())) {
       const sortObj = typeof sort === 'string' ? JSON.parse(sort) : sort;
       Object.keys(sortObj).forEach((key) => {
         let field;
