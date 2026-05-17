@@ -4,9 +4,13 @@ import { VnpayService } from './vnpay.service';
 
 describe('VnpayService', () => {
   let service: VnpayService;
-  let configService: ConfigService;
 
   beforeEach(async () => {
+    // Set process.env variables since the service reads directly from process.env
+    process.env.VNPAY_TMN_CODE = 'TESTCODE';
+    process.env.VNPAY_HASH_SECRET = 'TESTSECRET1234567890TESTSECRET12';
+    process.env.VNPAY_URL = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VnpayService,
@@ -27,7 +31,12 @@ describe('VnpayService', () => {
     }).compile();
 
     service = module.get<VnpayService>(VnpayService);
-    configService = module.get<ConfigService>(ConfigService);
+  });
+
+  afterEach(() => {
+    delete process.env.VNPAY_TMN_CODE;
+    delete process.env.VNPAY_HASH_SECRET;
+    delete process.env.VNPAY_URL;
   });
 
   it('should be defined', () => {

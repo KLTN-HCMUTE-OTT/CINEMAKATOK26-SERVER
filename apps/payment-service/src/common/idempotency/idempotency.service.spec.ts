@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { IdempotencyService } from './idempotency.service';
-import { RedisService } from '../../services/redis.service';
+import { RedisService } from '@app/common';
 
 describe('IdempotencyService', () => {
   let service: IdempotencyService;

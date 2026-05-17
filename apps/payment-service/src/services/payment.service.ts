@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { PaymentEntity, PaymentPlan, PaymentStatus, PaymentType } from '../entities/payment.entity';
 import { SagaEventLogEntity } from '../entities/saga-event-log.entity';
 import { DlqEvent } from '../entities/dlq-event.entity';
 import { VnpayService } from '../vnpay/vnpay.service';
 import { PaymentSaga } from '../saga/payment.saga';
-import { RedisService } from './redis.service';
+import { RedisService } from '@app/common';
 import { PaymentCallbackService } from './payment-callback.service';
 import { VnpayCallbackDto } from '../vnpay/dto/vnpay-callback.dto';
 
@@ -81,7 +81,7 @@ export class PaymentService {
       paymentType: payload.paymentType ?? PaymentType.NEW,
       durationDays,
       status: PaymentStatus.PENDING,
-      idempotencyKey: uuidv4(), // Internal dedup key
+      idempotencyKey: randomUUID(), // Internal dedup key
       ipAddress: payload.ipAddress,
       userAgent: payload.userAgent,
       returnUrl: payload.returnUrl ?? process.env.VNPAY_RETURN_URL,
@@ -156,6 +156,31 @@ export class PaymentService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Retrieve a single payment by ID for a specific user (owner check).
+   */
+  async getPaymentById(userId: string, paymentId: string) {
+    const payment = await this.paymentRepo.findOne({
+      where: { id: paymentId, userId },
+    });
+    if (!payment) return null;
+    return {
+      id: payment.id,
+      orderCode: payment.orderCode,
+      plan: payment.plan,
+      amount: payment.amount,
+      currency: payment.currency,
+      status: payment.status,
+      paymentType: payment.paymentType,
+      bankCode: payment.bankCode,
+      cardType: payment.cardType,
+      payDate: payment.payDate,
+      sagaId: payment.sagaId,
+      sagaStatus: payment.sagaStatus,
+      createdAt: payment.createdAt,
     };
   }
 

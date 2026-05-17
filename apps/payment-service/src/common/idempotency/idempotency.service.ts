@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RedisService } from '../../services/redis.service';
+import { RedisService } from '@app/common';
 
 @Injectable()
 export class IdempotencyService {

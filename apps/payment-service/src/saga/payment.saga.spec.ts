@@ -9,6 +9,7 @@ import {
 } from '../entities/payment.entity';
 import { SagaEventLogEntity } from '../entities/saga-event-log.entity';
 import { OutboxEvent } from '../entities/outbox-event.entity';
+import { RedisService } from '@app/common';
 import { of, throwError } from 'rxjs';
 
 /**
@@ -80,17 +81,14 @@ describe('PaymentSaga', () => {
           useValue: notificationClient,
         },
         {
-          provide: 'RedisService',
+          provide: RedisService,
           useValue: redisService,
         },
       ],
-    })
-      .overrideProvider('RedisService')
-      .useValue(redisService)
-      .compile();
+    }).compile();
 
-    // Manually inject redisService since it's not a token-based provider
     saga = module.get<PaymentSaga>(PaymentSaga);
+    // Explicitly assign mocked redis reference just in case
     (saga as any).redis = redisService;
   });
 

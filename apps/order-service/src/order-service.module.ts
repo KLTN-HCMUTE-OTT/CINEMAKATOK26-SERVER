@@ -6,7 +6,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import * as path from 'path';
 
 import { DatabaseModule } from '@app/core/database/database.module';
-import { RedisModule } from './common/redis/redis.module';
+import { RedisModule } from '@app/common';
 
 import { OrderServiceController } from './order-service.controller';
 import { SubscriptionService } from './services/subscription.service';

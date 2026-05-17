@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-
 import { ExcelModule } from './utils/excel/excel.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
-  imports: [ExcelModule],
-  exports: [ExcelModule],
+  imports: [ExcelModule, RedisModule],
+  exports: [ExcelModule, RedisModule],
   providers: [],
 })
 export class CommonModule {
