@@ -2,7 +2,8 @@ export type RoomCloseReason =
   | 'host_left'
   | 'host_closed'
   | 'expired'
-  | 'idle';
+  | 'idle'
+  | 'admin_closed';
 
 export type WatchPartyErrorCode =
   | 'WRONG_PASSWORD'

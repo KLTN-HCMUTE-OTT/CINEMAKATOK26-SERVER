@@ -28,6 +28,14 @@ export const WATCH_PARTY_CMD = {
   PLAY_NEXT: 'wp.playNext',
   PLAY_NOW: 'wp.playNow',
   HANDLE_VIDEO_END: 'wp.handleVideoEnd',
+  ADMIN_LIST_ALL_ROOMS: 'wp.admin.listAllRooms',
+  ADMIN_GET_ROOM_DETAILS: 'wp.admin.getRoomDetails',
+  ADMIN_CLOSE_ROOM: 'wp.admin.closeRoom',
+  ADMIN_KICK_MEMBER: 'wp.admin.kickMember',
+  ADMIN_GET_STATS: 'wp.admin.getStats',
+  ADMIN_BAN_USER: 'wp.admin.banUser',
+  ADMIN_UNBAN_USER: 'wp.admin.unbanUser',
+  ADMIN_IS_GLOBALLY_BANNED: 'wp.admin.isGloballyBanned',
 } as const;
 
 export type WatchPartyCmd =

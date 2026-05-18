@@ -235,3 +235,62 @@ export class VideoEndPayloadDto {
   @IsString()
   videoId?: string;
 }
+
+export class AdminListRoomsQueryDto {
+  @ApiPropertyOptional({ minimum: 1, maximum: 50, default: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number = 20;
+
+  @ApiPropertyOptional({ minimum: 0, default: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  offset?: number = 0;
+
+  @ApiPropertyOptional({ description: 'Search by title or hostId' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by videoId' })
+  @IsOptional()
+  @IsString()
+  videoId?: string;
+}
+
+export class AdminCloseRoomDto {
+  @ApiPropertyOptional({ description: 'Reason for closing the room' })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
+export class AdminBanUserDto {
+  @ApiPropertyOptional({ description: 'Duration in seconds (omit for permanent ban)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  durationSec?: number;
+
+  @ApiPropertyOptional({ description: 'Reason for the ban' })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
+export class WatchPartyStatsResponse {
+  @ApiProperty()
+  totalActiveRooms!: number;
+
+  @ApiProperty()
+  totalPublicRooms!: number;
+
+  @ApiProperty()
+  totalMembers!: number;
+}

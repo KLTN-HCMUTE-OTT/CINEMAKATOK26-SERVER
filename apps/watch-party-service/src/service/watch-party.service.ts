@@ -78,6 +78,9 @@ export class WatchPartyService {
     input: CreateRoomInput,
     hostInfo: MemberInput = { displayName: 'Host' },
   ): Promise<CreateRoomResult> {
+    if (await this.adminIsGloballyBanned(hostId)) {
+      throw new WatchPartyError('BANNED', 'You are banned from Watch Party');
+    }
     const existing = await this.redis.get(WP_KEYS.userRoom(hostId));
     if (existing) {
       const stillThere = await this.redis.exists(WP_KEYS.room(existing));
@@ -184,6 +187,9 @@ export class WatchPartyService {
     password?: string,
     member: MemberInput = { displayName: 'Guest' },
   ): Promise<RoomState> {
+    if (await this.adminIsGloballyBanned(userId)) {
+      throw new WatchPartyError('BANNED', 'You are banned from Watch Party');
+    }
     const room = await this.redis.hgetall(WP_KEYS.room(roomId));
     if (!room || !room.roomId) {
       throw new WatchPartyError('NOT_FOUND', 'Room not found');
@@ -764,6 +770,104 @@ export class WatchPartyService {
 
     const effectiveTotal = total - stale.length;
     return { items, total: Math.max(effectiveTotal, 0) };
+  }
+
+  async adminListAllRooms(query: {
+    limit: number;
+    offset: number;
+    search?: string;
+    videoId?: string;
+  }): Promise<{ items: RoomListItem[]; total: number }> {
+    const result = await this.listActiveRooms({
+      scope: 'all',
+      limit: query.limit,
+      offset: query.offset,
+      videoId: query.videoId,
+    });
+    if (!query.search) return result;
+    const search = query.search.toLowerCase();
+    const filtered = result.items.filter(
+      (r) =>
+        r.title.toLowerCase().includes(search) ||
+        r.hostId.toLowerCase().includes(search),
+    );
+    return { items: filtered, total: filtered.length };
+  }
+
+  async adminGetRoomDetails(
+    roomId: string,
+  ): Promise<RoomState & { banList: ModerationEntry[]; muteList: ModerationEntry[] }> {
+    const roomState = await this.getRoomState(roomId);
+    const [banList, muteList] = await Promise.all([
+      this.listBans(roomId),
+      this.listMutes(roomId),
+    ]);
+    return { ...roomState, banList, muteList };
+  }
+
+  async adminCloseRoom(
+    roomId: string,
+    _adminId: string,
+    reason?: string,
+  ): Promise<{ closed: true; memberIds: string[] }> {
+    const memberIds = await this.redis.smembers(WP_KEYS.members(roomId));
+    await this.closeRoom(roomId, (reason ?? 'admin_closed') as RoomCloseReason);
+    return { closed: true, memberIds };
+  }
+
+  async adminKickMember(
+    roomId: string,
+    _adminId: string,
+    targetId: string,
+  ): Promise<{ kicked: true; targetId: string }> {
+    await this.leaveRoom(roomId, targetId);
+    return { kicked: true, targetId };
+  }
+
+  async adminGetStats(): Promise<{
+    totalActiveRooms: number;
+    totalPublicRooms: number;
+    totalMembers: number;
+  }> {
+    const [totalActiveRooms, totalPublicRooms, roomIds] = await Promise.all([
+      this.redis.zcard(WP_KEYS.activeRooms),
+      this.redis.zcard(WP_KEYS.publicRooms),
+      this.redis.zrange(WP_KEYS.activeRooms, 0, -1),
+    ]);
+    let totalMembers = 0;
+    for (const roomId of roomIds) {
+      totalMembers += await this.redis.scard(WP_KEYS.members(roomId));
+    }
+    return { totalActiveRooms, totalPublicRooms, totalMembers };
+  }
+
+  async adminBanUserFromWatchParty(
+    userId: string,
+    durationSec?: number,
+  ): Promise<void> {
+    const key = WP_KEYS.globalBan(userId);
+    if (durationSec && durationSec > 0) {
+      const expiryTs = Date.now() + durationSec * 1000;
+      await this.redis.set(key, String(expiryTs), 'EX', durationSec);
+    } else {
+      await this.redis.set(key, 'permanent');
+    }
+  }
+
+  async adminUnbanUserFromWatchParty(userId: string): Promise<void> {
+    await this.redis.del(WP_KEYS.globalBan(userId));
+  }
+
+  async adminIsGloballyBanned(userId: string): Promise<boolean> {
+    const raw = await this.redis.get(WP_KEYS.globalBan(userId));
+    if (!raw) return false;
+    if (raw === 'permanent') return true;
+    const until = Number(raw);
+    if (!Number.isFinite(until) || until <= Date.now()) {
+      await this.redis.del(WP_KEYS.globalBan(userId));
+      return false;
+    }
+    return true;
   }
 
   private async applyModeration(args: {

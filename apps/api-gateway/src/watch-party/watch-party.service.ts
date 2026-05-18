@@ -262,4 +262,49 @@ export class WatchPartyService {
       videoId,
     });
   }
+
+  adminListAllRooms(query: {
+    limit: number;
+    offset: number;
+    search?: string;
+    videoId?: string;
+  }): Promise<{ items: RoomListItem[]; total: number }> {
+    return this.send(WATCH_PARTY_CMD.ADMIN_LIST_ALL_ROOMS, query);
+  }
+
+  adminGetRoomDetails(roomId: string): Promise<any> {
+    return this.send(WATCH_PARTY_CMD.ADMIN_GET_ROOM_DETAILS, { roomId });
+  }
+
+  adminCloseRoom(
+    roomId: string,
+    adminId: string,
+    reason?: string,
+  ): Promise<{ closed: true; memberIds: string[] }> {
+    return this.send(WATCH_PARTY_CMD.ADMIN_CLOSE_ROOM, { roomId, adminId, reason });
+  }
+
+  adminKickMember(
+    roomId: string,
+    adminId: string,
+    targetId: string,
+  ): Promise<{ kicked: true; targetId: string }> {
+    return this.send(WATCH_PARTY_CMD.ADMIN_KICK_MEMBER, { roomId, adminId, targetId });
+  }
+
+  adminGetStats(): Promise<{
+    totalActiveRooms: number;
+    totalPublicRooms: number;
+    totalMembers: number;
+  }> {
+    return this.send(WATCH_PARTY_CMD.ADMIN_GET_STATS, {});
+  }
+
+  adminBanUser(userId: string, durationSec?: number): Promise<void> {
+    return this.send(WATCH_PARTY_CMD.ADMIN_BAN_USER, { userId, durationSec });
+  }
+
+  adminUnbanUser(userId: string): Promise<void> {
+    return this.send(WATCH_PARTY_CMD.ADMIN_UNBAN_USER, { userId });
+  }
 }

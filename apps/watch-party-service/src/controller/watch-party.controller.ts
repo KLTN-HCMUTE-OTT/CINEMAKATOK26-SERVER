@@ -304,4 +304,56 @@ export class WatchPartyController {
       payload.videoId,
     );
   }
+
+  @MessagePattern({ cmd: WATCH_PARTY_CMD.ADMIN_LIST_ALL_ROOMS })
+  adminListAllRooms(
+    @Payload()
+    payload: { limit: number; offset: number; search?: string; videoId?: string },
+  ) {
+    return this.service.adminListAllRooms(payload);
+  }
+
+  @MessagePattern({ cmd: WATCH_PARTY_CMD.ADMIN_GET_ROOM_DETAILS })
+  adminGetRoomDetails(@Payload() payload: { roomId: string }) {
+    return this.service.adminGetRoomDetails(payload.roomId);
+  }
+
+  @MessagePattern({ cmd: WATCH_PARTY_CMD.ADMIN_CLOSE_ROOM })
+  adminCloseRoom(
+    @Payload()
+    payload: { roomId: string; adminId: string; reason?: string },
+  ) {
+    return this.service.adminCloseRoom(payload.roomId, payload.adminId, payload.reason);
+  }
+
+  @MessagePattern({ cmd: WATCH_PARTY_CMD.ADMIN_KICK_MEMBER })
+  adminKickMember(
+    @Payload()
+    payload: { roomId: string; adminId: string; targetId: string },
+  ) {
+    return this.service.adminKickMember(payload.roomId, payload.adminId, payload.targetId);
+  }
+
+  @MessagePattern({ cmd: WATCH_PARTY_CMD.ADMIN_GET_STATS })
+  adminGetStats() {
+    return this.service.adminGetStats();
+  }
+
+  @MessagePattern({ cmd: WATCH_PARTY_CMD.ADMIN_BAN_USER })
+  adminBanUser(
+    @Payload()
+    payload: { userId: string; durationSec?: number },
+  ) {
+    return this.service.adminBanUserFromWatchParty(payload.userId, payload.durationSec);
+  }
+
+  @MessagePattern({ cmd: WATCH_PARTY_CMD.ADMIN_UNBAN_USER })
+  adminUnbanUser(@Payload() payload: { userId: string }) {
+    return this.service.adminUnbanUserFromWatchParty(payload.userId);
+  }
+
+  @MessagePattern({ cmd: WATCH_PARTY_CMD.ADMIN_IS_GLOBALLY_BANNED })
+  adminIsGloballyBanned(@Payload() payload: { userId: string }) {
+    return this.service.adminIsGloballyBanned(payload.userId);
+  }
 }

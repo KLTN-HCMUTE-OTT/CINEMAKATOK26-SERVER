@@ -594,6 +594,21 @@ export class WatchPartyGateway
     }
   }
 
+  async adminKickMemberAndBroadcast(roomId: string, targetId: string): Promise<void> {
+    await this.service.adminKickMember(roomId, 'admin', targetId);
+    const namespace = this.server;
+    const sockets = await namespace.in(roomId).fetchSockets();
+    for (const s of sockets) {
+      const socketUser = (s.data as SocketData)?.user;
+      if (socketUser?.id === targetId) {
+        s.emit(WATCH_PARTY_EVENTS.ROOM_KICKED, { userId: targetId });
+        (s.data as SocketData).roomId = undefined;
+        s.leave(roomId);
+      }
+    }
+    namespace.to(roomId).emit(WATCH_PARTY_EVENTS.ROOM_MEMBER_LEFT, { userId: targetId });
+  }
+
   private async advanceQueue(roomId: string, hostId: string): Promise<void> {
     const result = await this.service.playNext(roomId, hostId);
     if (result.nextItem) {

@@ -13,6 +13,7 @@ export const WP_KEYS = {
   queue: (roomId: string) => `wp:room:${roomId}:queue`,
   activeRooms: 'wp:rooms:active',
   publicRooms: 'wp:rooms:public',
+  globalBan: (userId: string) => `wp:global-ban:${userId}`,
 };
 
 export const SYSTEM_USER_ID = '__system__';
