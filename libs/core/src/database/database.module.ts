@@ -8,7 +8,8 @@ export type DatabaseServiceName =
   | 'order'
   | 'content'
   | 'activity'
-  | 'audit';
+  | 'audit'
+  | 'streaming';
 
 export interface DatabaseModuleOptions {
   service: DatabaseServiceName;

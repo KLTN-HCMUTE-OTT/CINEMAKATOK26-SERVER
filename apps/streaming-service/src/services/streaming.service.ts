@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { VIDEO_STATUS } from '@app/common/enums/global.enum';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import { QueueService } from './queue.service';
 import { S3Service } from './s3.service';
@@ -10,6 +10,8 @@ import { ContentVideoService } from './content-video.service';
 
 @Injectable()
 export class StreamingService {
+  private readonly logger = new Logger(StreamingService.name);
+
   constructor(
     private readonly queueService: QueueService,
     private readonly s3Service: S3Service,
@@ -55,5 +57,21 @@ export class StreamingService {
 
   async getFileAccess(s3Key: string) {
     return this.s3Service.getSignedCookiesForFile(s3Key);
+  }
+
+  /**
+   * Generate a signed CloudFront URL for the DASH manifest (.mpd).
+   * The signed URL is short-lived (1 hour) for security.
+   */
+  async getManifestUrl(videoId: string): Promise<{ manifestUrl: string }> {
+    const s3Key = `videos/${videoId}/dash/manifest.mpd`;
+
+    this.logger.log(`Generating signed manifest URL for video ${videoId}`);
+
+    const result = await this.s3Service.getSignedCookiesForFile(s3Key);
+
+    return {
+      manifestUrl: result.fileUrl,
+    };
   }
 }
