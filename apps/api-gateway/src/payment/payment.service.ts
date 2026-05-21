@@ -26,6 +26,7 @@ export class PaymentService {
     userId: string,
     payload: {
       plan: string;
+      amount: number;
       returnUrl?: string;
       ipAddress: string;
       userAgent?: string;
@@ -74,6 +75,12 @@ export class PaymentService {
   getPlans(): Observable<any> {
     return this.orderClient
       .send('subscription.getPlans', {})
+      .pipe(catchRpcError());
+  }
+
+  getPlanByName(name: string): Observable<any> {
+    return this.orderClient
+      .send({ cmd: 'order.getPlanByName' }, { name })
       .pipe(catchRpcError());
   }
 

@@ -22,5 +22,8 @@ async function bootstrap() {
   );
 
   await app.listen();
+  console.log(
+    `User Service is running on port ${process.env.USER_SERVICE_PORT}`,
+  );
 }
 bootstrap();

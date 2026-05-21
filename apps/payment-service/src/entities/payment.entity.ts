@@ -1,25 +1,6 @@
 import { Column, Entity, Index } from 'typeorm';
 import { BaseEntity } from '@app/common/base/base-entity';
-
-export enum PaymentPlan {
-  BASIC = 'basic',
-  PREMIUM = 'premium',
-}
-
-export enum PaymentType {
-  NEW = 'new',
-  UPGRADE = 'upgrade',
-  RENEWAL = 'renewal',
-}
-
-export enum PaymentStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  EXPIRED = 'expired',
-  REFUNDED = 'refunded',
-}
+import { PaymentPlan, PaymentStatus, PaymentType } from '@app/common/enums/global.enum';
 
 @Entity({ name: 'payment' })
 export class PaymentEntity extends BaseEntity {
@@ -73,7 +54,7 @@ export class PaymentEntity extends BaseEntity {
   @Index()
   sagaId: string;
 
-  @Column({ type: 'varchar', length: 20, nullable: true })
+  @Column({ type: 'varchar', length: 50, nullable: true })
   sagaStatus: string;
 
   @Column({ type: 'varchar', length: 64, unique: true })

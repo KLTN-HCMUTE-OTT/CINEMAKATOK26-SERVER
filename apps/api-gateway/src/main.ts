@@ -91,8 +91,6 @@ async function bootstrap() {
     )
     .addTag('Auth', 'Authentication & token management')
     .addTag('Users', 'User profile management')
-    .addTag('Content', 'Movies & episodes catalogue')
-    .addTag('Orders', 'Subscription orders')
     .addTag('Payments', 'Payment processing')
     .addTag('Streaming', 'Video streaming URLs')
     .build();

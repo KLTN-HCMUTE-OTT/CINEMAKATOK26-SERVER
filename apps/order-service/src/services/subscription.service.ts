@@ -3,11 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
 
 import {
-  EntitySubscription,
-  SubscriptionPlan,
-  SubscriptionStatus,
+  EntitySubscription
 } from '../entities/subscription.entity';
 import { EntitySubscriptionPlan } from '../entities/subscription-plan.entity';
+import { SubscriptionStatus, SubscriptionPlan } from '@app/common/enums/global.enum';
+
 
 @Injectable()
 export class SubscriptionService {
@@ -19,6 +19,13 @@ export class SubscriptionService {
     @InjectRepository(EntitySubscriptionPlan, 'order')
     private readonly planRepo: Repository<EntitySubscriptionPlan>,
   ) {}
+
+  /**
+   * Get a subscription plan by its unique name (e.g., 'basic', 'premium').
+   */
+  async getPlanByName(name: string): Promise<EntitySubscriptionPlan | null> {
+    return this.planRepo.findOne({ where: { name } });
+  }
 
   /**
    * Check if a user has an active, non-expired subscription.
@@ -112,6 +119,7 @@ export class SubscriptionService {
     return this.subscriptionRepo.findOne({
       where: { userId },
       order: { createdAt: 'DESC' },
+      relations: ['plan']
     });
   }
 

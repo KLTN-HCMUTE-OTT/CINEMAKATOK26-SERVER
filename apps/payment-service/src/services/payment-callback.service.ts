@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { VnpayService } from '../vnpay/vnpay.service';
-import { PaymentEntity, PaymentStatus } from '../entities/payment.entity';
+import { PaymentEntity } from '../entities/payment.entity';
+import { PaymentStatus } from '@app/common/enums/global.enum';
 import { PaymentSaga } from '../saga/payment.saga';
 import { RedisService } from '@app/common';
 

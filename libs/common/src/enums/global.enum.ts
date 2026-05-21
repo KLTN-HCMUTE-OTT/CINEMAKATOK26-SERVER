@@ -71,3 +71,33 @@ export enum ACCESS_TIER {
   BASIC = 'BASIC',
   PREMIUM = 'PREMIUM',
 }
+
+export enum PaymentPlan {
+  BASIC = 'basic',
+  PREMIUM = 'premium',
+}
+
+export enum PaymentType {
+  NEW = 'new',
+  UPGRADE = 'upgrade',
+  RENEWAL = 'renewal',
+}
+
+export enum PaymentStatus {
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  EXPIRED = 'expired',
+  REFUNDED = 'refunded',
+}
+export enum SubscriptionPlan {
+  BASIC = 'basic',
+  PREMIUM = 'premium',
+}
+
+export enum SubscriptionStatus {
+  ACTIVE = 'active',
+  EXPIRED = 'expired',
+  CANCELLED = 'cancelled',
+}

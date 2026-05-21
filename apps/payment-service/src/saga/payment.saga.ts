@@ -5,10 +5,11 @@ import { Repository } from 'typeorm';
 import { firstValueFrom, timeout } from 'rxjs';
 import { randomUUID } from 'crypto';
 
-import { PaymentEntity, PaymentStatus } from '../entities/payment.entity';
+import { PaymentEntity } from '../entities/payment.entity';
 import { SagaEventLogEntity } from '../entities/saga-event-log.entity';
 import { OutboxEvent } from '../entities/outbox-event.entity';
 import { RedisService } from '@app/common';
+import { PaymentStatus } from '@app/common/enums/global.enum';
 
 /**
  * Saga status progression:

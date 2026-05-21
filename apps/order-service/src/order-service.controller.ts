@@ -2,7 +2,7 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
 import { SubscriptionService } from './services/subscription.service';
-import { SubscriptionPlan } from './entities/subscription.entity';
+import {  SubscriptionPlan } from '@app/common/enums/global.enum';
 
 @Controller()
 export class OrderServiceController {
@@ -11,6 +11,14 @@ export class OrderServiceController {
   ) {}
 
   // ─── Subscription ─────────────────────────────────────────────────────────────
+
+  /**
+   * Get subscription plan details (like price) by name.
+   */
+  @MessagePattern({ cmd: 'order.getPlanByName' })
+  getPlanByName(@Payload() payload: { name: string }) {
+    return this.subscriptionService.getPlanByName(payload.name);
+  }
 
   /**
    * Check if a user has an active subscription.

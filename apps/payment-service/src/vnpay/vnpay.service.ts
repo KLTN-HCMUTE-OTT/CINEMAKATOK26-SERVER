@@ -43,7 +43,7 @@ export class VnpayService {
       vnp_CurrCode: 'VND',
       vnp_TxnRef: orderId,
       vnp_OrderInfo: orderInfo,
-      vnp_OrderType: 'subscription',
+      vnp_OrderType: 'other',
       vnp_Amount: amount,
       vnp_ReturnUrl: params.returnUrl,
       vnp_IpAddr: params.ipAddress,
@@ -70,15 +70,19 @@ export class VnpayService {
   verifyCallback(query: Record<string, string>): boolean {
     const secretKey = process.env.VNPAY_HASH_SECRET;
     if (!secretKey) {
+      console.warn('[VNPAY] Verification failed: VNPAY_HASH_SECRET is missing');
       return false;
     }
 
-    const vnp_Params = { ...query };
-    const secureHash = vnp_Params['vnp_SecureHash'];
+    // Filter only parameters starting with 'vnp_' as per VNPAY specification
+    const vnp_Params: Record<string, string> = {};
+    for (const key in query) {
+      if (key.startsWith('vnp_') && key !== 'vnp_SecureHash' && key !== 'vnp_SecureHashType') {
+        vnp_Params[key] = query[key];
+      }
+    }
 
-    delete vnp_Params['vnp_SecureHash'];
-    delete vnp_Params['vnp_SecureHashType'];
-
+    const secureHash = query['vnp_SecureHash'];
     const signData = this.buildQueryString(vnp_Params);
     
     const hmac = crypto.createHmac('sha512', secretKey);
@@ -90,12 +94,18 @@ export class VnpayService {
       const actualBuffer = Buffer.from(secureHash?.toString() || '');
       
       if (expectedBuffer.length !== actualBuffer.length) {
+        console.warn(`[VNPAY] Signature length mismatch. Expected: ${expectedBuffer.length}, Actual: ${actualBuffer.length}`);
         return false;
       }
       
-      return crypto.timingSafeEqual(expectedBuffer, actualBuffer);
-    } catch {
-      return false; // length mismatch or other buffer error
+      const isValid = crypto.timingSafeEqual(expectedBuffer, actualBuffer);
+      if (!isValid) {
+        console.warn('[VNPAY] Signature hash mismatch');
+      }
+      return isValid;
+    } catch (err: any) {
+      console.error('[VNPAY] Error during signature comparison:', err.message);
+      return false;
     }
   }
 
@@ -155,18 +165,20 @@ export class VnpayService {
    * VNPAY requires space characters to be replaced with '+'.
    */
   private buildQueryString(params: Record<string, any>): string {
-    const sortedKeys = Object.keys(params).sort((a, b) => a.localeCompare(b));
-    const queryParts: string[] = [];
-    
-    for (const key of sortedKeys) {
-      if (params[key] !== '' && params[key] !== undefined && params[key] !== null) {
-        // Encode key and value, replacing %20 with + as per VNPAY documentation
-        const encodedKey = encodeURIComponent(key);
-        const encodedValue = encodeURIComponent(params[key].toString()).replace(/%20/g, '+');
-        queryParts.push(`${encodedKey}=${encodedValue}`);
-      }
-    }
-    
-    return queryParts.join('&');
+  const sortedKeys = Object.keys(params).sort();
+  const queryParts: string[] = [];
+
+  for (const key of sortedKeys) {
+    // Chỉ bỏ qua undefined và null, GIỮ LẠI empty string
+    if (params[key] === undefined || params[key] === null) continue;
+
+    const rawVal = String(params[key]);
+    const encodedValue = encodeURIComponent(rawVal).replace(/%20/g, '+');
+
+    // Key KHÔNG encode
+    queryParts.push(`${key}=${encodedValue}`);
   }
+
+  return queryParts.join('&');
+}
 }

@@ -3,18 +3,7 @@ import { Column, Entity, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from '@app/common/base/base-entity';
 import { EntitySubscriptionPlan } from './subscription-plan.entity';
 import { ApiProperty } from '@nestjs/swagger';
-
-export enum SubscriptionPlan {
-  BASIC = 'basic',
-  PREMIUM = 'premium',
-}
-
-export enum SubscriptionStatus {
-  ACTIVE = 'active',
-  EXPIRED = 'expired',
-  CANCELLED = 'cancelled',
-}
-
+import { SubscriptionStatus } from '@app/common/enums/global.enum';
 /**
  * Represents a user's subscription for content access.
  *

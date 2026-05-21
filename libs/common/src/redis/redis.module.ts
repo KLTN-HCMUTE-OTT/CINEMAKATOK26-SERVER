@@ -10,10 +10,13 @@ import { RedisService } from './redis.service';
     {
       provide: 'REDIS_CLIENT',
       useFactory: (configService: ConfigService) => {
-        const url =
-          configService.get<string>('REDIS_URL') ??
-          `redis://${configService.get<string>('REDIS_HOST', 'localhost')}:${configService.get<number>('REDIS_PORT', 6379)}`;
-        return new Redis(url, {
+        const host = configService.get<string>('REDIS_HOST', 'localhost');
+        const port = configService.get<number>('REDIS_PORT', 6379);
+        const password = configService.get<string>('REDIS_PASSWORD');
+        return new Redis({
+          host,
+          port,
+          password,
           lazyConnect: false,
           enableReadyCheck: true,
         });

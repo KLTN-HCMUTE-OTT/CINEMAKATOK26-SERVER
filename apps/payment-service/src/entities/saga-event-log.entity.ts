@@ -10,7 +10,7 @@ export class SagaEventLogEntity extends BaseEntity {
   @Column({ type: 'varchar', length: 50 })
   stepName: string;
 
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ type: 'varchar', length: 50 })
   status: string;
 
   @Column({ type: 'jsonb', nullable: true })

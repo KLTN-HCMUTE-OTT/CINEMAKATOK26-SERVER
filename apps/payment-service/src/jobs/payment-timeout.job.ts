@@ -2,8 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PaymentEntity, PaymentStatus } from '../entities/payment.entity';
+import { PaymentEntity } from '../entities/payment.entity';
 import { PaymentMetricsService } from '../metrics/payment.metrics';
+import { PaymentStatus } from '@app/common/enums/global.enum';
 
 /**
  * PaymentTimeoutJob

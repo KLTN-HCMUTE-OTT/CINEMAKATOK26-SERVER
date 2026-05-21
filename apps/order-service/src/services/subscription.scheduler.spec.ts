@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SubscriptionScheduler } from './subscription.scheduler';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { EntitySubscription, SubscriptionStatus } from '../entities/subscription.entity';
+import { EntitySubscription } from '../entities/subscription.entity';
 import { EntitySubscriptionPlan } from '../entities/subscription-plan.entity';
 import { RedisService } from '@app/common';
+import { SubscriptionStatus } from '@app/common/enums/global.enum';
+
 
 describe('SubscriptionScheduler', () => {
   let scheduler: SubscriptionScheduler;
