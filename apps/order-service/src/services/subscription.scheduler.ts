@@ -3,9 +3,10 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
-import { EntitySubscription, SubscriptionStatus } from '../entities/subscription.entity';
+import { EntitySubscription } from '../entities/subscription.entity';
 import { EntitySubscriptionPlan } from '../entities/subscription-plan.entity';
 import { RedisService } from '@app/common';
+import { SubscriptionStatus } from '@app/common/enums/global.enum';
 
 @Injectable()
 export class SubscriptionScheduler {

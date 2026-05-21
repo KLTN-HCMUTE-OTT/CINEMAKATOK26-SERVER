@@ -3,14 +3,14 @@ import { PaymentSaga, SagaStatus } from './payment.saga';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
   PaymentEntity,
-  PaymentStatus,
-  PaymentType,
-  PaymentPlan,
 } from '../entities/payment.entity';
 import { SagaEventLogEntity } from '../entities/saga-event-log.entity';
 import { OutboxEvent } from '../entities/outbox-event.entity';
 import { RedisService } from '@app/common';
 import { of, throwError } from 'rxjs';
+import {  PaymentStatus,
+  PaymentType,
+  PaymentPlan} from '@app/common/enums/global.enum'
 
 /**
  * Unit tests for PaymentSaga.

@@ -2,15 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { PaymentEntity, PaymentPlan, PaymentStatus, PaymentType } from '../entities/payment.entity';
 import { SagaEventLogEntity } from '../entities/saga-event-log.entity';
 import { DlqEvent } from '../entities/dlq-event.entity';
 import { VnpayService } from '../vnpay/vnpay.service';
 import { PaymentSaga } from '../saga/payment.saga';
 import { RedisService } from '@app/common';
 import { PaymentCallbackService } from './payment-callback.service';
+import { PaymentPlan, PaymentStatus, PaymentType } from '@app/common/enums/global.enum';
+import { PaymentEntity } from '../entities/payment.entity';
 import { VnpayCallbackDto } from '../vnpay/dto/vnpay-callback.dto';
-
 /**
  * Retry configuration — exponential backoff with ±25% jitter.
  * Attempt 0 ≈ 1s | Attempt 1 ≈ 2s | Attempt 2 ≈ 4s → then DLQ
@@ -97,7 +97,7 @@ export class PaymentService {
     const paymentUrl = this.vnpayService.createPaymentUrl({
       orderCode: saved.orderCode,
       amount: saved.amount,
-      orderInfo: `CinemaKatoK - ${saved.plan} subscription`,
+      orderInfo: `CinemaKatoK ${saved.plan} subscription`,
       ipAddress: payload.ipAddress,
       returnUrl: saved.returnUrl ?? process.env.VNPAY_RETURN_URL,
       locale: payload.locale ?? 'vn',

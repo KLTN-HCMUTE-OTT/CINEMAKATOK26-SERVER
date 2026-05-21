@@ -82,78 +82,13 @@ CREATE TRIGGER trg_subscription_plan_updatedAt
 -- ============================================================
 -- ============================================================
 
-DO $$ BEGIN
-  CREATE TYPE payment_plan_enum AS ENUM ('basic', 'premium');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE TYPE payment_type_enum AS ENUM ('new', 'upgrade', 'renewal');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE TYPE payment_status_enum AS ENUM ('pending', 'processing', 'completed', 'failed', 'expired', 'refunded');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
 -- 1. Create payment
-DROP TABLE IF EXISTS payment CASCADE;
-CREATE TABLE payment (
-  id                   UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-  "userId"             UUID          NOT NULL,
-  "subscriptionId"     UUID          DEFAULT NULL,
-
-  "orderCode"          VARCHAR(50)   NOT NULL UNIQUE,
-  "vnpayTxnNo"         VARCHAR(50)   DEFAULT NULL,
-
-  amount               BIGINT        NOT NULL,
-  currency             VARCHAR(3)    NOT NULL DEFAULT 'VND',
-
-  plan                 payment_plan_enum   NOT NULL,
-  "paymentType"        payment_type_enum   NOT NULL,
-  "durationDays"       INT           NOT NULL DEFAULT 30,
-
-  status               payment_status_enum NOT NULL DEFAULT 'pending',
-
-  "vnpayResponseCode"  VARCHAR(10)   DEFAULT NULL,
-  "vnpayMessage"       TEXT          DEFAULT NULL,
-  "bankCode"           VARCHAR(20)   DEFAULT NULL,
-  "cardType"           VARCHAR(20)   DEFAULT NULL,
-  "payDate"            TIMESTAMPTZ   DEFAULT NULL,
-
-  "sagaId"             UUID          DEFAULT NULL,
-  "sagaStatus"         VARCHAR(20)   DEFAULT NULL,
-
-  "idempotencyKey"     VARCHAR(64)   NOT NULL UNIQUE,
-
-  "ipAddress"          VARCHAR(45)   DEFAULT NULL,
-  "userAgent"          TEXT          DEFAULT NULL,
-  "returnUrl"          TEXT          DEFAULT NULL,
-
-  "createdAt"          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-  "updatedAt"          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-  "deletedAt"          TIMESTAMPTZ   DEFAULT NULL
-);
 
 CREATE INDEX idx_payment_user
   ON payment ("userId", "createdAt" DESC);
 CREATE INDEX idx_payment_saga
   ON payment ("sagaId");
 
--- 2. Create saga_event_log
-DROP TABLE IF EXISTS saga_event_log CASCADE;
-CREATE TABLE saga_event_log (
-  id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  "sagaId"      UUID        NOT NULL,
-  "stepName"    VARCHAR(50) NOT NULL,
-  status        VARCHAR(20) NOT NULL,
-  payload       JSONB       DEFAULT NULL,
-  error         TEXT        DEFAULT NULL,
-  "createdAt"   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "updatedAt"   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  "deletedAt"   TIMESTAMPTZ DEFAULT NULL
-);
 
 CREATE INDEX idx_saga_log_sagaId
   ON saga_event_log ("sagaId", "createdAt");

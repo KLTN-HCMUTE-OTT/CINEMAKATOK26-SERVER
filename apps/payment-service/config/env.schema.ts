@@ -14,11 +14,10 @@ export const paymentEnvSchema = z.object({
   PAYMENT_DB_POOL_MIN: z.coerce.number().default(2),
   PAYMENT_DB_POOL_IDLE_TIMEOUT_MS: z.coerce.number().default(30000),
   PAYMENT_DB_POOL_CONNECT_TIMEOUT_MS: z.coerce.number().default(5000),
-  PAYMENT_DB_SSL_ENABLED: z.boolean().default(false),
-  PAYMENT_DB_SSL_REJECT_UNAUTHORIZED: z.boolean().default(false),
+  PAYMENT_DB_SSL_ENABLED: z.preprocess((val) => val === 'true', z.boolean()).default(false),
+  PAYMENT_DB_SSL_REJECT_UNAUTHORIZED: z.preprocess((val) => val === 'true', z.boolean()).default(false),
 
-  REDIS_URL: z.string().default('redis://localhost:6379'),
-  PAYMENT_SERVICE_PORT: z.coerce.number().default(3008),
+  PAYMENT_SERVICE_PORT: z.coerce.number().default(3009),
   PAYMENT_SERVICE_HOST: z.string().default('localhost'),
   RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672'),
 
@@ -26,6 +25,7 @@ export const paymentEnvSchema = z.object({
   VNPAY_HASH_SECRET: z.string(),
   VNPAY_URL: z.string(),
   VNPAY_RETURN_URL: z.string(),
+  VNPAY_IPN_URL: z.string(),
 
   ORDER_SERVICE_HOST: z.string().default('localhost'),
   ORDER_SERVICE_PORT: z.coerce.number().default(3004),

@@ -16,7 +16,7 @@ import { HealthController } from './health.controller';
           transport: Transport.TCP,
           options: {
             host: cs.get('PAYMENT_SERVICE_HOST') ?? 'localhost',
-            port: Number(cs.get('PAYMENT_SERVICE_PORT') ?? 3008),
+            port: Number(cs.get('PAYMENT_SERVICE_PORT') ?? 3009),
           },
         }),
         inject: [ConfigService],
