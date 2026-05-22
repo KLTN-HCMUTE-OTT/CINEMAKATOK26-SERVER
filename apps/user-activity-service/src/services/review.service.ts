@@ -10,6 +10,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CreateReviewDto, UpdateReviewDto } from '@app/common/dtos/user-activity/review.dto';
 import { EntityReview } from '../entities/review.entity';
 import { ContentNotFoundError, CreateReviewFailedError, DomainError, ReviewNotFoundError, UpdateReviewFailedError, DeleteReviewFailedError } from '@app/common/exceptions/domain.error';
+import { AuditLogEmitterService } from './audit-log-emitter.service';
+import { LOG_ACTION, RESOURCE_TYPE } from '@app/common/enums/log.enum';
 
 @Injectable()
 export class ReviewService {
@@ -18,7 +20,21 @@ export class ReviewService {
     private readonly reviewRepository: Repository<EntityReview>,
     @Inject('CONTENT_SERVICE')
     private readonly contentClient: ClientProxy,
+    private readonly auditLogEmitter: AuditLogEmitterService,
   ) {}
+
+  private async getEntityIdByContentId(contentId: string): Promise<string | null> {
+    try {
+      return await firstValueFrom(
+        this.contentClient.send(
+          { cmd: 'content.getEntityIdByContentId' },
+          { contentId },
+        ),
+      );
+    } catch {
+      return null;
+    }
+  }
 
   async createReview(userId: string, createReviewDto: CreateReviewDto) {
     const queryRunner = this.reviewRepository.manager.connection.createQueryRunner();
@@ -41,6 +57,18 @@ export class ReviewService {
       await this.calculateAndBroadcastContentRating(queryRunner.manager, content.id);
 
       await queryRunner.commitTransaction();
+
+      // Emit audit log after successful commit
+      const isMovie = content?.type === 'MOVIE';
+      const entityId = await this.getEntityIdByContentId(content.id);
+      this.auditLogEmitter.emitLog({
+        userId,
+        action: LOG_ACTION.CREATE_REVIEW,
+        resourceType: isMovie ? RESOURCE_TYPE.MOVIE : RESOURCE_TYPE.SERIES,
+        resourceId: entityId ?? undefined,
+        metadata: { contentId: content.id, reviewId: savedReview.id },
+      });
+
       return this.findReviewById(savedReview.id);
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -68,6 +96,23 @@ export class ReviewService {
       await this.calculateAndBroadcastContentRating(queryRunner.manager, review.contentId).catch(() => {});
 
       await queryRunner.commitTransaction();
+
+      // Emit audit log after successful commit
+      try {
+        const content = await firstValueFrom(this.contentClient.send({ cmd: 'content.getContentById' }, { id: review.contentId }));
+        const isMovie = content?.type === 'MOVIE';
+        const entityId = await this.getEntityIdByContentId(review.contentId);
+        this.auditLogEmitter.emitLog({
+          userId: userId ?? review.userId,
+          action: LOG_ACTION.UPDATE_REVIEW,
+          resourceType: isMovie ? RESOURCE_TYPE.MOVIE : RESOURCE_TYPE.SERIES,
+          resourceId: entityId ?? undefined,
+          metadata: { contentId: review.contentId, reviewId: id },
+        });
+      } catch {
+        // Content resolution failure should not block the update response
+      }
+
       return this.findReviewById(updatedReview.id);
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -98,6 +143,23 @@ export class ReviewService {
       await this.calculateAndBroadcastContentRating(queryRunner.manager, contentId);
 
       await queryRunner.commitTransaction();
+
+      // Emit audit log after successful commit
+      try {
+        const content = await firstValueFrom(this.contentClient.send({ cmd: 'content.getContentById' }, { id: contentId }));
+        const isMovie = content?.type === 'MOVIE';
+        const entityId = await this.getEntityIdByContentId(contentId);
+        this.auditLogEmitter.emitLog({
+          userId: userId ?? review.userId,
+          action: LOG_ACTION.DELETE_REVIEW,
+          resourceType: isMovie ? RESOURCE_TYPE.MOVIE : RESOURCE_TYPE.SERIES,
+          resourceId: entityId ?? undefined,
+          metadata: { contentId, reviewId: id },
+        });
+      } catch {
+        // Content resolution failure should not block the delete response
+      }
+
       return true;
     } catch (error) {
       await queryRunner.rollbackTransaction();

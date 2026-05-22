@@ -21,6 +21,8 @@ import { EntityReviewEpisode } from '../entities/review-episode.entity';
 import { EntityReviewReply } from '../entities/review-reply.entity';
 import { CreateReviewFailedError, DomainError, ReviewNotFoundError, UpdateReviewFailedError, DeleteReviewFailedError, GetReviewsFailedError, ContentNotFoundError } from '@app/common/exceptions/domain.error';
 import { catchRpcError } from '@app/common/exceptions';
+import { AuditLogEmitterService } from './audit-log-emitter.service';
+import { LOG_ACTION, RESOURCE_TYPE } from '@app/common/enums/log.enum';
 
 @Injectable()
 export class EpisodeReviewService {
@@ -29,6 +31,7 @@ export class EpisodeReviewService {
     private readonly reviewEpisodeRepository: Repository<EntityReviewEpisode>,
     @Inject('CONTENT_SERVICE')
     private readonly contentClient: ClientProxy,
+    private readonly auditLogEmitter: AuditLogEmitterService,
   ) {}
 
   async createReview(userId: string, createEpisodeReviewDto: CreateEpisodeReviewDto) {
@@ -62,6 +65,15 @@ export class EpisodeReviewService {
     
     const savedReview = await this.reviewEpisodeRepository.save(review);
 
+    // Emit audit log after successful save
+    this.auditLogEmitter.emitLog({
+      userId,
+      action: LOG_ACTION.CREATE_REVIEW,
+      resourceType: RESOURCE_TYPE.SERIES,
+      resourceId: content?.season?.tvseries?.id || undefined,
+      metadata: { episodeId: createEpisodeReviewDto.episodeId, reviewId: savedReview.id },
+    });
+
     return savedReview;
     }
     catch(error){
@@ -85,6 +97,27 @@ export class EpisodeReviewService {
 
     Object.assign(review, updateReviewDto);
     const updatedReview = await this.reviewEpisodeRepository.save(review);
+
+    // Emit audit log after successful save
+    try {
+      const episodeData = await firstValueFrom(
+        this.contentClient.send(
+          { cmd: 'content.getEpisodeById' },
+          { id: review.episodeId },
+        ),
+      ).catch(() => null);
+      const seriesId = episodeData?.season?.tvseries?.id;
+
+      this.auditLogEmitter.emitLog({
+        userId: userId ?? review.userId,
+        action: LOG_ACTION.UPDATE_REVIEW,
+        resourceType: RESOURCE_TYPE.SERIES,
+        resourceId: seriesId || undefined,
+        metadata: { episodeId: review.episodeId, reviewId: id },
+      });
+    } catch {
+      // ignore
+    }
     
     return updatedReview;
     }
@@ -117,6 +150,28 @@ export class EpisodeReviewService {
 
         await manager.delete(EntityReviewEpisode, id);
     });
+
+    // Emit audit log after successful delete
+    try {
+      const episodeData = await firstValueFrom(
+        this.contentClient.send(
+          { cmd: 'content.getEpisodeById' },
+          { id: review.episodeId },
+        ),
+      ).catch(() => null);
+      const seriesId = episodeData?.season?.tvseries?.id;
+
+      this.auditLogEmitter.emitLog({
+        userId: userId ?? review.userId,
+        action: LOG_ACTION.DELETE_REVIEW,
+        resourceType: RESOURCE_TYPE.SERIES,
+        resourceId: seriesId || undefined,
+        metadata: { episodeId: review.episodeId, reviewId: id },
+      });
+    } catch {
+      // ignore
+    }
+
     return true;
     }
     catch(error){
