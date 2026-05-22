@@ -42,9 +42,9 @@ export class StreamingGatewayService {
   /**
    * Get the signed manifest URL for a video.
    */
-  getManifestUrl(videoId: string) {
+  getManifestUrl(videoId: string, userId?: string) {
     return this.streamingClient
-      .send({ cmd: 'streaming.getManifestUrl' }, { videoId })
+      .send({ cmd: 'streaming.getManifestUrl' }, { videoId, userId })
       .pipe(catchRpcError());
   }
 

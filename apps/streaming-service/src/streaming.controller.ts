@@ -45,8 +45,8 @@ export class StreamingController {
    * Returns the CloudFront signed URL to the .mpd file.
    */
   @MessagePattern({ cmd: 'streaming.getManifestUrl' })
-  getManifestUrl(@Payload() payload: { videoId: string }) {
-    return this.streamingService.getManifestUrl(payload.videoId);
+  getManifestUrl(@Payload() payload: { videoId: string; userId?: string }) {
+    return this.streamingService.getManifestUrl(payload.videoId, payload.userId);
   }
 
   /**
