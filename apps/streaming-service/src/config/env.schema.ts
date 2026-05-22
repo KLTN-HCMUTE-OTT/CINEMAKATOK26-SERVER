@@ -45,6 +45,8 @@ export const streamingEnvSchema = z.object({
   // Shaka Packager
   SHAKA_PACKAGER_PATH: z.string().optional(),
 
+  RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672'),
+
   // Local Storage
   UPLOAD_DIR: z.string().default('uploads'),
   LOCAL_STORAGE_DIR: z.string().default('output'),

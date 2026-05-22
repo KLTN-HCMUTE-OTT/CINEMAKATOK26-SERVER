@@ -2,7 +2,7 @@ import { plainToInstance } from 'class-transformer';
 import type { Response, Request } from 'express';
 import { firstValueFrom } from 'rxjs';
 
-import { Public } from '@app/common/decorators/public.decorator';
+import { Public, UserSession } from '@app/common/decorators';
 import { IsAdminGuard, JwtAuthGuard } from '@app/common/guards';
 import { ResponseBuilder } from '@app/common/utils/dto';
 import { VideoDto } from '@app/common/dtos/content/video.dto';
@@ -140,11 +140,12 @@ export class StreamingController {
     description: 'Signed manifest URL generated',
   })
   async getManifestUrl(
+    @UserSession('id') userId: string,
     @Param('videoId') videoId: string,
     @Res({ passthrough: true }) response: Response,
   ) {
     const result = (await firstValueFrom(
-      this.streamingService.getManifestUrl(videoId),
+      this.streamingService.getManifestUrl(videoId, userId),
     )) as any;
 
     // Also set signed cookies for segment access
