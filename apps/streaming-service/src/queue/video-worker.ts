@@ -22,7 +22,6 @@ import { S3Service } from '../services/s3.service';
 import { DrmKeyService } from '../services/drm-key.service';
 import { ShakaPackagerService } from '../services/shaka-packager.service';
 
-
 //r2
 async function generateSpritesAndVTT(
   videoId: string,
@@ -242,6 +241,7 @@ async function cleanupTempFiles(paths: string[]) {
 async function cleanupStaleFiles() {
   console.log('Scanning for stale temp files (> 24h)...');
   const uploadBaseDir = process.env.UPLOAD_DIR || 'E:/uploads';
+
   const dirsToScan = [
     path.join(uploadBaseDir, 'dash-temp'),
     path.join(uploadBaseDir, 'thumbnails'),
@@ -308,9 +308,7 @@ async function bootstrap() {
         // ────────────────────────────────────────────────────────────────────
         console.log('Generating DRM keys...');
         const drmKey = await drmKeyService.generateKeysForVideo(videoId);
-        console.log(
-          `DRM keys ready: keyId=${drmKey.keyId.substring(0, 8)}...`,
-        );
+        console.log(`DRM keys ready: keyId=${drmKey.keyId.substring(0, 8)}...`);
 
         // ────────────────────────────────────────────────────────────────────
         // STEP 2: Transcode to fragmented MP4 (multiple bitrates + audio)
@@ -457,7 +455,7 @@ async function bootstrap() {
           const { spriteUrls, vttUrls } = await generateSpritesAndVTT(
             videoId,
             inputPath,
-            r2Service
+            r2Service,
           );
           console.log(
             `Generated ${spriteUrls.length} sprites and ${vttUrls.length} VTT files`,

@@ -34,6 +34,7 @@ export interface RoomMember {
   displayName: string;
   avatarUrl?: string;
   joinedAt: number;
+  role?: 'host' | 'admin' | 'member';
 }
 
 export interface VideoState {
@@ -91,6 +92,8 @@ export interface RoomState {
   videoState: VideoState;
   recentMessages: ChatMessage[];
   queue: QueueItem[];
+  mutedUserIds?: string[];
+  bannedUserIds?: string[];
 }
 
 export interface CreateRoomResult {
@@ -115,6 +118,7 @@ export interface ModerationEntry {
 export interface MemberInput {
   displayName: string;
   avatarUrl?: string;
+  isAdmin?: boolean;
 }
 
 export interface CreateRoomInput {

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"d:\\\\HocTap\\\\KLTN\\\\CINEMAKATOK26-FE-ADMIN\\\\src\" -type f \\\\\\( -iname \"*socket*\" -o -iname \"*websocket*\" -o -iname \"*chat*\" \\\\\\) | grep -v node_modules)",
+      "Read(//d/HocTap/KLTN/CINEMAKATOK26-FE-ADMIN/src/**)",
+      "Bash(find \"d:\\\\HocTap\\\\KLTN\\\\CINEMAKATOK26-FE-ADMIN\\\\src\" -maxdepth 2 -type d | grep -E \"pages|app\" | head -20)",
+      "Bash(npx tsc *)",
+      "Bash(npx jest *)",
+      "Bash(Get-ChildItem -Path \"d:\\\\HocTap\\\\KLTN\\\\CINEMAKATOK26-FE-ADMIN\" -Directory)",
+      "Bash(Select-Object Name)"
+    ]
+  }
+}

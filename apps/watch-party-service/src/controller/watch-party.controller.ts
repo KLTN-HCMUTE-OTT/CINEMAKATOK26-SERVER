@@ -63,13 +63,17 @@ export class WatchPartyController {
       userId: string;
       password?: string;
       member?: MemberInput;
+      actorIsAdmin?: boolean;
     },
   ) {
+    const member: MemberInput | undefined = payload.member
+      ? { ...payload.member, isAdmin: payload.actorIsAdmin ?? payload.member.isAdmin }
+      : payload.actorIsAdmin ? { displayName: 'Admin', isAdmin: true } : undefined;
     return this.service.joinRoomById(
       payload.roomId,
       payload.userId,
       payload.password,
-      payload.member,
+      member,
     );
   }
 
@@ -120,12 +124,14 @@ export class WatchPartyController {
       roomId: string;
       userId: string;
       state: { isPlaying: boolean; currentTime: number };
+      actorIsAdmin?: boolean;
     },
   ) {
     return this.service.syncVideo(
       payload.roomId,
       payload.userId,
       payload.state,
+      payload.actorIsAdmin,
     );
   }
 
@@ -165,6 +171,7 @@ export class WatchPartyController {
       actorId: string;
       targetId: string;
       durationSec?: number;
+      actorIsAdmin?: boolean;
     },
   ) {
     return this.service.muteMember(
@@ -172,6 +179,7 @@ export class WatchPartyController {
       payload.actorId,
       payload.targetId,
       payload.durationSec,
+      payload.actorIsAdmin,
     );
   }
 
@@ -182,18 +190,38 @@ export class WatchPartyController {
       roomId: string;
       actorId: string;
       targetId: string;
+      actorIsAdmin?: boolean;
     },
   ) {
     return this.service.unmuteMember(
       payload.roomId,
       payload.actorId,
       payload.targetId,
+      payload.actorIsAdmin,
     );
   }
 
   @MessagePattern({ cmd: WATCH_PARTY_CMD.IS_MUTED })
   isMuted(@Payload() payload: { roomId: string; userId: string }) {
     return this.service.isMuted(payload.roomId, payload.userId);
+  }
+
+  @MessagePattern({ cmd: WATCH_PARTY_CMD.KICK_MEMBER })
+  kickMember(
+    @Payload()
+    payload: {
+      roomId: string;
+      actorId: string;
+      targetId: string;
+      actorIsAdmin?: boolean;
+    },
+  ) {
+    return this.service.kickMember(
+      payload.roomId,
+      payload.actorId,
+      payload.targetId,
+      payload.actorIsAdmin,
+    );
   }
 
   @MessagePattern({ cmd: WATCH_PARTY_CMD.BAN_MEMBER })
@@ -204,6 +232,7 @@ export class WatchPartyController {
       actorId: string;
       targetId: string;
       durationSec?: number;
+      actorIsAdmin?: boolean;
     },
   ) {
     return this.service.banMember(
@@ -211,6 +240,7 @@ export class WatchPartyController {
       payload.actorId,
       payload.targetId,
       payload.durationSec,
+      payload.actorIsAdmin,
     );
   }
 
@@ -221,12 +251,14 @@ export class WatchPartyController {
       roomId: string;
       actorId: string;
       targetId: string;
+      actorIsAdmin?: boolean;
     },
   ) {
     return this.service.unbanMember(
       payload.roomId,
       payload.actorId,
       payload.targetId,
+      payload.actorIsAdmin,
     );
   }
 
@@ -247,38 +279,41 @@ export class WatchPartyController {
       roomId: string;
       hostId: string;
       item: Omit<QueueItem, 'addedBy' | 'addedAt'>;
+      actorIsAdmin?: boolean;
     },
   ) {
-    return this.service.enqueueVideo(payload.roomId, payload.hostId, payload.item);
+    return this.service.enqueueVideo(payload.roomId, payload.hostId, payload.item, payload.actorIsAdmin);
   }
 
   @MessagePattern({ cmd: WATCH_PARTY_CMD.REMOVE_FROM_QUEUE })
   removeFromQueue(
-    @Payload() payload: { roomId: string; hostId: string; index: number },
+    @Payload() payload: { roomId: string; hostId: string; index: number; actorIsAdmin?: boolean },
   ) {
     return this.service.removeFromQueue(
       payload.roomId,
       payload.hostId,
       payload.index,
+      payload.actorIsAdmin,
     );
   }
 
   @MessagePattern({ cmd: WATCH_PARTY_CMD.REORDER_QUEUE })
   reorderQueue(
     @Payload()
-    payload: { roomId: string; hostId: string; from: number; to: number },
+    payload: { roomId: string; hostId: string; from: number; to: number; actorIsAdmin?: boolean },
   ) {
     return this.service.reorderQueue(
       payload.roomId,
       payload.hostId,
       payload.from,
       payload.to,
+      payload.actorIsAdmin,
     );
   }
 
   @MessagePattern({ cmd: WATCH_PARTY_CMD.PLAY_NEXT })
-  playNext(@Payload() payload: { roomId: string; hostId: string }) {
-    return this.service.playNext(payload.roomId, payload.hostId);
+  playNext(@Payload() payload: { roomId: string; hostId: string; actorIsAdmin?: boolean }) {
+    return this.service.playNext(payload.roomId, payload.hostId, payload.actorIsAdmin);
   }
 
   @MessagePattern({ cmd: WATCH_PARTY_CMD.PLAY_NOW })
@@ -288,20 +323,22 @@ export class WatchPartyController {
       roomId: string;
       hostId: string;
       item: Omit<QueueItem, 'addedBy' | 'addedAt'>;
+      actorIsAdmin?: boolean;
     },
   ) {
-    return this.service.playNow(payload.roomId, payload.hostId, payload.item);
+    return this.service.playNow(payload.roomId, payload.hostId, payload.item, payload.actorIsAdmin);
   }
 
   @MessagePattern({ cmd: WATCH_PARTY_CMD.HANDLE_VIDEO_END })
   handleVideoEnd(
     @Payload()
-    payload: { roomId: string; hostId: string; videoId?: string },
+    payload: { roomId: string; hostId: string; videoId?: string; actorIsAdmin?: boolean },
   ) {
     return this.service.handleVideoEnd(
       payload.roomId,
       payload.hostId,
       payload.videoId,
+      payload.actorIsAdmin,
     );
   }
 

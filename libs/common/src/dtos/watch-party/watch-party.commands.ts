@@ -18,6 +18,7 @@ export const WATCH_PARTY_CMD = {
   MUTE_MEMBER: 'wp.muteMember',
   UNMUTE_MEMBER: 'wp.unmuteMember',
   IS_MUTED: 'wp.isMuted',
+  KICK_MEMBER: 'wp.kickMember',
   BAN_MEMBER: 'wp.banMember',
   UNBAN_MEMBER: 'wp.unbanMember',
   IS_BANNED: 'wp.isBanned',

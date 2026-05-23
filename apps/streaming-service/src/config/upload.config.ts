@@ -5,7 +5,7 @@ import * as path from 'path';
 export const multerConfig = {
   storage: diskStorage({
     destination: (req, file, cb) => {
-      const dir = path.join(__dirname, '../../tmp');
+      const dir = process.env.UPLOAD_DIR || path.join(__dirname, '../../tmp');
       fs.mkdirSync(dir, { recursive: true });
       cb(null, dir);
     },

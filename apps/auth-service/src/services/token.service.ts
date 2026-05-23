@@ -31,22 +31,20 @@ export class TokenService {
     return this.tokenRepository.save(entity);
   }
 
-  async checkRefreshToken(token: string) {
+  async checkRefreshToken(token: string): Promise<{ entity: EntityRefreshToken; payload: JwtPayload }> {
     try {
-      const payload = this.jwtService.verify<
-        JwtPayload & { isRefresh?: boolean; sub: string }
-      >(token);
+      const payload = this.jwtService.verify<JwtPayload>(token);
       if (!payload.isRefresh) {
         throw new InvalidTokenError('Not a refresh token');
       }
-      const existedToken = await this.tokenRepository.findOneBy({
+      const entity = await this.tokenRepository.findOneBy({
         userId: payload.sub,
         token,
       });
-      if (!existedToken) {
+      if (!entity) {
         throw new InvalidTokenError('Token not found');
       }
-      return existedToken;
+      return { entity, payload };
     } catch {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       throw new InvalidTokenError();
@@ -58,13 +56,16 @@ export class TokenService {
   }
 
   async refresh(token: TokenRequest) {
-    const existedToken = await this.checkRefreshToken(token.refreshToken);
+    const { entity, payload } = await this.checkRefreshToken(token.refreshToken);
     // Invalidate old token before issuing new one (token rotation)
-    await this.removeRefreshToken(existedToken.userId);
+    await this.removeRefreshToken(entity.userId);
     const { accessToken, refreshToken } = this.generateTokens({
-      sub: existedToken.userId,
+      sub: entity.userId,
+      name: payload.name,
+      avatar: payload.avatar,
+      isAdmin: payload.isAdmin,
     });
-    await this.saveRefreshToken(existedToken.userId, refreshToken);
+    await this.saveRefreshToken(entity.userId, refreshToken);
     return new TokenResponse(accessToken, refreshToken);
   }
 }

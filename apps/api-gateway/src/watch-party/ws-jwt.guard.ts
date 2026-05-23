@@ -15,6 +15,7 @@ export interface WatchPartySocketUser {
   id: string;
   displayName: string;
   avatarUrl?: string;
+  isAdmin: boolean;
 }
 
 @Injectable()
@@ -53,10 +54,9 @@ export class WsJwtGuard implements CanActivate {
       }
       const user: WatchPartySocketUser = {
         id: payload.sub,
-        displayName:
-          (payload as JwtPayload & { displayName?: string }).displayName ??
-          `user-${payload.sub.slice(0, 6)}`,
-        avatarUrl: (payload as JwtPayload & { avatarUrl?: string }).avatarUrl,
+        displayName: payload.name ?? `user-${payload.sub.slice(0, 6)}`,
+        avatarUrl: payload.avatar,
+        isAdmin: payload.isAdmin ?? false,
       };
       (client.data as { user?: WatchPartySocketUser }).user = user;
       return true;

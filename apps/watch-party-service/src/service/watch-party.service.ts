@@ -137,6 +137,7 @@ export class WatchPartyService {
         displayName: hostInfo.displayName,
         avatarUrl: hostInfo.avatarUrl,
         joinedAt: now,
+        role: 'host',
       }),
     );
     pipeline.expire(memberInfoKey, this.roomTtl);
@@ -199,7 +200,9 @@ export class WatchPartyService {
       throw new WatchPartyError('BANNED', 'You are banned from this room');
     }
 
-    if (room.passwordHash && room.hostId !== userId) {
+    const actorIsAdmin = member.isAdmin === true;
+
+    if (!actorIsAdmin && room.passwordHash && room.hostId !== userId) {
       if (!password) {
         throw new WatchPartyError('WRONG_PASSWORD', 'Password required');
       }
@@ -215,10 +218,12 @@ export class WatchPartyService {
     );
 
     if (!isAlreadyMember) {
-      const memberCount = await this.redis.scard(WP_KEYS.members(roomId));
-      const max = Number(room.maxMembers || this.maxMembers);
-      if (memberCount >= max) {
-        throw new WatchPartyError('ROOM_FULL', 'Room is full');
+      if (!actorIsAdmin) {
+        const memberCount = await this.redis.scard(WP_KEYS.members(roomId));
+        const max = Number(room.maxMembers || this.maxMembers);
+        if (memberCount >= max) {
+          throw new WatchPartyError('ROOM_FULL', 'Room is full');
+        }
       }
 
       const otherRoom = await this.redis.get(WP_KEYS.userRoom(userId));
@@ -227,6 +232,7 @@ export class WatchPartyService {
       }
 
       const now = Date.now();
+      const role = room.hostId === userId ? 'host' : actorIsAdmin ? 'admin' : 'member';
       const pipeline = this.redis.multi();
       pipeline.sadd(WP_KEYS.members(roomId), userId);
       pipeline.hset(
@@ -237,10 +243,35 @@ export class WatchPartyService {
           displayName: member.displayName,
           avatarUrl: member.avatarUrl,
           joinedAt: now,
+          role,
         }),
       );
       pipeline.set(WP_KEYS.userRoom(userId), roomId, 'EX', this.roomTtl);
       await pipeline.exec();
+    } else {
+      // Refresh display name and avatar on reconnect/rejoin; preserve or upgrade role
+      const existing = await this.redis.hget(WP_KEYS.memberInfo(roomId), userId);
+      let joinedAt = Date.now();
+      let existingRole: string | undefined;
+      if (existing) {
+        try {
+          const parsed = JSON.parse(existing) as { joinedAt?: number; role?: string };
+          joinedAt = parsed.joinedAt ?? joinedAt;
+          existingRole = parsed.role;
+        } catch { /* ignore */ }
+      }
+      const role = room.hostId === userId ? 'host' : actorIsAdmin ? 'admin' : (existingRole ?? 'member');
+      await this.redis.hset(
+        WP_KEYS.memberInfo(roomId),
+        userId,
+        JSON.stringify({
+          userId,
+          displayName: member.displayName,
+          avatarUrl: member.avatarUrl,
+          joinedAt,
+          role,
+        }),
+      );
     }
 
     return this.getRoomState(roomId);
@@ -307,17 +338,23 @@ export class WatchPartyService {
     const summary = await this.getRoomSummary(roomId);
     if (!summary) throw new WatchPartyError('NOT_FOUND', 'Room not found');
 
-    const [memberInfo, videoRaw, chatRaw, queueRaw] = await Promise.all([
+    const [memberInfo, videoRaw, chatRaw, queueRaw, mutesRaw, bansRaw] = await Promise.all([
       this.redis.hgetall(WP_KEYS.memberInfo(roomId)),
       this.redis.hgetall(WP_KEYS.video(roomId)),
       this.redis.lrange(WP_KEYS.chat(roomId), 0, this.chatHistorySize - 1),
       this.redis.lrange(WP_KEYS.queue(roomId), 0, -1),
+      this.redis.hgetall(WP_KEYS.mutes(roomId)),
+      this.redis.hgetall(WP_KEYS.bans(roomId)),
     ]);
 
+    const hostId = summary.hostId;
     const members: RoomMember[] = Object.values(memberInfo)
       .map((raw) => {
         try {
-          return JSON.parse(raw) as RoomMember;
+          const m = JSON.parse(raw) as RoomMember;
+          if (m.userId === hostId) m.role = 'host';
+          else if (!m.role) m.role = 'member';
+          return m;
         } catch {
           return null as unknown as RoomMember;
         }
@@ -354,18 +391,24 @@ export class WatchPartyService {
       })
       .filter((q): q is QueueItem => Boolean(q));
 
-    return { room: summary, members, videoState, recentMessages, queue };
+    const now = Date.now();
+    const mutedUserIds = Object.entries(mutesRaw ?? {})
+      .filter(([, v]) => v === 'permanent' || (Number.isFinite(Number(v)) && Number(v) > now))
+      .map(([id]) => id);
+    const bannedUserIds = Object.entries(bansRaw ?? {})
+      .filter(([, v]) => v === 'permanent' || (Number.isFinite(Number(v)) && Number(v) > now))
+      .map(([id]) => id);
+
+    return { room: summary, members, videoState, recentMessages, queue, mutedUserIds, bannedUserIds };
   }
 
   async syncVideo(
     roomId: string,
     userId: string,
     state: { isPlaying: boolean; currentTime: number },
+    actorIsAdmin = false,
   ): Promise<VideoState> {
-    const host = await this.isHost(roomId, userId);
-    if (!host) {
-      throw new WatchPartyError('NOT_AUTHORIZED', 'Only host can sync video');
-    }
+    await this.assertHostOrAdmin(roomId, userId, actorIsAdmin);
     const now = Date.now();
     const existing = await this.redis.hgetall(WP_KEYS.video(roomId));
     await this.redis.hset(WP_KEYS.video(roomId), {
@@ -452,11 +495,28 @@ export class WatchPartyService {
     return message;
   }
 
+  async kickMember(
+    roomId: string,
+    actorId: string,
+    targetId: string,
+    actorIsAdmin = false,
+  ): Promise<void> {
+    if (actorId === targetId) {
+      throw new WatchPartyError('NOT_AUTHORIZED', 'You cannot moderate yourself');
+    }
+    await this.assertHostOrAdmin(roomId, actorId, actorIsAdmin);
+    if (!actorIsAdmin && (await this.isMemberAdmin(roomId, targetId))) {
+      throw new WatchPartyError('NOT_AUTHORIZED', 'Cannot moderate an admin');
+    }
+    await this.leaveRoom(roomId, targetId);
+  }
+
   async banMember(
     roomId: string,
     actorId: string,
     targetId: string,
     durationSec?: number,
+    actorIsAdmin = false,
   ): Promise<ModerationEntry> {
     const entry = await this.applyModeration({
       kind: 'ban',
@@ -464,6 +524,7 @@ export class WatchPartyService {
       actorId,
       targetId,
       durationSec,
+      actorIsAdmin,
     });
     await this.leaveRoom(roomId, targetId);
     return entry;
@@ -473,8 +534,9 @@ export class WatchPartyService {
     roomId: string,
     actorId: string,
     targetId: string,
+    actorIsAdmin = false,
   ): Promise<void> {
-    await this.assertHost(roomId, actorId);
+    await this.assertHostOrAdmin(roomId, actorId, actorIsAdmin);
     await this.redis.hdel(WP_KEYS.bans(roomId), targetId);
   }
 
@@ -491,6 +553,7 @@ export class WatchPartyService {
     actorId: string,
     targetId: string,
     durationSec?: number,
+    actorIsAdmin = false,
   ): Promise<ModerationEntry> {
     return this.applyModeration({
       kind: 'mute',
@@ -498,6 +561,7 @@ export class WatchPartyService {
       actorId,
       targetId,
       durationSec,
+      actorIsAdmin,
     });
   }
 
@@ -505,8 +569,9 @@ export class WatchPartyService {
     roomId: string,
     actorId: string,
     targetId: string,
+    actorIsAdmin = false,
   ): Promise<void> {
-    await this.assertHost(roomId, actorId);
+    await this.assertHostOrAdmin(roomId, actorId, actorIsAdmin);
     await this.redis.hdel(WP_KEYS.mutes(roomId), targetId);
   }
 
@@ -535,8 +600,9 @@ export class WatchPartyService {
     roomId: string,
     hostId: string,
     item: Omit<QueueItem, 'addedBy' | 'addedAt'>,
+    actorIsAdmin = false,
   ): Promise<QueueItem[]> {
-    await this.assertHost(roomId, hostId);
+    await this.assertHostOrAdmin(roomId, hostId, actorIsAdmin);
     const currentSize = await this.redis.llen(WP_KEYS.queue(roomId));
     if (currentSize >= this.queueMaxSize) {
       throw new WatchPartyError(
@@ -554,8 +620,9 @@ export class WatchPartyService {
     roomId: string,
     hostId: string,
     index: number,
+    actorIsAdmin = false,
   ): Promise<QueueItem[]> {
-    await this.assertHost(roomId, hostId);
+    await this.assertHostOrAdmin(roomId, hostId, actorIsAdmin);
     const raw = await this.redis.lrange(WP_KEYS.queue(roomId), 0, -1);
     if (index < 0 || index >= raw.length) {
       throw new WatchPartyError('INVALID_QUEUE_INDEX', 'Index out of range');
@@ -572,8 +639,9 @@ export class WatchPartyService {
     hostId: string,
     from: number,
     to: number,
+    actorIsAdmin = false,
   ): Promise<QueueItem[]> {
-    await this.assertHost(roomId, hostId);
+    await this.assertHostOrAdmin(roomId, hostId, actorIsAdmin);
     const raw = await this.redis.lrange(WP_KEYS.queue(roomId), 0, -1);
     if (
       from < 0 ||
@@ -597,8 +665,9 @@ export class WatchPartyService {
     roomId: string,
     hostId: string,
     item: Omit<QueueItem, 'addedBy' | 'addedAt'>,
+    actorIsAdmin = false,
   ): Promise<{ videoState: VideoState; queue: QueueItem[] }> {
-    await this.assertHost(roomId, hostId);
+    await this.assertHostOrAdmin(roomId, hostId, actorIsAdmin);
     const now = Date.now();
     // Update room hash current videoId
     await this.redis.hset(WP_KEYS.room(roomId), 'videoId', item.videoId);
@@ -626,12 +695,13 @@ export class WatchPartyService {
   async playNext(
     roomId: string,
     hostId: string,
+    actorIsAdmin = false,
   ): Promise<{
     videoState: VideoState;
     queue: QueueItem[];
     nextItem: QueueItem | null;
   }> {
-    await this.assertHost(roomId, hostId);
+    await this.assertHostOrAdmin(roomId, hostId, actorIsAdmin);
     const raw = await this.redis.lpop(WP_KEYS.queue(roomId));
     const queue = await this.getQueue(roomId);
 
@@ -688,12 +758,13 @@ export class WatchPartyService {
     roomId: string,
     hostId: string,
     videoId?: string,
+    actorIsAdmin = false,
   ): Promise<{
     videoState: VideoState;
     queue: QueueItem[];
     nextItem: QueueItem | null;
   }> {
-    await this.assertHost(roomId, hostId);
+    await this.assertHostOrAdmin(roomId, hostId, actorIsAdmin);
     // Idempotency: if client sends videoId, verify it matches current
     if (videoId) {
       const currentVideoId = await this.redis.hget(
@@ -715,7 +786,7 @@ export class WatchPartyService {
         return { videoState, queue, nextItem: null };
       }
     }
-    return this.playNext(roomId, hostId);
+    return this.playNext(roomId, hostId, actorIsAdmin);
   }
 
   async listActiveRooms(
@@ -876,15 +947,19 @@ export class WatchPartyService {
     actorId: string;
     targetId: string;
     durationSec?: number;
+    actorIsAdmin?: boolean;
   }): Promise<ModerationEntry> {
-    const { kind, roomId, actorId, targetId, durationSec } = args;
+    const { kind, roomId, actorId, targetId, durationSec, actorIsAdmin = false } = args;
     if (actorId === targetId) {
       throw new WatchPartyError(
         'NOT_AUTHORIZED',
         'You cannot moderate yourself',
       );
     }
-    await this.assertHost(roomId, actorId);
+    await this.assertHostOrAdmin(roomId, actorId, actorIsAdmin);
+    if (!actorIsAdmin && (await this.isMemberAdmin(roomId, targetId))) {
+      throw new WatchPartyError('NOT_AUTHORIZED', 'Cannot moderate an admin');
+    }
     const until =
       durationSec && durationSec > 0 ? Date.now() + durationSec * 1000 : null;
     const key = kind === 'mute' ? WP_KEYS.mutes(roomId) : WP_KEYS.bans(roomId);
@@ -903,6 +978,25 @@ export class WatchPartyService {
     }
     if (hostId !== actorId) {
       throw new WatchPartyError('NOT_AUTHORIZED', 'Only host can moderate');
+    }
+  }
+
+  private async assertHostOrAdmin(
+    roomId: string,
+    actorId: string,
+    actorIsAdmin: boolean,
+  ): Promise<void> {
+    if (actorIsAdmin) return;
+    await this.assertHost(roomId, actorId);
+  }
+
+  private async isMemberAdmin(roomId: string, userId: string): Promise<boolean> {
+    const raw = await this.redis.hget(WP_KEYS.memberInfo(roomId), userId);
+    if (!raw) return false;
+    try {
+      return (JSON.parse(raw) as { role?: string }).role === 'admin';
+    } catch {
+      return false;
     }
   }
 

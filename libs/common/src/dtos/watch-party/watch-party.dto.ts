@@ -120,6 +120,11 @@ export class ModerationActionPayloadDto {
   @Min(0)
   @Max(60 * 60 * 24)
   durationSec?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  reason?: string;
 }
 
 export class ModerationTargetPayloadDto {

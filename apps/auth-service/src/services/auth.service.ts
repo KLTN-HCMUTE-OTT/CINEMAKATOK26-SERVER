@@ -86,7 +86,7 @@ export class AuthService {
     this.validatePassword(authRequest.password, user.password);
     this.validateUserStatus(user);
 
-    const token = await this.generateAndSaveTokens(user.id);
+    const token = await this.generateAndSaveTokens({ id: user.id, name: user.name, avatar: user.avatar ?? undefined, isAdmin: user.isAdmin });
 
     return {
       id: user.id,
@@ -105,7 +105,7 @@ export class AuthService {
       const user = await this.getOrCreateSocialUser(socialUser);
 
       this.validateUserStatus(user);
-      const token = await this.generateAndSaveTokens(user.id);
+      const token = await this.generateAndSaveTokens({ id: user.id, name: user.name, avatar: user.avatar ?? undefined, isAdmin: user.isAdmin });
 
       return {
         id: user.id,
@@ -398,11 +398,14 @@ export class AuthService {
     }
   }
 
-  private async generateAndSaveTokens(userId: string): Promise<TokenResponse> {
+  private async generateAndSaveTokens(user: { id: string; name?: string; avatar?: string; isAdmin?: boolean }): Promise<TokenResponse> {
     const { accessToken, refreshToken } = this.tokenService.generateTokens({
-      sub: userId,
+      sub: user.id,
+      name: user.name,
+      avatar: user.avatar,
+      isAdmin: user.isAdmin,
     });
-    await this.tokenService.saveRefreshToken(userId, refreshToken);
+    await this.tokenService.saveRefreshToken(user.id, refreshToken);
     return new TokenResponse(accessToken, refreshToken);
   }
 }

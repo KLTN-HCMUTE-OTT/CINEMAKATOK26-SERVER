@@ -151,7 +151,7 @@ export class WatchPartyGateway
         body.roomId,
         user.id,
         body.password,
-        { displayName: user.displayName, avatarUrl: user.avatarUrl },
+        { displayName: user.displayName, avatarUrl: user.avatarUrl, isAdmin: user.isAdmin },
       );
       (client.data as SocketData).roomId = body.roomId;
       await client.join(body.roomId);
@@ -171,7 +171,12 @@ export class WatchPartyGateway
       });
       return { ok: true };
     } catch (err) {
-      this.emitError(client, err);
+      const normalized = this.normalizeError(err);
+      if (normalized.code === 'BANNED') {
+        client.emit(WATCH_PARTY_EVENTS.ROOM_KICKED, { reason: 'banned', until: null });
+      } else {
+        client.emit(WATCH_PARTY_EVENTS.ERROR, normalized);
+      }
       return { ok: false };
     }
   }
@@ -213,7 +218,7 @@ export class WatchPartyGateway
     const roomId = (client.data as SocketData)?.roomId;
     if (!roomId) return { ok: false };
     try {
-      const next = await this.service.syncVideo(roomId, user.id, body);
+      const next = await this.service.syncVideo(roomId, user.id, body, user.isAdmin);
       this.server
         .to(roomId)
         .emit(WATCH_PARTY_EVENTS.VIDEO_SYNC_UPDATE, {
@@ -270,6 +275,7 @@ export class WatchPartyGateway
         user.id,
         body.userId,
         body.durationSec,
+        user.isAdmin,
       );
       const targetName = await this.getDisplayName(roomId, body.userId);
       this.server
@@ -297,7 +303,7 @@ export class WatchPartyGateway
     const roomId = (client.data as SocketData)?.roomId;
     if (!roomId) return { ok: false };
     try {
-      await this.service.unmuteMember(roomId, user.id, body.userId);
+      await this.service.unmuteMember(roomId, user.id, body.userId, user.isAdmin);
       const targetName = await this.getDisplayName(roomId, body.userId);
       this.server
         .to(roomId)
@@ -307,6 +313,45 @@ export class WatchPartyGateway
       await this.emitSystemMessage(
         roomId,
         `${targetName} đã được mở chat trở lại.`,
+      );
+      return { ok: true };
+    } catch (err) {
+      this.emitError(client, err);
+      return { ok: false };
+    }
+  }
+
+  @UseGuards(WsJwtGuard)
+  @UsePipes(wsValidationPipe)
+  @SubscribeMessage('member:kick')
+  async onKick(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: ModerationTargetPayloadDto,
+  ) {
+    const user = this.requireUser(client);
+    const roomId = (client.data as SocketData)?.roomId;
+    if (!roomId) return { ok: false };
+    try {
+      const targetName = await this.getDisplayName(roomId, body.userId);
+      await this.service.kickMember(roomId, user.id, body.userId, user.isAdmin);
+
+      const namespace = this.server;
+      const sockets = await namespace.in(roomId).fetchSockets();
+      for (const s of sockets) {
+        const sUser = (s.data as SocketData)?.user;
+        if (sUser?.id === body.userId) {
+          s.emit(WATCH_PARTY_EVENTS.ROOM_KICKED, { reason: 'kicked', until: 0 });
+          (s.data as SocketData).roomId = undefined;
+          s.leave(roomId);
+        }
+      }
+
+      namespace
+        .to(roomId)
+        .emit(WATCH_PARTY_EVENTS.ROOM_MEMBER_LEFT, { userId: body.userId });
+      await this.emitSystemMessage(
+        roomId,
+        `${targetName} đã bị đuổi khỏi phòng.`,
       );
       return { ok: true };
     } catch (err) {
@@ -332,6 +377,7 @@ export class WatchPartyGateway
         user.id,
         body.userId,
         body.durationSec,
+        user.isAdmin,
       );
 
       const namespace = this.server;
@@ -342,6 +388,7 @@ export class WatchPartyGateway
           s.emit(WATCH_PARTY_EVENTS.ROOM_KICKED, {
             reason: 'banned',
             until: entry.until,
+            banReason: body.reason,
           });
           (s.data as SocketData).roomId = undefined;
           s.leave(roomId);
@@ -374,7 +421,7 @@ export class WatchPartyGateway
     const roomId = (client.data as SocketData)?.roomId;
     if (!roomId) return { ok: false };
     try {
-      await this.service.unbanMember(roomId, user.id, body.userId);
+      await this.service.unbanMember(roomId, user.id, body.userId, user.isAdmin);
       this.server
         .to(roomId)
         .emit(WATCH_PARTY_EVENTS.ROOM_MEMBER_UNBANNED, {
@@ -425,7 +472,7 @@ export class WatchPartyGateway
         title: body.title,
         thumbnailUrl: body.thumbnailUrl,
         durationSec: body.durationSec,
-      });
+      }, user.isAdmin);
       this.server
         .to(roomId)
         .emit(WATCH_PARTY_EVENTS.QUEUE_UPDATED, { queue });
@@ -451,6 +498,7 @@ export class WatchPartyGateway
         roomId,
         user.id,
         body.index,
+        user.isAdmin,
       );
       this.server
         .to(roomId)
@@ -478,6 +526,7 @@ export class WatchPartyGateway
         user.id,
         body.from,
         body.to,
+        user.isAdmin,
       );
       this.server
         .to(roomId)
@@ -506,7 +555,7 @@ export class WatchPartyGateway
         title: body.title,
         thumbnailUrl: body.thumbnailUrl,
         durationSec: body.durationSec,
-      });
+      }, user.isAdmin);
       this.server
         .to(roomId)
         .emit(WATCH_PARTY_EVENTS.VIDEO_CHANGED, {
@@ -529,7 +578,7 @@ export class WatchPartyGateway
     if (!roomId) return { ok: false };
     try {
       this.cancelIdleGrace(roomId);
-      await this.advanceQueue(roomId, user.id);
+      await this.advanceQueue(roomId, user.id, user.isAdmin);
       return { ok: true };
     } catch (err) {
       this.emitError(client, err);
@@ -552,6 +601,7 @@ export class WatchPartyGateway
         roomId,
         user.id,
         body.videoId,
+        user.isAdmin,
       );
       if (result.nextItem) {
         this.server
@@ -574,10 +624,10 @@ export class WatchPartyGateway
     }
   }
 
-  async closeRoomAndBroadcast(roomId: string, reason: RoomCloseReason, hostId?: string) {
+  async closeRoomAndBroadcast(roomId: string, reason: RoomCloseReason, hostId?: string, customReason?: string) {
     this.cancelIdleGrace(roomId);
     const namespace = this.server;
-    namespace.to(roomId).emit(WATCH_PARTY_EVENTS.ROOM_CLOSED, { reason });
+    namespace.to(roomId).emit(WATCH_PARTY_EVENTS.ROOM_CLOSED, { reason, customReason });
     const sockets = await namespace.in(roomId).fetchSockets();
     for (const s of sockets) {
       (s.data as SocketData).roomId = undefined;
@@ -609,8 +659,8 @@ export class WatchPartyGateway
     namespace.to(roomId).emit(WATCH_PARTY_EVENTS.ROOM_MEMBER_LEFT, { userId: targetId });
   }
 
-  private async advanceQueue(roomId: string, hostId: string): Promise<void> {
-    const result = await this.service.playNext(roomId, hostId);
+  private async advanceQueue(roomId: string, hostId: string, actorIsAdmin = false): Promise<void> {
+    const result = await this.service.playNext(roomId, hostId, actorIsAdmin);
     if (result.nextItem) {
       this.server
         .to(roomId)

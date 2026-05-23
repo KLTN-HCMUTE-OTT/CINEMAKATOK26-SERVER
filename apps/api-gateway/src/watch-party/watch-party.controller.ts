@@ -54,18 +54,22 @@ export class WatchPartyController {
   @ApiOperation({ summary: 'Create a new watch-party room' })
   @ApiOkResponse({ type: ApiResponseDto(CreateRoomResponse) })
   async createRoom(
-    @UserSession() user: { id: string; fullName?: string; avatarUrl?: string },
+    @UserSession() user: { id: string; name?: string; avatar?: string | null },
     @Body() body: CreateRoomRequest,
   ) {
     const result = await this.service.createRoom(user.id, body, {
-      displayName: user.fullName ?? `user-${user.id.slice(0, 6)}`,
-      avatarUrl: user.avatarUrl,
+      displayName: user.name ?? `user-${user.id.slice(0, 6)}`,
+      avatarUrl: user.avatar ?? undefined,
     });
     this.auditLog.logWatchPartyAction({
       userId: user.id,
       action: LOG_ACTION.CREATE_WATCH_PARTY_ROOM,
       roomId: result.roomId,
-      metadata: { title: body.title, videoId: body.videoId, inviteCode: result.inviteCode },
+      metadata: {
+        title: body.title,
+        videoId: body.videoId,
+        inviteCode: result.inviteCode,
+      },
     });
     return ResponseBuilder.createResponse({
       data: result,
@@ -166,14 +170,17 @@ export class WatchPartyController {
     @Param('id') roomId: string,
     @Body() body: AdminCloseRoomDto,
   ) {
-    await this.gateway.closeRoomAndBroadcast(roomId, 'admin_closed');
+    await this.gateway.closeRoomAndBroadcast(roomId, 'admin_closed', undefined, body.reason);
     this.auditLog.logWatchPartyAction({
       userId: adminId,
       action: LOG_ACTION.ADMIN_CLOSE_WATCH_PARTY_ROOM,
       roomId,
       metadata: { reason: body.reason ?? 'admin_closed' },
     });
-    return ResponseBuilder.createResponse({ data: null, message: 'Room closed by admin' });
+    return ResponseBuilder.createResponse({
+      data: null,
+      message: 'Room closed by admin',
+    });
   }
 
   @Delete('admin/rooms/:id/members/:userId')
@@ -191,7 +198,10 @@ export class WatchPartyController {
       roomId,
       metadata: { targetUserId: targetId },
     });
-    return ResponseBuilder.createResponse({ data: null, message: 'Member kicked by admin' });
+    return ResponseBuilder.createResponse({
+      data: null,
+      message: 'Member kicked by admin',
+    });
   }
 
   @Get('admin/stats')
@@ -217,14 +227,23 @@ export class WatchPartyController {
       userId: adminId,
       action: LOG_ACTION.ADMIN_BAN_USER_FROM_WATCH_PARTY,
       roomId: targetUserId,
-      metadata: { targetUserId, durationSec: body.durationSec, reason: body.reason },
+      metadata: {
+        targetUserId,
+        durationSec: body.durationSec,
+        reason: body.reason,
+      },
     });
-    return ResponseBuilder.createResponse({ data: null, message: 'User banned from Watch Party' });
+    return ResponseBuilder.createResponse({
+      data: null,
+      message: 'User banned from Watch Party',
+    });
   }
 
   @Delete('admin/users/:userId/ban')
   @UseGuards(JwtAuthGuard, IsAdminGuard)
-  @ApiOperation({ summary: 'Remove global Watch Party ban from a user (admin)' })
+  @ApiOperation({
+    summary: 'Remove global Watch Party ban from a user (admin)',
+  })
   async adminUnbanUser(
     @UserSession('id') adminId: string,
     @Param('userId') targetUserId: string,
@@ -236,6 +255,9 @@ export class WatchPartyController {
       roomId: targetUserId,
       metadata: { targetUserId },
     });
-    return ResponseBuilder.createResponse({ data: null, message: 'User unbanned from Watch Party' });
+    return ResponseBuilder.createResponse({
+      data: null,
+      message: 'User unbanned from Watch Party',
+    });
   }
 }

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import { defaultIfEmpty, firstValueFrom } from 'rxjs';
 
 import { catchRpcError } from '@app/common/exceptions';
 import {
@@ -29,9 +29,11 @@ export class WatchPartyService {
   ) {}
 
   private send<T>(cmd: string, payload: unknown): Promise<T> {
-    return firstValueFrom<T>(
-      this.client.send({ cmd }, payload).pipe(catchRpcError()) as any,
-    );
+    return firstValueFrom(
+      this.client
+        .send({ cmd }, payload)
+        .pipe(catchRpcError(), defaultIfEmpty(null)),
+    ) as Promise<T>;
   }
 
   createRoom(
@@ -65,12 +67,14 @@ export class WatchPartyService {
     userId: string,
     password?: string,
     member?: MemberInput,
+    actorIsAdmin?: boolean,
   ): Promise<RoomState> {
     return this.send(WATCH_PARTY_CMD.JOIN_ROOM_BY_ID, {
       roomId,
       userId,
       password,
       member,
+      actorIsAdmin,
     });
   }
 
@@ -112,8 +116,9 @@ export class WatchPartyService {
     roomId: string,
     userId: string,
     state: { isPlaying: boolean; currentTime: number },
+    actorIsAdmin?: boolean,
   ): Promise<VideoState> {
-    return this.send(WATCH_PARTY_CMD.SYNC_VIDEO, { roomId, userId, state });
+    return this.send(WATCH_PARTY_CMD.SYNC_VIDEO, { roomId, userId, state, actorIsAdmin });
   }
 
   sendMessage(
@@ -143,12 +148,14 @@ export class WatchPartyService {
     actorId: string,
     targetId: string,
     durationSec?: number,
+    actorIsAdmin?: boolean,
   ): Promise<ModerationEntry> {
     return this.send(WATCH_PARTY_CMD.MUTE_MEMBER, {
       roomId,
       actorId,
       targetId,
       durationSec,
+      actorIsAdmin,
     });
   }
 
@@ -156,11 +163,22 @@ export class WatchPartyService {
     roomId: string,
     actorId: string,
     targetId: string,
+    actorIsAdmin?: boolean,
   ): Promise<void> {
     return this.send(WATCH_PARTY_CMD.UNMUTE_MEMBER, {
       roomId,
       actorId,
       targetId,
+      actorIsAdmin,
+    });
+  }
+
+  kickMember(roomId: string, actorId: string, targetId: string, actorIsAdmin?: boolean): Promise<void> {
+    return this.send(WATCH_PARTY_CMD.KICK_MEMBER, {
+      roomId,
+      actorId,
+      targetId,
+      actorIsAdmin,
     });
   }
 
@@ -169,12 +187,14 @@ export class WatchPartyService {
     actorId: string,
     targetId: string,
     durationSec?: number,
+    actorIsAdmin?: boolean,
   ): Promise<ModerationEntry> {
     return this.send(WATCH_PARTY_CMD.BAN_MEMBER, {
       roomId,
       actorId,
       targetId,
       durationSec,
+      actorIsAdmin,
     });
   }
 
@@ -182,11 +202,13 @@ export class WatchPartyService {
     roomId: string,
     actorId: string,
     targetId: string,
+    actorIsAdmin?: boolean,
   ): Promise<void> {
     return this.send(WATCH_PARTY_CMD.UNBAN_MEMBER, {
       roomId,
       actorId,
       targetId,
+      actorIsAdmin,
     });
   }
 
@@ -198,19 +220,22 @@ export class WatchPartyService {
     roomId: string,
     hostId: string,
     item: Omit<QueueItem, 'addedBy' | 'addedAt'>,
+    actorIsAdmin?: boolean,
   ): Promise<QueueItem[]> {
-    return this.send(WATCH_PARTY_CMD.ENQUEUE_VIDEO, { roomId, hostId, item });
+    return this.send(WATCH_PARTY_CMD.ENQUEUE_VIDEO, { roomId, hostId, item, actorIsAdmin });
   }
 
   removeFromQueue(
     roomId: string,
     hostId: string,
     index: number,
+    actorIsAdmin?: boolean,
   ): Promise<QueueItem[]> {
     return this.send(WATCH_PARTY_CMD.REMOVE_FROM_QUEUE, {
       roomId,
       hostId,
       index,
+      actorIsAdmin,
     });
   }
 
@@ -219,38 +244,43 @@ export class WatchPartyService {
     hostId: string,
     from: number,
     to: number,
+    actorIsAdmin?: boolean,
   ): Promise<QueueItem[]> {
     return this.send(WATCH_PARTY_CMD.REORDER_QUEUE, {
       roomId,
       hostId,
       from,
       to,
+      actorIsAdmin,
     });
   }
 
   playNext(
     roomId: string,
     hostId: string,
+    actorIsAdmin?: boolean,
   ): Promise<{
     videoState: VideoState;
     queue: QueueItem[];
     nextItem: QueueItem | null;
   }> {
-    return this.send(WATCH_PARTY_CMD.PLAY_NEXT, { roomId, hostId });
+    return this.send(WATCH_PARTY_CMD.PLAY_NEXT, { roomId, hostId, actorIsAdmin });
   }
 
   playNow(
     roomId: string,
     hostId: string,
     item: Omit<QueueItem, 'addedBy' | 'addedAt'>,
+    actorIsAdmin?: boolean,
   ): Promise<{ videoState: VideoState; queue: QueueItem[] }> {
-    return this.send(WATCH_PARTY_CMD.PLAY_NOW, { roomId, hostId, item });
+    return this.send(WATCH_PARTY_CMD.PLAY_NOW, { roomId, hostId, item, actorIsAdmin });
   }
 
   handleVideoEnd(
     roomId: string,
     hostId: string,
     videoId?: string,
+    actorIsAdmin?: boolean,
   ): Promise<{
     videoState: VideoState;
     queue: QueueItem[];
@@ -260,6 +290,7 @@ export class WatchPartyService {
       roomId,
       hostId,
       videoId,
+      actorIsAdmin,
     });
   }
 
@@ -281,7 +312,11 @@ export class WatchPartyService {
     adminId: string,
     reason?: string,
   ): Promise<{ closed: true; memberIds: string[] }> {
-    return this.send(WATCH_PARTY_CMD.ADMIN_CLOSE_ROOM, { roomId, adminId, reason });
+    return this.send(WATCH_PARTY_CMD.ADMIN_CLOSE_ROOM, {
+      roomId,
+      adminId,
+      reason,
+    });
   }
 
   adminKickMember(
@@ -289,7 +324,11 @@ export class WatchPartyService {
     adminId: string,
     targetId: string,
   ): Promise<{ kicked: true; targetId: string }> {
-    return this.send(WATCH_PARTY_CMD.ADMIN_KICK_MEMBER, { roomId, adminId, targetId });
+    return this.send(WATCH_PARTY_CMD.ADMIN_KICK_MEMBER, {
+      roomId,
+      adminId,
+      targetId,
+    });
   }
 
   adminGetStats(): Promise<{

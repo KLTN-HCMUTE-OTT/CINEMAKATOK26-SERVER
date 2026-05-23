@@ -4,8 +4,6 @@ import { basename, join, parse } from 'path';
 
 import { spawn } from 'child_process';
 
-import { getConfig } from '../get-config';
-
 /**
  * Transcode a video into multiple fragmented MP4 files for DASH packaging.
  *
@@ -73,7 +71,8 @@ export const processVideoDASH = async (
   }
 
   const fileName = parse(basename(inputFilePath)).name;
-  const uploadBaseDir = getConfig('uploadDir', 'E:/uploads');
+  const uploadBaseDir = process.env.UPLOAD_DIR || 'uploads';
+
   const outputDir = join(uploadBaseDir, 'dash-temp', fileName);
   const thumbnailDir = join(uploadBaseDir, 'thumbnails');
 
@@ -195,9 +194,7 @@ function runFfmpeg(executable: string, args: string[]): Promise<void> {
       if (code === 0) {
         resolve();
       } else {
-        reject(
-          new Error(`FFmpeg exited with code ${code}: ${stderrOutput}`),
-        );
+        reject(new Error(`FFmpeg exited with code ${code}: ${stderrOutput}`));
       }
     });
 
