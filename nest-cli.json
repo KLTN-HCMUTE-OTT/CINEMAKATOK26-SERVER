@@ -126,6 +126,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/payment-service/tsconfig.app.json"
       }
+    },
+    "watch-party-service": {
+      "type": "application",
+      "root": "apps/watch-party-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/watch-party-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/watch-party-service/tsconfig.app.json"
+      }
     }
   }
 }

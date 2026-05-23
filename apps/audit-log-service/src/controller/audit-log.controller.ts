@@ -33,4 +33,17 @@ export class AuditLogController {
   async getTransactionsForFPGrowth() {
     return await this.auditLogService.getTransactionsForFPGrowth();
   }
+
+  @MessagePattern({ cmd: 'create_watch_party_log' })
+  async createWatchPartyLog(
+    @Payload()
+    data: {
+      userId: string;
+      action: LOG_ACTION;
+      roomId: string;
+      metadata?: Record<string, unknown>;
+    },
+  ) {
+    return await this.auditLogService.logWatchPartyAction(data);
+  }
 }

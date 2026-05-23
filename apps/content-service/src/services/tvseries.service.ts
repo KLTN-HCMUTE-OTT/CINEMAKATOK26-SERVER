@@ -151,7 +151,7 @@ export class TvSeriesService {
       this._applyDateRange(qb, filter);
     }
 
-    if (sort) {
+    if (sort && (typeof sort !== 'string' || sort.trim())) {
       const sortObj = typeof sort === 'string' ? JSON.parse(sort) : sort;
       Object.keys(sortObj).forEach((key) => {
         let field;

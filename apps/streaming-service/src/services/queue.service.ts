@@ -27,7 +27,6 @@ export class QueueService {
   private videoQueue: Queue | null = null;
   private readonly logger = new Logger(QueueService.name);
   private isRedisAvailable = false;
-  private readonly localOutputDir = process.env.LOCAL_STORAGE_DIR || 'uploads';
   private readonly uploadBaseDir = process.env.UPLOAD_DIR || 'uploads';
 
   constructor(
@@ -102,32 +101,6 @@ export class QueueService {
       'thumbnails',
       `${fileName}.png`,
     );
-    // // Step 5: Copy encrypted DASH files to local output directory
-    // this.logger.log(`Copying encrypted DASH files to local directory...`);
-    // const localBaseDir = path.join(this.localOutputDir, 'videos', videoId, 'dash');
-
-    // // Ensure output directory exists
-    // await fsPromises.mkdir(localBaseDir, { recursive: true });
-
-    // // Copy manifest.mpd
-    // const mpdDestPath = path.join(localBaseDir, 'manifest.mpd');
-    // await fsPromises.copyFile(mpdOutputPath, mpdDestPath);
-    // this.logger.log(`Copied manifest.mpd to ${mpdDestPath}`);
-
-    // // Copy all encrypted segments
-    // const encryptedFiles = await fsPromises.readdir(dashOutputDir);
-    // for (const fileNameInDir of encryptedFiles) {
-    //   if (fileNameInDir === 'manifest.mpd') continue;
-
-    //   const filePath = path.join(dashOutputDir, fileNameInDir);
-    //   const fileStats = await fsPromises.stat(filePath);
-    //   if (!fileStats.isFile()) continue;
-
-    //   const destPath = path.join(localBaseDir, fileNameInDir);
-    //   await fsPromises.copyFile(filePath, destPath);
-    // }
-
-    // this.logger.log(`All DASH files copied to ${localBaseDir}`);
 
     // Step 5: Upload encrypted DASH files to S3
     this.logger.log(`Uploading encrypted DASH files to S3...`);
@@ -175,14 +148,12 @@ export class QueueService {
       const s3Key = `${s3BaseKey}/${fileNameInDir}`;
       await this.s3Service.uploadLargeFile(file, s3Key);
     }
-    
 
     // Step 6: Cleanup local files
     await fsPromises.rm(dashResult.outputDir, {
       recursive: true,
       force: true,
     });
-
     if (fs.existsSync(inputPath)) {
       await fsPromises.unlink(inputPath);
     }

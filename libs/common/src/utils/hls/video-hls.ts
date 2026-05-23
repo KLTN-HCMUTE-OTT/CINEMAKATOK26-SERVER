@@ -8,7 +8,6 @@ import { plainToInstance } from 'class-transformer';
 
 import { RESOLUTION, VIDEO_STATUS } from '@app/common/enums/global.enum';
 
-import { getConfig } from '../get-config';
 
 /**
  * Xử lý video sang HLS nhiều chất lượng (1080p, 720p, 480p)
@@ -25,7 +24,7 @@ export const processVideoHLS = async (
   }
 
   const fileName = parse(basename(inputFilePath)).name;
-  const uploadBaseDir = getConfig('uploadDir', 'E:/uploads');
+  const uploadBaseDir = process.env.UPLOAD_DIR || 'uploads';
   const videoDir = join(uploadBaseDir, 'videos', fileName);
   const thumbnailDir = join(uploadBaseDir, 'thumbnails');
   const outputDir = videoDir;

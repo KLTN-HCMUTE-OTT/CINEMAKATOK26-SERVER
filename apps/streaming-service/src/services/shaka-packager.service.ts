@@ -52,7 +52,9 @@ export class ShakaPackagerService {
    * @param options - Input files, encryption keys, and output path
    * @returns Result containing the path to the generated .mpd manifest
    */
-  async packageDash(options: ShakaPackagerOptions): Promise<ShakaPackagerResult> {
+  async packageDash(
+    options: ShakaPackagerOptions,
+  ): Promise<ShakaPackagerResult> {
     const { inputs, keyId, contentKey, mpdOutputPath } = options;
 
     const outputDir = path.dirname(mpdOutputPath);
@@ -124,9 +126,7 @@ export class ShakaPackagerService {
             success: true,
           });
         } else {
-          this.logger.error(
-            `Shaka Packager failed with code ${code}`,
-          );
+          this.logger.error(`Shaka Packager failed with code ${code}`);
           this.logger.error(`stderr: ${stderrOutput}`);
           reject(
             new Error(
@@ -144,9 +144,7 @@ export class ShakaPackagerService {
         this.logger.error(
           'Set SHAKA_PACKAGER_PATH env var to the binary location.',
         );
-        reject(
-          new Error(`Shaka Packager not found: ${err.message}`),
-        );
+        reject(new Error(`Shaka Packager not found: ${err.message}`));
       });
     });
   }

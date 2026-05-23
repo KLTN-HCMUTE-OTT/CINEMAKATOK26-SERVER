@@ -3,8 +3,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { basename, join, parse } from 'path';
 
 import { spawn } from 'child_process';
-
-import { getConfig } from '../get-config';
+import { getConfig } from '@app/common/utils/get-config';
 
 /**
  * Transcode a video into multiple fragmented MP4 files for DASH packaging.
@@ -78,7 +77,8 @@ export const processVideoDASH = async (
   }
 
   const fileName = parse(basename(inputFilePath)).name;
-  const uploadBaseDir = getConfig('uploadDir', 'E:/uploads');
+  const uploadBaseDir = process.env.UPLOAD_DIR || 'uploads';
+
   const outputDir = join(uploadBaseDir, 'dash-temp', fileName);
   const thumbnailDir = join(uploadBaseDir, 'thumbnails');
 
@@ -106,32 +106,48 @@ export const processVideoDASH = async (
   const filterComplex = [splitFilter, ...scaleFilters].join('; ');
 
   const videoOutputArgs = VARIANTS.flatMap((v, i) => [
-    '-map', `[vout${i}]`,
-    '-c:v', 'h264_nvenc',
-    '-preset', 'p4',           // p1=fastest … p7=slowest; p4 is balanced
-    '-b:v', v.bitrate,
-    '-maxrate', v.maxrate,
-    '-bufsize', v.bufsize,
+    '-map',
+    `[vout${i}]`,
+    '-c:v',
+    'h264_nvenc',
+    '-preset',
+    'p4', // p1=fastest … p7=slowest; p4 is balanced
+    '-b:v',
+    v.bitrate,
+    '-maxrate',
+    v.maxrate,
+    '-bufsize',
+    v.bufsize,
     '-an',
-    '-movflags', '+frag_keyframe+empty_moov+default_base_moof',
-    '-f', 'mp4',
+    '-movflags',
+    '+frag_keyframe+empty_moov+default_base_moof',
+    '-f',
+    'mp4',
     join(outputDir, v.outputName),
   ]);
 
   const audioOutputArgs = [
-    '-map', '0:a',
-    '-c:a', 'aac',
-    '-b:a', '192k',
-    '-ac', '2',
+    '-map',
+    '0:a',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
+    '-ac',
+    '2',
     '-vn',
-    '-movflags', '+frag_keyframe+empty_moov+default_base_moof',
-    '-f', 'mp4',
+    '-movflags',
+    '+frag_keyframe+empty_moov+default_base_moof',
+    '-f',
+    'mp4',
     audioPath,
   ];
 
   const args = [
-    '-i', inputFilePath,
-    '-filter_complex', filterComplex,
+    '-i',
+    inputFilePath,
+    '-filter_complex',
+    filterComplex,
     ...videoOutputArgs,
     ...audioOutputArgs,
   ];
@@ -144,11 +160,16 @@ export const processVideoDASH = async (
   console.log('🖼  Generating thumbnail...');
   try {
     await runFfmpeg(ffmpegExecutable, [
-      '-ss', '00:00:05',       // seek BEFORE -i for near-instant grab
-      '-i', inputFilePath,
-      '-vframes', '1',
-      '-vf', 'scale=320:-1',
-      '-q:v', '3',
+      '-ss',
+      '00:00:05', // seek BEFORE -i for near-instant grab
+      '-i',
+      inputFilePath,
+      '-vframes',
+      '1',
+      '-vf',
+      'scale=320:-1',
+      '-q:v',
+      '3',
       thumbnailPath,
     ]);
     console.log(`Thumbnail: ${thumbnailPath}`);
@@ -196,43 +217,64 @@ export const processVideoDASH_CPU = async (
   const filterComplex = [splitFilter, ...scaleFilters].join('; ');
 
   const videoOutputArgs = VARIANTS.flatMap((v, i) => [
-    '-map', `[vout${i}]`,
-    '-c:v', 'libx264',
-    '-preset', 'veryfast',
-    '-b:v', v.bitrate,
-    '-maxrate', v.maxrate,
-    '-bufsize', v.bufsize,
+    '-map',
+    `[vout${i}]`,
+    '-c:v',
+    'libx264',
+    '-preset',
+    'veryfast',
+    '-b:v',
+    v.bitrate,
+    '-maxrate',
+    v.maxrate,
+    '-bufsize',
+    v.bufsize,
     '-an',
-    '-movflags', '+frag_keyframe+empty_moov+default_base_moof',
-    '-f', 'mp4',
+    '-movflags',
+    '+frag_keyframe+empty_moov+default_base_moof',
+    '-f',
+    'mp4',
     join(outputDir, v.outputName),
   ]);
 
   const audioOutputArgs = [
-    '-map', '0:a',
-    '-c:a', 'aac',
-    '-b:a', '192k',
-    '-ac', '2',
+    '-map',
+    '0:a',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
+    '-ac',
+    '2',
     '-vn',
-    '-movflags', '+frag_keyframe+empty_moov+default_base_moof',
-    '-f', 'mp4',
+    '-movflags',
+    '+frag_keyframe+empty_moov+default_base_moof',
+    '-f',
+    'mp4',
     audioPath,
   ];
 
   await runFfmpeg(ffmpegExecutable, [
-    '-i', inputFilePath,
-    '-filter_complex', filterComplex,
+    '-i',
+    inputFilePath,
+    '-filter_complex',
+    filterComplex,
     ...videoOutputArgs,
     ...audioOutputArgs,
   ]);
 
   try {
     await runFfmpeg(ffmpegExecutable, [
-      '-ss', '00:00:05',
-      '-i', inputFilePath,
-      '-vframes', '1',
-      '-vf', 'scale=320:-1',
-      '-q:v', '3',
+      '-ss',
+      '00:00:05',
+      '-i',
+      inputFilePath,
+      '-vframes',
+      '1',
+      '-vf',
+      'scale=320:-1',
+      '-q:v',
+      '3',
       thumbnailPath,
     ]);
   } catch (err) {
@@ -249,9 +291,7 @@ export const processVideoDASH_CPU = async (
 export const detectCuda = (): Promise<boolean> =>
   new Promise((resolve) => {
     const ffmpegExecutable = resolveFfmpegExecutable();
-    const proc = spawn(ffmpegExecutable, [
-      '-hide_banner', '-encoders',
-    ]);
+    const proc = spawn(ffmpegExecutable, ['-hide_banner', '-encoders']);
     let out = '';
     proc.stdout.on('data', (d) => (out += d.toString()));
     proc.stderr.on('data', (d) => (out += d.toString()));

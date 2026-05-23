@@ -165,6 +165,21 @@ export class AuditLogService {
     console.log(`Deleted ${result.affected} old audit logs.`);
   }
 
+  async logWatchPartyAction(data: {
+    userId: string;
+    action: LOG_ACTION;
+    roomId: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<AuditLog> {
+    return this.log({
+      userId: data.userId,
+      action: data.action,
+      resourceType: RESOURCE_TYPE.WATCH_PARTY,
+      resourceId: data.roomId,
+      metadata: data.metadata,
+    });
+  }
+
   async logVideoAction(
     userId: string,
     videoId: string,

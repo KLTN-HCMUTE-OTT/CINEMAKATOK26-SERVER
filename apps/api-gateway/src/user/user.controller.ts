@@ -154,6 +154,16 @@ export class UserController {
     return ResponseBuilder.createResponse({ data: null, message: 'Avatar deleted successfully' });
   }
 
+  @Post('batch')
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
+  @IsAdmin()
+  @ApiOperation({ summary: 'Batch fetch users by IDs (admin)' })
+  @ApiOkResponse({ description: 'List of users by IDs' })
+  async getUsersByIds(@Body() body: { ids: string[] }) {
+    const users = await firstValueFrom(this.userService.getUsersByIds(body.ids));
+    return ResponseBuilder.createResponse({ data: users });
+  }
+
   // Admin-only user management endpoints
   @Get()
   @UseGuards(JwtAuthGuard, IsAdminGuard)

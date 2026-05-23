@@ -115,6 +115,19 @@ export class VideosController {
     });
   }
 
+  @Public()
+  @Get(':id/parent-content')
+  @ApiOperation({ summary: 'Get the movie or TV series that owns this video' })
+  @ApiResponse({
+    status: 200,
+    description: 'Parent content info retrieved successfully',
+  })
+  @ApiNotFoundResponse({ description: 'Video not found or has no parent content' })
+  async getVideoParentContent(@Param('id', new ParseUUIDPipe()) id: string) {
+    const result = await firstValueFrom(this.contentService.getMovieOrSeriesFromVideo(id));
+    return ResponseBuilder.createResponse({ data: result, message: 'Parent content retrieved' });
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiOperation({ summary: '[ADMIN] Create video' })

@@ -364,6 +364,12 @@ export class ContentService {
       .pipe(catchRpcError());
   }
 
+  getMovieOrSeriesFromVideo(videoId: string): Observable<any> {
+    return this.contentClient
+      .send({ cmd: 'content.getMovieOrSeriesFromVideo' }, { videoId })
+      .pipe(catchRpcError());
+  }
+
   createVideo(data: Record<string, any>): Observable<any> {
     return this.contentClient
       .send({ cmd: 'content.createVideo' }, data)

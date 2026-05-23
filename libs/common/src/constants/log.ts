@@ -22,6 +22,10 @@ const ACTION_DESCRIPTIONS: Partial<Record<LOG_ACTION, string>> = {
   [LOG_ACTION.CREATE_REVIEW]: 'User wrote a review',
   [LOG_ACTION.UPDATE_REVIEW]: 'User updated a review',
   [LOG_ACTION.DELETE_REVIEW]: 'User deleted a review',
+  [LOG_ACTION.ADMIN_CLOSE_WATCH_PARTY_ROOM]: 'Admin force-closed a watch party room',
+  [LOG_ACTION.ADMIN_KICK_WATCH_PARTY_MEMBER]: 'Admin kicked a member from a watch party room',
+  [LOG_ACTION.ADMIN_BAN_USER_FROM_WATCH_PARTY]: 'Admin banned a user from Watch Party',
+  [LOG_ACTION.ADMIN_UNBAN_USER_FROM_WATCH_PARTY]: 'Admin removed Watch Party ban from a user',
 };
 
 export function resolveDescription(action: LOG_ACTION, metadata?: Record<string, any>): string {

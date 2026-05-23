@@ -210,3 +210,31 @@ export class EpisodeReviewNotFoundError extends DomainError {
     super(message, ERROR_CODE.ENTITY_NOT_FOUND, HttpStatus.NOT_FOUND);
   }
 }
+
+// ─── Watch Party ─────────────────────────────────────────────────────────────
+
+import type { WatchPartyErrorCode } from '../dtos/watch-party/watch-party.types';
+
+const WP_HTTP_STATUS: Record<WatchPartyErrorCode, HttpStatus> = {
+  WRONG_PASSWORD: HttpStatus.UNAUTHORIZED,
+  ROOM_FULL: HttpStatus.CONFLICT,
+  NOT_FOUND: HttpStatus.NOT_FOUND,
+  ALREADY_IN_ROOM: HttpStatus.CONFLICT,
+  NOT_AUTHORIZED: HttpStatus.FORBIDDEN,
+  RATE_LIMITED: HttpStatus.TOO_MANY_REQUESTS,
+  MUTED: HttpStatus.FORBIDDEN,
+  BANNED: HttpStatus.FORBIDDEN,
+  QUEUE_FULL: HttpStatus.CONFLICT,
+  QUEUE_EMPTY: HttpStatus.UNPROCESSABLE_ENTITY,
+  INVALID_VIDEO: HttpStatus.UNPROCESSABLE_ENTITY,
+  INVALID_QUEUE_INDEX: HttpStatus.BAD_REQUEST,
+  INTERNAL_ERROR: HttpStatus.INTERNAL_SERVER_ERROR,
+};
+
+export class WatchPartyError extends DomainError {
+  public readonly code: WatchPartyErrorCode;
+  constructor(code: WatchPartyErrorCode, message: string) {
+    super(message, code, WP_HTTP_STATUS[code] ?? HttpStatus.BAD_REQUEST);
+    this.code = code;
+  }
+}
