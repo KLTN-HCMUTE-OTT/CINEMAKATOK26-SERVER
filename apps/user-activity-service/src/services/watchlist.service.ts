@@ -12,6 +12,8 @@ import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { EntityWatchList } from '../entities/watchlist.entity';
+import { AuditLogEmitterService } from './audit-log-emitter.service';
+import { LOG_ACTION, RESOURCE_TYPE } from '@app/common/enums/log.enum';
 
 @Injectable()
 export class WatchListService {
@@ -20,6 +22,7 @@ export class WatchListService {
     private readonly watchListRepository: Repository<EntityWatchList>,
     @Inject('CONTENT_SERVICE')
     private readonly contentClient: ClientProxy,
+    private readonly auditLogEmitter: AuditLogEmitterService,
   ) {}
 
   private async getContent(contentId: string): Promise<any> {
@@ -125,7 +128,25 @@ export class WatchListService {
       userId,
       contentId,
     });
-    return this.watchListRepository.save(watchListItem);
+    const savedItem = await this.watchListRepository.save(watchListItem);
+
+    // Emit audit log for watchlist add action
+    try {
+      const content = await this.getContent(contentId);
+      const entityId = await this.getEntityIdByContentId(contentId);
+      const isMovie = content?.type === 'MOVIE';
+      this.auditLogEmitter.emitLog({
+        userId,
+        action: isMovie ? LOG_ACTION.ADD_MOVIE_TO_WATCHLIST : LOG_ACTION.ADD_SERIES_TO_WATCHLIST,
+        resourceType: isMovie ? RESOURCE_TYPE.MOVIE : RESOURCE_TYPE.SERIES,
+        resourceId: entityId ?? undefined,
+        metadata: { contentId },
+      });
+    } catch {
+      // Content resolution failure should not block the watchlist response
+    }
+
+    return savedItem;
   }
 
   async removeFromWatchList(userId: string, contentId: string): Promise<void> {
@@ -141,6 +162,22 @@ export class WatchListService {
     }
 
     await this.watchListRepository.remove(watchListItem);
+
+    // Emit audit log for watchlist remove action
+    try {
+      const content = await this.getContent(contentId);
+      const entityId = await this.getEntityIdByContentId(contentId);
+      const isMovie = content?.type === 'MOVIE';
+      this.auditLogEmitter.emitLog({
+        userId,
+        action: isMovie ? LOG_ACTION.REMOVE_MOVIE_FROM_WATCHLIST : LOG_ACTION.REMOVE_SERIES_FROM_WATCHLIST,
+        resourceType: isMovie ? RESOURCE_TYPE.MOVIE : RESOURCE_TYPE.SERIES,
+        resourceId: entityId ?? undefined,
+        metadata: { contentId },
+      });
+    } catch {
+      // Content resolution failure should not block the remove response
+    }
   }
 
   async getUserWatchList(userId: string, query?: any): Promise<any> {

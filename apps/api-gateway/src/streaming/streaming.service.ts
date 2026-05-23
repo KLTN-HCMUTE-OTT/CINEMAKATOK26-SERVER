@@ -27,7 +27,13 @@ export class StreamingGatewayService {
    * Issue a ClearKey DRM license.
    * Delegates to streaming-service which validates entitlement via order-service.
    */
-  issueClearKeyLicense(payload: { keyIds: string[]; userId: string }) {
+  issueClearKeyLicense(
+    payload: {
+      keyIds: string[];
+      userId: string;
+      contentId: string;
+    },
+  ) {
     return this.streamingClient
       .send({ cmd: 'streaming.drm.issueLicense' }, payload)
       .pipe(catchRpcError());
@@ -36,9 +42,9 @@ export class StreamingGatewayService {
   /**
    * Get the signed manifest URL for a video.
    */
-  getManifestUrl(videoId: string) {
+  getManifestUrl(videoId: string, userId?: string) {
     return this.streamingClient
-      .send({ cmd: 'streaming.getManifestUrl' }, { videoId })
+      .send({ cmd: 'streaming.getManifestUrl' }, { videoId, userId })
       .pipe(catchRpcError());
   }
 

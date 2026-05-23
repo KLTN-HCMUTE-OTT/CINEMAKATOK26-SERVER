@@ -13,6 +13,10 @@ export const notificationEnvSchema = z.object({
 
   // RabbitMQ
   RABBITMQ_URL: z.string().min(1, 'RABBITMQ_URL is required'),
+
+  // Services
+  USER_SERVICE_HOST: z.string().default('localhost'),
+  USER_SERVICE_PORT: z.coerce.number().default(3002),
 });
 
 export type NotificationEnv = z.infer<typeof notificationEnvSchema>;

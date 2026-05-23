@@ -12,6 +12,8 @@ import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { EntityFavorite } from '../entities/favorite.entity';
+import { AuditLogEmitterService } from './audit-log-emitter.service';
+import { LOG_ACTION, RESOURCE_TYPE } from '@app/common/enums/log.enum';
 
 @Injectable()
 export class FavoriteService {
@@ -20,6 +22,7 @@ export class FavoriteService {
     private readonly favoriteRepository: Repository<EntityFavorite>,
     @Inject('CONTENT_SERVICE')
     private readonly contentClient: ClientProxy,
+    private readonly auditLogEmitter: AuditLogEmitterService,
   ) {}
 
   private async getContent(contentId: string): Promise<any> {
@@ -97,6 +100,18 @@ export class FavoriteService {
     const favorite = this.favoriteRepository.create({ userId, contentId });
     await this.favoriteRepository.save(favorite);
 
+    // Emit audit log for like action
+    const content = await this.getContent(contentId);
+    const entityId = await this.getEntityIdByContentId(contentId);
+    const isMovie = content?.type === 'MOVIE';
+    this.auditLogEmitter.emitLog({
+      userId,
+      action: isMovie ? LOG_ACTION.LIKE_MOVIE : LOG_ACTION.LIKE_SERIES,
+      resourceType: isMovie ? RESOURCE_TYPE.MOVIE : RESOURCE_TYPE.SERIES,
+      resourceId: entityId ?? undefined,
+      metadata: { contentId },
+    });
+
     return this.getFavoriteStatus(contentId, userId);
   }
 
@@ -138,6 +153,22 @@ export class FavoriteService {
 
     await this.favoriteRepository.remove(favorite);
 
+    // Emit audit log for unlike action
+    try {
+      const content = await this.getContent(contentId);
+      const entityId = await this.getEntityIdByContentId(contentId);
+      const isMovie = content?.type === 'MOVIE';
+      this.auditLogEmitter.emitLog({
+        userId,
+        action: isMovie ? LOG_ACTION.UNLIKE_MOVIE : LOG_ACTION.UNLIKE_SERIES,
+        resourceType: isMovie ? RESOURCE_TYPE.MOVIE : RESOURCE_TYPE.SERIES,
+        resourceId: entityId ?? undefined,
+        metadata: { contentId },
+      });
+    } catch {
+      // Content resolution failure should not block the unlike response
+    }
+
     return { message: 'Content removed from favorites successfully' };
   }
 
@@ -153,6 +184,22 @@ export class FavoriteService {
         });
       }
       await this.favoriteRepository.remove(favorite);
+
+      // Emit audit log for each unlike action
+      try {
+        const content = await this.getContent(contentId);
+        const entityId = await this.getEntityIdByContentId(contentId);
+        const isMovie = content?.type === 'MOVIE';
+        this.auditLogEmitter.emitLog({
+          userId,
+          action: isMovie ? LOG_ACTION.UNLIKE_MOVIE : LOG_ACTION.UNLIKE_SERIES,
+          resourceType: isMovie ? RESOURCE_TYPE.MOVIE : RESOURCE_TYPE.SERIES,
+          resourceId: entityId ?? undefined,
+          metadata: { contentId },
+        });
+      } catch {
+        // Content resolution failure should not block the unlike operation
+      }
     }
 
     return { message: 'Contents removed from favorites successfully' };

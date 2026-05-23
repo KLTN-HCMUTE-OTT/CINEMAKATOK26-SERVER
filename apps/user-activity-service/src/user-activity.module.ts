@@ -32,6 +32,7 @@ import { EpisodeReviewService } from './services/episode-review.service';
 import { ReviewReplyService } from './services/review-reply.service';
 import { ReportService } from './services/report.service';
 import { ConfigService } from '@nestjs/config';
+import { AuditLogEmitterService } from './services/audit-log-emitter.service';
 
 @Module({
   imports: [
@@ -96,6 +97,18 @@ import { ConfigService } from '@nestjs/config';
         }),
         inject: [ConfigService],
       },
+      {
+        name: 'AUDIT_LOG_SERVICE',
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [config.get<string>('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672')],
+            queue: 'audit_log_queue',
+            queueOptions: { durable: true },
+          },
+        }),
+        inject: [ConfigService],
+      },
     ]),
   ],
   controllers: [
@@ -115,6 +128,7 @@ import { ConfigService } from '@nestjs/config';
     EpisodeReviewService,
     ReviewReplyService,
     ReportService,
+    AuditLogEmitterService,
   ],
 })
 export class UserActivityModule {}

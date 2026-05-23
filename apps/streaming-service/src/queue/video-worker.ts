@@ -12,7 +12,7 @@ import { spawn, spawnSync } from 'child_process';
 import { VIDEO_STATUS } from '@app/common/enums/global.enum';
 import { UpdateVideoDto } from '@app/common/dtos/content/video.dto';
 import { getConfig } from '@app/common/utils/get-config';
-import { processVideoDASH } from '@app/common/utils/dash/video-dash';
+import { processVideoDASH, processVideoDASH_CPU, detectCuda } from '@app/common/utils/dash/video-dash';
 import { NestFactory } from '@nestjs/core';
 
 import { StreamingModule } from '../streaming.module';
@@ -314,7 +314,9 @@ async function bootstrap() {
         // STEP 2: Transcode to fragmented MP4 (multiple bitrates + audio)
         // ────────────────────────────────────────────────────────────────────
         console.log('Processing DASH (fragmented MP4)...');
-        const dashResult = await processVideoDASH(inputPath);
+        const hasCuda = await detectCuda();
+        const processor = hasCuda ? processVideoDASH : processVideoDASH_CPU;
+        const dashResult = await processor(inputPath);
         pathsToCleanup.push(dashResult.outputDir);
         pathsToCleanup.push(dashResult.thumbnailPath);
         console.log(

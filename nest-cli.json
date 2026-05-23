@@ -118,6 +118,15 @@
         "tsConfigPath": "apps/analytics-service/tsconfig.app.json"
       }
     },
+    "payment-service": {
+      "type": "application",
+      "root": "apps/payment-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/payment-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/payment-service/tsconfig.app.json"
+      }
+    },
     "watch-party-service": {
       "type": "application",
       "root": "apps/watch-party-service",

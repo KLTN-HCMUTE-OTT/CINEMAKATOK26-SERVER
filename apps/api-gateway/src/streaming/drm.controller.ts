@@ -22,6 +22,7 @@ import {
 
 import { StreamingGatewayService } from './streaming.service';
 import { UserSession } from '@app/common/decorators';
+import { EntitlementGuard } from './guards/entitlement.guard';
 
 @ApiTags('DRM')
 @ApiBearerAuth()
@@ -36,7 +37,7 @@ export class DrmController {
    * content decryption keys.
    */
   @Post('license/clearkey')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, EntitlementGuard)
   @ApiOperation({
     summary: 'Issue ClearKey DRM license',
     description:
@@ -72,6 +73,7 @@ export class DrmController {
       this.streamingService.issueClearKeyLicense({
         keyIds,
         userId,
+        contentId: body.contentId,
       }),
     );
 

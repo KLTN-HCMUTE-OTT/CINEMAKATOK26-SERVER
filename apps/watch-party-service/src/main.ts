@@ -9,7 +9,7 @@ import {
 import { WatchPartyServiceModule } from './watch-party-service.module';
 
 async function bootstrap() {
-  const port = Number(process.env.WATCH_PARTY_SERVICE_PORT) || 3009;
+  const port = Number(process.env.WATCH_PARTY_SERVICE_PORT) || 3010;
   const host = process.env.WATCH_PARTY_SERVICE_HOST || 'localhost';
 
   const app = await NestFactory.createMicroservice(WatchPartyServiceModule, {

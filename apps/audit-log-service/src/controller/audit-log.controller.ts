@@ -1,13 +1,18 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
-import { LOG_ACTION } from '@app/common/enums/log.enum';
+import { CreateAuditLogDto } from '@app/common/dtos/audit-log/audit-log.dto';
 import { PaginationQueryDto } from '@app/common/utils/dto/pagination-query.dto';
 import { AuditLogService } from '../service/audit-log.service';
 
 @Controller()
 export class AuditLogController {
   constructor(private readonly auditLogService: AuditLogService) {}
+
+  @MessagePattern({ cmd: 'create_audit_log' })
+  async createAuditLog(@Payload() data: Partial<CreateAuditLogDto>) {
+    return await this.auditLogService.log(data);
+  }
 
   @MessagePattern({ cmd: 'get_audit_logs' })
   async getLogs(@Payload() query: PaginationQueryDto) {

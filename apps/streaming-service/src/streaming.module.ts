@@ -6,13 +6,13 @@ import * as path from 'path';
 
 import { DatabaseModule } from '@app/core/database/database.module';
 
-import { StreamingController } from './streaming.controller';
 import { validateStreamingEnv } from './config/env.schema';
 import { EntityDrmKey } from './entities/drm-key.entity';
+import { StreamingController } from './streaming.controller';
+import { DrmLicenseService } from './services/drm-license.service';
 import {
   ContentVideoService,
   DrmKeyService,
-  DrmLicenseService,
   QueueService,
   R2StorageService,
   S3Service,
@@ -49,6 +49,15 @@ import {
         options: {
           host: process.env.ORDER_SERVICE_HOST ?? 'localhost',
           port: Number(process.env.ORDER_SERVICE_PORT ?? 3004),
+        },
+      },
+      {
+        name: 'AUDIT_LOG_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URL ?? 'amqp://guest:guest@localhost:5672'],
+          queue: 'audit_log_queue',
+          queueOptions: { durable: true },
         },
       },
     ]),

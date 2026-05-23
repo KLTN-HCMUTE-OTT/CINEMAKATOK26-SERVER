@@ -430,7 +430,10 @@ export class TvSeriesService {
   }
 
   async findEpisodeById(id: string) {
-    const episode = await this.episodeRepository.findOne({ where: { id } });
+    const episode = await this.episodeRepository.findOne({
+      where: { id },
+      relations: ['season', 'season.tvseries'],
+    });
     if(!episode){
       throw new ContentNotFoundError();
     }

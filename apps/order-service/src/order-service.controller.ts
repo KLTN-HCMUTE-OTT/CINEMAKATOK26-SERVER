@@ -2,7 +2,7 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
 import { SubscriptionService } from './services/subscription.service';
-import { SubscriptionPlan } from './entities/subscription.entity';
+import {  SubscriptionPlan } from '@app/common/enums/global.enum';
 
 @Controller()
 export class OrderServiceController {
@@ -11,6 +11,14 @@ export class OrderServiceController {
   ) {}
 
   // ─── Subscription ─────────────────────────────────────────────────────────────
+
+  /**
+   * Get subscription plan details (like price) by name.
+   */
+  @MessagePattern({ cmd: 'order.getPlanByName' })
+  getPlanByName(@Payload() payload: { name: string }) {
+    return this.subscriptionService.getPlanByName(payload.name);
+  }
 
   /**
    * Check if a user has an active subscription.
@@ -39,8 +47,20 @@ export class OrderServiceController {
       userId: string;
       plan?: SubscriptionPlan;
       durationDays?: number;
+      paymentId?: string;
+      paymentType?: string;
     },
   ) {
+    // If paymentType is upgrade or renewal, use activateSubscription for proper handling
+    if (payload.paymentType === 'upgrade' || payload.paymentType === 'renewal') {
+      return this.subscriptionService.activateSubscription({
+        userId: payload.userId,
+        plan: payload.plan as string,
+        durationDays: payload.durationDays ?? 30,
+        paymentId: payload.paymentId ?? '',
+        paymentType: payload.paymentType,
+      });
+    }
     return this.subscriptionService.createSubscription(
       payload.userId,
       payload.plan,
@@ -54,5 +74,23 @@ export class OrderServiceController {
   @MessagePattern({ cmd: 'order.cancelSubscription' })
   cancelSubscription(@Payload() payload: { userId: string }) {
     return this.subscriptionService.cancelSubscription(payload.userId);
+  }
+
+  /**
+   * Activate, extend or upgrade a subscription (called by PaymentSaga).
+   */
+  @MessagePattern('subscription.activate')
+  activateSubscription(
+    @Payload()
+    payload: {
+      userId: string;
+      plan: string;
+      durationDays: number;
+      paymentId: string;
+      paymentType: string;
+      previousPlan?: string;
+    },
+  ) {
+    return this.subscriptionService.activateSubscription(payload);
   }
 }

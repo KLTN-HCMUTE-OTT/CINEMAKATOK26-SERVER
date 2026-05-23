@@ -22,7 +22,7 @@ import { WatchPartyModule } from './watch-party/watch-party.module';
     UserModule,
     ContentModule,
     UserActivityModule,
-    // PaymentModule,
+    PaymentModule,
     StreamingModule,
     AuditLogModule,
     AnalyticsModule,

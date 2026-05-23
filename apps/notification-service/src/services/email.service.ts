@@ -265,6 +265,49 @@ export class EmailService {
       </div>`;
   }
 
+  private renderSubscriptionExpired(userName: string, plan: string): string {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+        <div style="background-color: #dc2626; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">${this.fromName}</h1>
+        </div>
+        <div style="padding: 30px; color: #333;">
+          <h2 style="margin-top: 0; color: #dc2626;">Subscription Expired</h2>
+          <p>Dear ${userName},</p>
+          <p>Your <strong>${plan.toUpperCase()}</strong> subscription has expired.</p>
+          <p>You no longer have access to premium features. Renew your subscription now to continue enjoying high-quality movies and exclusive content.</p>
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="https://cinemakatok.com/pricing" style="background-color: #dc2626; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Renew Now</a>
+          </div>
+        </div>
+        <div style="background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #777;">
+          <p>© 2025 ${this.fromName}. All rights reserved.</p>
+        </div>
+      </div>`;
+  }
+
+  private renderSubscriptionExpiringSoon(userName: string, plan: string, daysLeft: number, expiresAt: Date): string {
+    const formatDate = (date: Date) => new Date(date).toLocaleDateString('vi-VN');
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+        <div style="background-color: #f59e0b; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">${this.fromName}</h1>
+        </div>
+        <div style="padding: 30px; color: #333;">
+          <h2 style="margin-top: 0; color: #f59e0b;">Subscription Expiring Soon</h2>
+          <p>Dear ${userName},</p>
+          <p>Your <strong>${plan.toUpperCase()}</strong> subscription will expire in <strong>${daysLeft} days</strong> (on ${formatDate(expiresAt)}).</p>
+          <p>Don't lose your access! Renew now to ensure uninterrupted service.</p>
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="https://cinemakatok.com/pricing" style="background-color: #f59e0b; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Extend Subscription</a>
+          </div>
+        </div>
+        <div style="background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #777;">
+          <p>© 2025 ${this.fromName}. All rights reserved.</p>
+        </div>
+      </div>`;
+  }
+
   async sendReviewBanNotification(
     email: string,
     userName: string,
@@ -287,6 +330,20 @@ export class EmailService {
     const html = this.renderReviewRestoreNotification(userName, itemDescription);
     await this.dispatch({ from: `"${this.fromName}" <${this.fromEmail}>`, to: email, subject, html });
     this.logger.log(`${itemDescription} restore notification sent to ${email}`);
+  }
+
+  async sendSubscriptionExpiredEmail(email: string, userName: string, plan: string): Promise<void> {
+    const subject = 'Your Subscription has Expired';
+    const html = this.renderSubscriptionExpired(userName, plan);
+    await this.dispatch({ from: `"${this.fromName}" <${this.fromEmail}>`, to: email, subject, html });
+    this.logger.log(`Subscription expired email sent to ${email}`);
+  }
+
+  async sendSubscriptionExpiringSoonEmail(email: string, userName: string, plan: string, daysLeft: number, expiresAt: Date): Promise<void> {
+    const subject = 'Your Subscription is Expiring Soon';
+    const html = this.renderSubscriptionExpiringSoon(userName, plan, daysLeft, expiresAt);
+    await this.dispatch({ from: `"${this.fromName}" <${this.fromEmail}>`, to: email, subject, html });
+    this.logger.log(`Subscription expiring soon email sent to ${email}`);
   }
 
   async sendEmail(to: string, subject: string, html: string): Promise<void> {
