@@ -41,7 +41,7 @@ export class SubscriptionController {
     description: 'Subscription info returned',
     type: ApiResponseDto(InformationSubscribeDto),
   })
-  async getMySubscription(@UserSession('userId') userId: string) {
+  async getMySubscription(@UserSession('id') userId: string) {
     const result = await firstValueFrom(
       this.orderClient
         .send({ cmd: 'order.getSubscription' }, { userId })
@@ -63,7 +63,7 @@ export class SubscriptionController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Check if subscription is active' })
   @ApiResponse({ status: 200, description: 'Subscription check result', type: ApiResponseDto(CheckSubscribeDto) })
-  async checkSubscription(@UserSession('userId') userId: string) {
+  async checkSubscription(@UserSession('id') userId: string) {
     const result = await firstValueFrom(
       this.orderClient
         .send({ cmd: 'order.checkSubscription' }, { userId })

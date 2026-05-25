@@ -16,73 +16,74 @@ export class SubscribeDto {
 }
 
 export class InformationSubscribeDto extends BaseEntityDto {
-    @ApiProperty({
-      description: 'userId',
-      example: 'uuid',
-    })
-    @IsString()
-    @Expose()
-    userId: string;
+  @ApiProperty({
+    description: 'userId',
+    example: 'uuid',
+  })
+  @IsString()
+  @Expose()
+  userId: string;
 
-    @ApiProperty({
-      description: 'planId',
-      example: 'uuid',
-    })
-    @IsString()
-    @Expose()
-    planId: string;
+  @ApiProperty({
+    description: 'planId',
+    example: 'uuid',
+  })
+  @IsString()
+  @Expose()
+  planId: string;
 
-    @ApiProperty({
-      enum: SubscriptionStatus,
-      example: SubscriptionStatus.ACTIVE,
-    })
-    @IsEnum(SubscriptionStatus)
-    @Expose()
-    status: SubscriptionStatus;
+  @ApiProperty({
+    enum: SubscriptionStatus,
+    example: SubscriptionStatus.ACTIVE,
+  })
+  @IsEnum(SubscriptionStatus)
+  @Expose()
+  status: SubscriptionStatus;
 
-    @ApiProperty({
-      description: 'plan',
-      type: String,
-      example: 'basic',
-    })
-    @IsString()
-    @Expose()
-    @Transform(({ obj }) => obj.plan?.name)
-    plan: string;
+  @ApiProperty({
+    description: 'plan name',
+    example: 'premium',
+  })
+  @IsString()
+  @Expose()
+  @Transform(({ value, obj }) => obj.plan?.name ?? value)
+  planName: string;
 
-    @ApiProperty({
-      description: 'startsAt',
-      example: '2026-05-21T06:49:00.220Z',
-    })
-    @Type(() => Date)
-    @IsDate()
-    @Expose()
-    startsAt: Date;
+  @ApiProperty({
+    description: 'startsAt',
+    example: '2026-05-21T06:49:00.220Z',
+  })
+  @Type(() => Date)
+  @IsDate()
+  @Expose()
+  startsAt: Date;
 
-    @ApiProperty({
-      description: 'expiresAt',
-      example: '2026-06-20T06:49:00.220Z',
-    })
-    @Type(() => Date)
-    @IsDate()
-    @Expose()
-    expiresAt: Date;
+  @ApiProperty({
+    description: 'expiresAt',
+    example: '2026-06-20T06:49:00.220Z',
+  })
+  @Type(() => Date)
+  @IsDate()
+  @Expose()
+  expiresAt: Date;
 
-    @ApiProperty({
-      description: 'autoRenew',
-      example: true,
-    })
-    @IsBoolean()
-    @Expose()
-    autoRenew: boolean;
+  @ApiProperty({
+    description: 'autoRenew',
+    example: true,
+  })
+  @IsBoolean()
+  @Expose()
+  autoRenew: boolean;
 
-    @ApiProperty({
-      description: 'paymentId',
-      example: 'uuid',
-    })
-    @IsString()
-    @Expose()
-    paymentId: string;
+  @ApiProperty({
+    description: 'paymentId',
+    nullable: true,
+    example: null,
+  })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  paymentId?: string | null;
 }
 
 export class CheckSubscribeDto {

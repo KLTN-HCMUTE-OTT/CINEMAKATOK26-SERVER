@@ -119,7 +119,7 @@ export class PaymentController {
     );
 
     return ResponseBuilder.createResponse({
-      data: result,
+      data: result.data,
       message: 'Payment URL created successfully',
     });
   }
@@ -167,7 +167,7 @@ export class PaymentController {
     @Query() query: Record<string, string>,
     @Res() res: Response,
   ) {
-    const frontendUrl = process.env.CLIENT_ORIGIN ?? 'http://localhost:3001';
+    const frontendUrl = process.env.CLIENT_ORIGIN ?? 'http://localhost:3010';
     const status = query['vnp_ResponseCode'] === '00' ? 'success' : 'failed';
     const orderCode = query['vnp_TxnRef'] ?? '';
     return res.redirect(
@@ -201,7 +201,7 @@ export class PaymentController {
       this.paymentService.getPaymentHistory(userId, Number(query.page) || 1, effectiveLimit),
     );
     return ResponseBuilder.createPaginatedResponse({
-      data: result.data.map(item => plainToInstance(PaymentDetailDto, item, {
+      data: (result.items || []).map(item => plainToInstance(PaymentDetailDto, item, {
         excludeExtraneousValues: true,
       })),
       message: 'Get Payment History Successfully',
