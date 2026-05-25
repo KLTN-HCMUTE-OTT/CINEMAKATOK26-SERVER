@@ -56,8 +56,8 @@ export class EntitlementGuard implements CanActivate {
     const userId: string | undefined = request.user?.id ?? request.user?.sub;
     
     // Extract contentId / videoId from path or body
-    const contentId: string | undefined =
-      request.params?.videoId ?? request.body?.contentId;
+    const videoId: string | undefined =
+      request.params?.videoId ?? request.body?.videoId;
 
     if (!userId) {
       this.logger.warn('[EntitlementGuard] No userId in request — denying');
@@ -67,19 +67,39 @@ export class EntitlementGuard implements CanActivate {
     try {
       // Step 1: Resolve content access tier dynamically
       let requiredTier = 0; // default to free
-      if (contentId) {
+      if (videoId) {
         try {
-          const content = await firstValueFrom(
+          const ownership = await firstValueFrom(
             this.contentClient
-              .send({ cmd: 'content.getContentById' }, { id: contentId })
+              .send({ cmd: 'content.getMovieOrSeriesFromVideo' }, { videoId })
               .pipe(timeout(5000)),
           );
-          if (content && content.accessTier) {
-            requiredTier = PLAN_TIER[content.accessTier] ?? 0;
+
+          let accessTier: string | undefined;
+          if (ownership) {
+            if (ownership.movieId) {
+              const movie = await firstValueFrom(
+                this.contentClient
+                  .send({ cmd: 'content.getMovieById' }, { id: ownership.movieId })
+                  .pipe(timeout(5000)),
+              );
+              accessTier = movie?.metaData?.accessTier;
+            } else if (ownership.tvSeriesId) {
+              const tvSeries = await firstValueFrom(
+                this.contentClient
+                  .send({ cmd: 'content.getTvSeriesById' }, { id: ownership.tvSeriesId })
+                  .pipe(timeout(5000)),
+              );
+              accessTier = tvSeries?.metaData?.accessTier;
+            }
+          }
+
+          if (accessTier) {
+            requiredTier = PLAN_TIER[accessTier] ?? 0;
           }
         } catch (contentErr: any) {
           this.logger.error(
-            `[EntitlementGuard] Failed to fetch content ${contentId}: ${contentErr.message}`,
+            `[EntitlementGuard] Failed to fetch content ${videoId}: ${contentErr.message}`,
           );
           throw new ForbiddenException(
             'Unable to verify content metadata. Access denied.',

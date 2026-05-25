@@ -72,7 +72,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(
     new ClassSerializerInterceptor(app.get(Reflector)),
     HttpLoggingInterceptor({ logLevel: 'log' }),
-    new HttpResponseInterceptor(),
+    new HttpResponseInterceptor(app.get(Reflector)),
   );
 
   // Global filters — handles both HttpException and RpcException (TCP microservice errors)

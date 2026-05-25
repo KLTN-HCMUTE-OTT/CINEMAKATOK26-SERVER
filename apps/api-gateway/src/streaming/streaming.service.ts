@@ -31,7 +31,7 @@ export class StreamingGatewayService {
     payload: {
       keyIds: string[];
       userId: string;
-      contentId: string;
+      videoId: string;
     },
   ) {
     return this.streamingClient

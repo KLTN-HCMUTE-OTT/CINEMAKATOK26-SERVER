@@ -23,9 +23,10 @@ import {
 import { StreamingGatewayService } from './streaming.service';
 import { UserSession } from '@app/common/decorators';
 import { EntitlementGuard } from './guards/entitlement.guard';
+import { SkipTransform } from '@app/common/decorators/skip-transform.decorator';
 
 @ApiTags('DRM')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @Controller('drm')
 export class DrmController {
   constructor(private readonly streamingService: StreamingGatewayService) {}
@@ -56,6 +57,7 @@ export class DrmController {
     status: 401,
     description: 'Unauthorized',
   })
+  @SkipTransform()
   async issueClearKeyLicense(
     @Body() body: ClearKeyLicenseRequestDto,
     @UserSession('id') userId: string,
@@ -73,7 +75,7 @@ export class DrmController {
       this.streamingService.issueClearKeyLicense({
         keyIds,
         userId,
-        contentId: body.contentId,
+        videoId: body.videoId,
       }),
     );
 

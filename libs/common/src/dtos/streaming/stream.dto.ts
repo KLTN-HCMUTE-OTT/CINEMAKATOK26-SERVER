@@ -23,10 +23,10 @@ export class ClearKeyLicenseRequestDto {
 
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Content ID',
+    description: 'Video ID',
   })
   @IsUUID()
-  contentId: string;
+  videoId: string;
 }
 
 export class ClearKeyKeyDto {

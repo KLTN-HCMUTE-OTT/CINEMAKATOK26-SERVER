@@ -119,7 +119,7 @@ export class PaymentSaga {
       });
 
       // Step 4: Update entitlement cache (Redis)
-      await this.updateEntitlementCache(payment.userId, subscription);
+      await this.updateEntitlementCache(payment.userId, subscription, payment.plan);
       await this.logSagaEvent(sagaId, 'UPDATE_ENTITLEMENT', 'completed');
 
       // Step 5: Send notification — best-effort, never blocks saga completion
@@ -282,6 +282,7 @@ export class PaymentSaga {
   private async updateEntitlementCache(
     userId: string,
     subscription: any,
+    paymentPlan?: string,
   ): Promise<void> {
     const expiresAt = new Date(subscription.expiresAt);
     const ttlSeconds = Math.max(
@@ -289,10 +290,12 @@ export class PaymentSaga {
       1,
     );
 
+    const planName = subscription.plan?.name ?? subscription.plan ?? paymentPlan ?? 'free';
+
     await this.redis.set(
       `entitlement:${userId}`,
       JSON.stringify({
-        plan: subscription.plan?.name ?? subscription.plan,
+        plan: planName,
         expiresAt: subscription.expiresAt,
         isActive: true,
       }),

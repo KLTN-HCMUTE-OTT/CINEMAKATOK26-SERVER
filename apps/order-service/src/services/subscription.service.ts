@@ -169,7 +169,8 @@ export class SubscriptionService {
     } else if (paymentType === 'renewal') {
       const existing = await this.subscriptionRepo.findOne({
         where: { userId, status: SubscriptionStatus.ACTIVE },
-        order: { expiresAt: 'DESC' }
+        order: { expiresAt: 'DESC' },
+        relations: ['plan'],
       });
       if (existing) {
         existing.expiresAt = new Date(existing.expiresAt.getTime() + durationDays * 24 * 60 * 60 * 1000);
