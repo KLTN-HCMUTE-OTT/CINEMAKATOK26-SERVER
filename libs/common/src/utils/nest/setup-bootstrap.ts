@@ -39,7 +39,7 @@ export async function setupBootstrap(app: INestApplication<any>) {
 
   app.useGlobalInterceptors(
     new ClassSerializerInterceptor(app.get(Reflector)),
-    new HttpResponseInterceptor(),
+    new HttpResponseInterceptor(app.get(Reflector)),
     HttpLoggingInterceptor({ logLevel: 'debug' }),
   );
 

@@ -1,6 +1,6 @@
 import { Injectable, Logger, ForbiddenException, Inject, NotFoundException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom, of } from 'rxjs';
+import { firstValueFrom, of, from, Observable } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
 import { DrmKeyService } from './drm-key.service';
 import { ACCESS_TIER } from '@app/common/enums/global.enum';
@@ -36,18 +36,55 @@ export class DrmLicenseService {
     @Inject('CONTENT_SERVICE') private readonly contentClient: ClientProxy,
   ) {}
 
+  private resolveContentAccessTier(videoId: string): Observable<ACCESS_TIER> {
+    return from(this.fetchAccessTier(videoId));
+  }
+
+  private async fetchAccessTier(videoId: string): Promise<ACCESS_TIER> {
+    try {
+      const ownership = await firstValueFrom(
+        this.contentClient
+          .send({ cmd: 'content.getMovieOrSeriesFromVideo' }, { videoId })
+          .pipe(timeout(4000)),
+      );
+
+      let accessTier: ACCESS_TIER | undefined;
+      if (ownership) {
+        if (ownership.movieId) {
+          const movie = await firstValueFrom(
+            this.contentClient
+              .send({ cmd: 'content.getMovieById' }, { id: ownership.movieId })
+              .pipe(timeout(4000)),
+          );
+          accessTier = movie?.metaData?.accessTier as ACCESS_TIER;
+        } else if (ownership.tvSeriesId) {
+          const tvSeries = await firstValueFrom(
+            this.contentClient
+              .send({ cmd: 'content.getTvSeriesById' }, { id: ownership.tvSeriesId })
+              .pipe(timeout(4000)),
+          );
+          accessTier = tvSeries?.metaData?.accessTier as ACCESS_TIER;
+        }
+      }
+      return accessTier ?? ACCESS_TIER.BASIC;
+    } catch (err: any) {
+      this.logger.error(`[DrmLicenseService] Failed to fetch access tier for video ${videoId}: ${err.message}`);
+      return ACCESS_TIER.BASIC;
+    }
+  }
+
   /**
    * Enhanced license issuance with subscription tier enforcement.
    */
   async issueClearKeyLicense(
     keyIds: string[],
     userId: string,
-    contentId: string,
+    videoId: string,
   ): Promise<ClearKeyLicenseResponse> {
     // Step 1: Parallel subscription + content tier check with 5s timeout
-    const [sub, content] = await Promise.all([
+    const [sub, contentTier] = await Promise.all([
       firstValueFrom(
-        this.orderClient.send('order.checkSubscription', { userId }).pipe(
+        this.orderClient.send({ cmd: 'order.checkSubscription' }, { userId }).pipe(
           timeout(5000),
           catchError((err) => {
             this.logger.error(`Order service TCP failure for user ${userId}: ${err.message}`);
@@ -56,11 +93,11 @@ export class DrmLicenseService {
         ),
       ),
       firstValueFrom(
-        this.contentClient.send('content.getContentById', { id: contentId }).pipe(
+        this.resolveContentAccessTier(videoId).pipe(
           timeout(5000),
           catchError((err) => {
-            this.logger.warn(`Content service TCP failure for content ${contentId}: ${err.message}`);
-            return of({ accessTier: ACCESS_TIER.BASIC }); // Fail-open for content tier check
+            this.logger.warn(`Content service TCP failure for video ${videoId}: ${err.message}`);
+            return of(ACCESS_TIER.BASIC); // Fail-open for content tier check
           }),
         ),
       ),
@@ -77,21 +114,20 @@ export class DrmLicenseService {
     );
 
     // Step 3: Content tier enforcement
-    const contentTier = content?.accessTier;
     if (contentTier === ACCESS_TIER.PREMIUM && sub.plan === ACCESS_TIER.BASIC) {
-      this.logger.warn(`User ${userId} (basic) attempted to access premium content ${contentId}`);
+      this.logger.warn(`User ${userId} (basic) attempted to access premium content for video ${videoId}`);
       throw new ForbiddenException('Premium content requires premium subscription');
     }
 
     if (!contentTier) {
-      this.logger.warn(`Unknown access tier for content ${contentId}, defaulting to allowed (fail-open)`);
+      this.logger.warn(`Unknown access tier for video ${videoId}, defaulting to allowed (fail-open)`);
     }
 
     // Step 4: Issue keys
     const response = await this.buildClearKeyResponse(keyIds);
 
     this.logger.log(
-      `DRM License issued: userId=${userId}, contentId=${contentId}, plan=${sub.plan}, keysCount=${keyIds.length}`,
+      `DRM License issued: userId=${userId}, videoId=${videoId}, plan=${sub.plan}, keysCount=${keyIds.length}`,
     );
 
     return response;
@@ -130,10 +166,10 @@ export class DrmLicenseService {
    */
   async checkUserEntitlement(
     userId: string,
-    contentId: string,
+    videoId: string,
   ): Promise<{ allowed: boolean; reason?: string }> {
     try {
-      await this.issueClearKeyLicense([], userId, contentId);
+      await this.issueClearKeyLicense([], userId, videoId);
       return { allowed: true };
     } catch (error) {
       return {
