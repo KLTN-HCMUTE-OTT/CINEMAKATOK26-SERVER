@@ -154,32 +154,48 @@ export class ShakaPackagerService {
    * Checks: env var → project tools dir → system PATH
    */
   private resolveExecutable(): string {
-    // 1. Environment variable
-    const envPath = process.env.SHAKA_PACKAGER_PATH;
-    if (envPath && existsSync(envPath)) {
-      const absolutePath = path.resolve(envPath);
+  const executableName =
+    process.platform === 'win32' ? 'packager-win-x64.exe' : 'packager';
+
+  // 1. Environment variable (ưu tiên tuyệt đối hoặc tương đối từ project root)
+  const envPath = process.env.SHAKA_PACKAGER_PATH;
+  if (envPath) {
+    const absolutePath = path.isAbsolute(envPath)
+      ? path.resolve(envPath)
+      : path.resolve(process.cwd(), envPath); // tương đối từ project root
+    if (existsSync(absolutePath)) {
       this.logger.log(`Using Shaka Packager from env: ${absolutePath}`);
       return absolutePath;
     }
-
-    // 2. Project tools directory
-    const toolsPath = path.resolve(
-      process.cwd(),
-      'tools',
-      'shaka-packager',
-      process.platform === 'win32' ? 'packager.exe' : 'packager',
-    );
-    if (existsSync(toolsPath)) {
-      this.logger.log(`Using Shaka Packager from tools: ${toolsPath}`);
-      return toolsPath;
-    }
-
-    // 3. Fall back to system PATH
-    const systemName =
-      process.platform === 'win32' ? 'packager.exe' : 'packager';
-    this.logger.warn(
-      `Shaka Packager binary not found locally. Falling back to "${systemName}" on PATH.`,
-    );
-    return systemName;
   }
+
+  // 2. Tương đối từ __dirname → trỏ lên project root → vào tools/
+  //    dist/apps/<module>/<file>.js → lên 3 cấp = project root
+  const fromDist = path.resolve(
+    __dirname,
+    '../../../tools/shaka-packager',
+    executableName,
+  );
+  if (existsSync(fromDist)) {
+    this.logger.log(`Using Shaka Packager from dist-relative path: ${fromDist}`);
+    return fromDist;
+  }
+
+  // 3. Fallback: tương đối từ process.cwd() (chạy local với ts-node)
+  const fromCwd = path.resolve(
+    process.cwd(),
+    'tools/shaka-packager',
+    executableName,
+  );
+  if (existsSync(fromCwd)) {
+    this.logger.log(`Using Shaka Packager from cwd: ${fromCwd}`);
+    return fromCwd;
+  }
+
+  // 4. Fall back to system PATH
+  this.logger.warn(
+    `Shaka Packager not found. Falling back to "${executableName}" on PATH.`,
+  );
+  return executableName;
+}
 }

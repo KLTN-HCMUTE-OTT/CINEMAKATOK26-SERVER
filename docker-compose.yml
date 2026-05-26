@@ -1,0 +1,544 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # Infrastructure Services
+  # ==========================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: cinemakatok-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - cinemakatok-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  redis:
+    image: redis:7-alpine
+    container_name: cinemakatok-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cinemakatok-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: cinemakatok-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Web Management console
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - cinemakatok-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  # ==========================================
+  # Application Services
+  # ==========================================
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-api-gateway
+    env_file:
+      - .env
+    environment:
+      - SERVICE_NAME=api-gateway
+      - PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - AUTH_SERVICE_HOST=auth-service
+      - AUTH_SERVICE_PORT=3001
+      - USER_SERVICE_HOST=user-service
+      - USER_SERVICE_PORT=3002
+      - CONTENT_SERVICE_HOST=content-service
+      - CONTENT_SERVICE_PORT=3003
+      - ORDER_SERVICE_HOST=order-service
+      - ORDER_SERVICE_PORT=3004
+      - PAYMENT_SERVICE_HOST=payment-service
+      - PAYMENT_SERVICE_PORT=3005
+      - STREAMING_SERVICE_HOST=streaming-service
+      - STREAMING_SERVICE_PORT=3006
+      - NOTIFICATION_SERVICE_HOST=notification-service
+      - NOTIFICATION_SERVICE_PORT=3007
+      - AUDIT_LOG_SERVICE_HOST=audit-log-service
+      - AUDIT_LOG_SERVICE_PORT=3008
+      - ANALYTICS_SERVICE_HOST=analytics-service
+      - ANALYTICS_SERVICE_PORT=3009
+      - USER_ACTIVITY_SERVICE_HOST=user-activity-service
+      - USER_ACTIVITY_SERVICE_PORT=3010
+      - WATCH_PARTY_SERVICE_HOST=watch-party-service
+      - WATCH_PARTY_SERVICE_PORT=3011
+    ports:
+      - "3000:3000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-auth-service
+    env_file:
+      - .env
+      - ./apps/auth-service/.env
+    environment:
+      - SERVICE_NAME=auth-service
+      - AUTH_SERVICE_HOST=0.0.0.0
+      - AUTH_SERVICE_PORT=3001
+      - AUTH_DB_HOST=postgres
+      - AUTH_DB_PORT=5432
+      - AUTH_DB_USERNAME=postgres
+      - AUTH_DB_PASSWORD=postgres
+      - AUTH_DB_NAME=auth_service_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - USER_SERVICE_HOST=user-service
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-user-service
+    env_file:
+      - .env
+      - ./apps/user-service/.env
+    environment:
+      - SERVICE_NAME=user-service
+      - USER_SERVICE_HOST=0.0.0.0
+      - USER_SERVICE_PORT=3002
+      - USER_DB_HOST=postgres
+      - USER_DB_PORT=5432
+      - USER_DB_USERNAME=postgres
+      - USER_DB_PASSWORD=postgres
+      - USER_DB_NAME=user_service_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  content-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-content-service
+    env_file:
+      - .env
+      - ./apps/content-service/.env
+    environment:
+      - SERVICE_NAME=content-service
+      - CONTENT_SERVICE_HOST=0.0.0.0
+      - CONTENT_SERVICE_PORT=3003
+      - CONTENT_DB_HOST=postgres
+      - CONTENT_DB_PORT=5432
+      - CONTENT_DB_USERNAME=postgres
+      - CONTENT_DB_PASSWORD=postgres
+      - CONTENT_DB_NAME=content_service_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  order-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-order-service
+    env_file:
+      - .env
+      - ./apps/order-service/.env
+    environment:
+      - SERVICE_NAME=order-service
+      - ORDER_SERVICE_HOST=0.0.0.0
+      - ORDER_SERVICE_PORT=3004
+      - ORDER_DB_HOST=postgres
+      - ORDER_DB_PORT=5432
+      - ORDER_DB_USERNAME=postgres
+      - ORDER_DB_PASSWORD=postgres
+      - ORDER_DB_NAME=order_service_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3004:3004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-payment-service
+    env_file:
+      - .env
+      - ./apps/payment-service/.env
+    environment:
+      - SERVICE_NAME=payment-service
+      - PAYMENT_SERVICE_HOST=0.0.0.0
+      - PAYMENT_SERVICE_PORT=3005
+      - PAYMENT_DB_HOST=postgres
+      - PAYMENT_DB_PORT=5432
+      - PAYMENT_DB_USERNAME=postgres
+      - PAYMENT_DB_PASSWORD=postgres
+      - PAYMENT_DB_NAME=payment_service_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - ORDER_SERVICE_HOST=order-service
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3005:3005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  streaming-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-streaming-service
+    env_file:
+      - .env
+      - ./apps/streaming-service/.env
+    environment:
+      - SERVICE_NAME=streaming-service
+      - STREAMING_SERVICE_HOST=0.0.0.0
+      - STREAMING_SERVICE_PORT=3006
+      - STREAMING_DB_HOST=postgres
+      - STREAMING_DB_PORT=5432
+      - STREAMING_DB_USERNAME=postgres
+      - STREAMING_DB_PASSWORD=postgres
+      - STREAMING_DB_NAME=streaming_service_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - CONTENT_SERVICE_HOST=content-service
+      - ORDER_SERVICE_HOST=order-service
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - SHAKA_PACKAGER_PATH=/usr/local/bin/packager
+      - UPLOAD_DIR=/app/uploads
+    ports:
+      - "3006:3006"
+    volumes:
+      - video_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  video-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-video-worker
+    command: ["node", "dist/apps/streaming-service/src/queue/video-worker.js"]
+    env_file:
+      - .env
+      - ./apps/streaming-service/.env
+    environment:
+      - SERVICE_NAME=streaming-service
+      - STREAMING_DB_HOST=postgres
+      - STREAMING_DB_PORT=5432
+      - STREAMING_DB_USERNAME=postgres
+      - STREAMING_DB_PASSWORD=postgres
+      - STREAMING_DB_NAME=streaming_service_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - CONTENT_SERVICE_HOST=content-service
+      - ORDER_SERVICE_HOST=order-service
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - SHAKA_PACKAGER_PATH=/usr/local/bin/packager
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - video_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-notification-service
+    env_file:
+      - .env
+      - ./apps/notification-service/.env
+    environment:
+      - SERVICE_NAME=notification-service
+      - NOTIFICATION_SERVICE_HOST=0.0.0.0
+      - NOTIFICATION_SERVICE_PORT=3007
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - USER_SERVICE_HOST=user-service
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3007:3007"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  audit-log-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-audit-log-service
+    env_file:
+      - .env
+      - ./apps/audit-log-service/.env
+    environment:
+      - SERVICE_NAME=audit-log-service
+      - AUDIT_LOG_SERVICE_HOST=0.0.0.0
+      - AUDIT_LOG_SERVICE_PORT=3008
+      - AUDIT_DB_HOST=postgres
+      - AUDIT_DB_PORT=5432
+      - AUDIT_DB_USERNAME=postgres
+      - AUDIT_DB_PASSWORD=postgres
+      - AUDIT_DB_NAME=audit_log_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3008:3008"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-analytics-service
+    env_file:
+      - .env
+    environment:
+      - SERVICE_NAME=analytics-service
+      - ANALYTICS_SERVICE_HOST=0.0.0.0
+      - ANALYTICS_SERVICE_PORT=3009
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3009:3009"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  user-activity-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-user-activity-service
+    env_file:
+      - .env
+      - ./apps/user-activity-service/.env
+    environment:
+      - SERVICE_NAME=user-activity-service
+      - USER_ACTIVITY_SERVICE_HOST=0.0.0.0
+      - USER_ACTIVITY_SERVICE_PORT=3010
+      - ACTIVITY_DB_HOST=postgres
+      - ACTIVITY_DB_PORT=5432
+      - ACTIVITY_DB_USERNAME=postgres
+      - ACTIVITY_DB_PASSWORD=postgres
+      - ACTIVITY_DB_NAME=user_activity_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - CONTENT_SERVICE_HOST=content-service
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3010:3010"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  watch-party-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinemakatok-watch-party-service
+    env_file:
+      - .env
+    environment:
+      - SERVICE_NAME=watch-party-service
+      - WATCH_PARTY_SERVICE_HOST=0.0.0.0
+      - WATCH_PARTY_SERVICE_PORT=3011
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    ports:
+      - "3011:3011"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - cinemakatok-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+networks:
+  cinemakatok-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  video_uploads:

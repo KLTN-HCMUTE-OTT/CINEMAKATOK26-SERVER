@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
+import * as bcrypt from 'bcryptjs';
 
 import { Client } from 'pg';
 
@@ -180,6 +181,8 @@ async function seedUsers(userClient: Client): Promise<SeedUser[]> {
 
     const createdAt = randomDateWithinDay(accountAgeDays);
 
+    const hashedPassword = bcrypt.hashSync('seed-password', 10);
+
     await userClient.query(
       `
       INSERT INTO "user" (
@@ -196,7 +199,7 @@ async function seedUsers(userClient: Client): Promise<SeedUser[]> {
       )
       VALUES ($1, $2, $3, $4, 'ACTIVATED', false, true, false, $5, $6)
       `,
-      [user.id, user.name, user.email, 'seed-password', createdAt, createdAt],
+      [user.id, user.name, user.email, hashedPassword, createdAt, createdAt],
     );
   }
 
