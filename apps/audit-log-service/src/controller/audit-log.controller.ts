@@ -2,6 +2,7 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
 import { CreateAuditLogDto } from '@app/common/dtos/audit-log/audit-log.dto';
+import { LOG_ACTION } from '@app/common/enums/log.enum';
 import { PaginationQueryDto } from '@app/common/utils/dto/pagination-query.dto';
 import { AuditLogService } from '../service/audit-log.service';
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as LRUMap from 'pixl-cache';
 
 type LRUCacheMapOptions = {

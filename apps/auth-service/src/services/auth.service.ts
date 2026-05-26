@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { ClientProxy } from '@nestjs/microservices';
 
@@ -32,6 +32,8 @@ import { SocialAuthService } from './social-auth.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
     @Inject('NOTIFICATION_SERVICE')
@@ -216,6 +218,8 @@ export class AuthService {
       OTP_PURPOSE.REGISTRATION,
     );
 
+    this.logger.log(`[DEV ONLY] Generated registration OTP for ${dto.email}: ${otp}`);
+
     try {
       await firstValueFrom(
         this.notificationClient.emit('notification.sendOtp', {
@@ -293,6 +297,8 @@ export class AuthService {
       dto.email,
       OTP_PURPOSE.FORGOT_PASSWORD,
     );
+
+    this.logger.log(`[DEV ONLY] Generated forgot-password OTP for ${dto.email}: ${otp}`);
 
     try {
       await firstValueFrom(

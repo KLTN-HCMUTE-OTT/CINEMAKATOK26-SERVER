@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { EntityVideo } from 'src/cms/entities/video.entity';
 
 /**

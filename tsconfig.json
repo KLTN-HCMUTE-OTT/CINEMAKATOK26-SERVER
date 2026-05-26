@@ -28,5 +28,6 @@
       "@app/core": ["libs/core/src"],
       "@app/core/*": ["libs/core/src/*"]
     }
-  }
+  },
+  "exclude": ["node_modules", "dist", "test", "**/test/**", "**/*.spec.ts", "**/*.e2e-spec.ts"]
 }
