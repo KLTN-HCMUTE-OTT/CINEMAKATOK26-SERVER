@@ -1,7 +1,8 @@
-import { Expose, Type } from 'class-transformer';
+import { Expose, Type, Transform } from 'class-transformer';
 import {
   IsArray,
   IsDate,
+  IsDateString,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -56,11 +57,19 @@ export class ContentDto extends BaseEntityDto {
     description: 'Release date of the content',
     example: '2010-07-16',
   })
-  @Type(() => Date)
-  @IsDate()
+  @Transform(({ value }) => {
+    if (value instanceof Date) {
+      return value.toISOString().split('T')[0];
+    }
+    if (typeof value === 'string') {
+      return value.split('T')[0];
+    }
+    return value;
+  })
+  @IsDateString()
   @IsNotEmpty()
   @Expose()
-  releaseDate: Date;
+  releaseDate: string;
 
   @ApiProperty({
     description: 'Maturity rating of the content',

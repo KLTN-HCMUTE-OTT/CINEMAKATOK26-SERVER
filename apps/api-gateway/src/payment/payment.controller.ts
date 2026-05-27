@@ -167,7 +167,7 @@ export class PaymentController {
     @Query() query: Record<string, string>,
     @Res() res: Response,
   ) {
-    const frontendUrl = process.env.CLIENT_ORIGIN ?? 'http://localhost:3010';
+    const frontendUrl = process.env.CLIENT_ORIGIN ?? 'http://localhost:3020';
     const status = query['vnp_ResponseCode'] === '00' ? 'success' : 'failed';
     const orderCode = query['vnp_TxnRef'] ?? '';
     return res.redirect(

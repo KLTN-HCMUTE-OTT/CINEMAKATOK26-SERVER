@@ -1,4 +1,4 @@
-import { Expose, Type } from 'class-transformer';
+import { Expose, Type, Transform } from 'class-transformer';
 import {
   IsDate,
   IsEnum,
@@ -98,8 +98,17 @@ export class ActorContentDto {
   thumbnail: string;
 
   @ApiProperty({ description: 'Content release date' })
+  @Transform(({ value }) => {
+    if (value instanceof Date) {
+      return value.toISOString().split('T')[0];
+    }
+    if (typeof value === 'string') {
+      return value.split('T')[0];
+    }
+    return value;
+  })
   @Expose()
-  releaseDate: Date;
+  releaseDate: string;
 
   @ApiProperty({ description: 'Duration of the content in minutes' })
   @Expose()

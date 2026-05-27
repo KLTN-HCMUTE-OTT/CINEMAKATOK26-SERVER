@@ -149,7 +149,7 @@ export class WatchListService {
     return savedItem;
   }
 
-  async removeFromWatchList(userId: string, contentId: string): Promise<void> {
+  async removeFromWatchList(userId: string, contentId: string): Promise<boolean> {
     const watchListItem = await this.watchListRepository.findOne({
       where: { userId, contentId },
     });
@@ -178,6 +178,8 @@ export class WatchListService {
     } catch {
       // Content resolution failure should not block the remove response
     }
+
+    return true;
   }
 
   async getUserWatchList(userId: string, query?: any): Promise<any> {

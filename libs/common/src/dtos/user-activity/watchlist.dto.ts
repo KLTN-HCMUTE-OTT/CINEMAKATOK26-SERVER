@@ -1,4 +1,4 @@
-import { Expose, Type } from 'class-transformer';
+import { Expose, Type, Transform } from 'class-transformer';
 import { IsNotEmpty, IsUUID, ValidateNested } from 'class-validator';
 
 import { BaseEntityDto } from '@app/common/base/base-entity-dto';
@@ -30,8 +30,17 @@ export class WatchListContentDto {
   thumbnail: string;
 
   @ApiProperty({ description: 'Release date' })
+  @Transform(({ value }) => {
+    if (value instanceof Date) {
+      return value.toISOString().split('T')[0];
+    }
+    if (typeof value === 'string') {
+      return value.split('T')[0];
+    }
+    return value;
+  })
   @Expose()
-  releaseDate: Date;
+  releaseDate: string;
 
   @ApiProperty({ description: 'Trailer URL' })
   @Expose()

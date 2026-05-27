@@ -29,8 +29,13 @@ export class VnpayService {
       throw new Error('VNPAY configuration is missing from environment variables');
     }
 
-    const createDate = dayjs().format('YYYYMMDDHHmmss');
-    const expireDate = dayjs().add(15, 'minute').format('YYYYMMDDHHmmss');
+    const tzOffset = 7; // GMT+7 (Vietnam time)
+    const now = new Date();
+    const vnTime = new Date(now.getTime() + (tzOffset * 60 + now.getTimezoneOffset()) * 60 * 1000);
+    const vnTimeExpire = new Date(vnTime.getTime() + 15 * 60 * 1000);
+
+    const createDate = dayjs(vnTime).format('YYYYMMDDHHmmss');
+    const expireDate = dayjs(vnTimeExpire).format('YYYYMMDDHHmmss');
     const orderId = params.orderCode;
     const amount = params.amount * 100; // VNPAY requires amount * 100
     const orderInfo = params.orderInfo || `Thanh toan don hang ${orderId}`;
