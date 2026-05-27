@@ -1,4 +1,4 @@
-import { Expose } from 'class-transformer';
+import { Expose, Transform } from 'class-transformer';
 import { IsArray, IsUUID } from 'class-validator';
 
 import { ApiProperty } from '@nestjs/swagger';
@@ -49,8 +49,17 @@ export class FavoriteItemDto {
   type: string;
 
   @ApiProperty({ description: 'Release date' })
+  @Transform(({ value }) => {
+    if (value instanceof Date) {
+      return value.toISOString().split('T')[0];
+    }
+    if (typeof value === 'string') {
+      return value.split('T')[0];
+    }
+    return value;
+  })
   @Expose()
-  releaseDate: Date;
+  releaseDate: string;
 
   @ApiProperty({ description: 'Thumbnail URL' })
   @Expose()
