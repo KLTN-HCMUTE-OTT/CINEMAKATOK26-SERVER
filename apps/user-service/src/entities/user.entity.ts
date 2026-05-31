@@ -1,6 +1,7 @@
-import { Column, Entity, OneToMany, Unique } from 'typeorm';
+import { Column, Entity, Unique } from 'typeorm';
 
 import { USER_STATUS } from '@app/common/enums/global.enum';
+import type { ContentPreferences } from '@app/common/types/violence.types';
 
 import { PersonEntity } from './person.entity';
 
@@ -44,6 +45,12 @@ export class EntityUser extends PersonEntity {
 
   @Column({ type: 'boolean', default: false })
   isBanned: boolean;
+
+  @Column({
+    type: 'jsonb',
+    default: () => `'{"violence": "strict", "nudity": "strict"}'::jsonb`,
+  })
+  contentPreferences: ContentPreferences;
 
   // @OneToMany(() => EntityReview, review => review.user)
   // reviews: EntityReview[];

@@ -3,11 +3,17 @@ import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 import { BaseEntityDto } from '@app/common/base/base-entity-dto';
 import { ToS3FileKey } from '@app/common/decorators/toS3FileKey.decorator';
-import { RESOLUTION, VIDEO_STATUS } from '@app/common/enums/global.enum';
+import { VIDEO_STATUS } from '@app/common/enums/global.enum';
 import { getConfig } from '@app/common/utils/get-config';
+import type {
+  CensorFrame,
+} from '@app/common/types/violence.types';
 import { ApiProperty, OmitType, PickType } from '@nestjs/swagger';
 
-const bucketUrl = getConfig('aws.s3BucketUrl', 'https://your-default-bucket-url.com/');
+const bucketUrl = getConfig(
+  'aws.s3BucketUrl',
+  'https://your-default-bucket-url.com/',
+);
 export class VideoDto extends BaseEntityDto {
   @ApiProperty({
     description: 'Video URL',
@@ -55,12 +61,88 @@ export class VideoDto extends BaseEntityDto {
   @IsOptional()
   @Expose()
   vttFiles?: string[];
+
+  // ─── Violence Detection Fields ───────────────────────────────────────────
+
+  @ApiProperty({
+    description: 'Whether the video contains violent scenes',
+    example: true,
+    nullable: true,
+  })
+  @IsOptional()
+  @Expose()
+  isViolent?: boolean | null;
+
+  @ApiProperty({
+    description: 'Overall violence score (0.0 to 1.0)',
+    example: 0.91,
+    nullable: true,
+  })
+  @IsOptional()
+  @Expose()
+  violenceScore?: number | null;
+
+  @ApiProperty({
+    description: 'Detected violence coordinates by frame',
+    example: [{ timestamp: 120.5, boxes: [{ x: 0.15, y: 0.25, w: 0.1, h: 0.1, label: 'knife', score: 0.91 }] }],
+    nullable: true,
+  })
+  @IsOptional()
+  @Expose()
+  violentSegments?: CensorFrame[] | null;
+
+  // ─── Nudity Detection Fields ─────────────────────────────────────────────
+
+  @ApiProperty({
+    description: 'Whether the video contains nude/sexy scenes',
+    example: true,
+    nullable: true,
+  })
+  @IsOptional()
+  @Expose()
+  isNude?: boolean | null;
+
+  @ApiProperty({
+    description: 'Overall nudity score (0.0 to 1.0)',
+    example: 0.85,
+    nullable: true,
+  })
+  @IsOptional()
+  @Expose()
+  nudityScore?: number | null;
+
+  @ApiProperty({
+    description: 'Detected nudity coordinates by frame',
+    example: [
+      {
+        timestamp: 240.5,
+        boxes: [
+          {
+            x: 0.1,
+            y: 0.2,
+            w: 0.1,
+            h: 0.1,
+            label: 'exposed_breast',
+            score: 0.85,
+          },
+        ],
+      },
+    ],
+    nullable: true,
+  })
+  @IsOptional()
+  @Expose()
+  nuditySegments?: CensorFrame[] | null;
 }
 export interface AbsContentPathParams {
   s3Key: string;
 }
 
-export class CreateVideoDto extends OmitType(VideoDto, ['id', 'createdAt', 'updatedAt']) {}
+export class CreateVideoDto extends OmitType(VideoDto, [
+  'id',
+  'createdAt',
+  'updatedAt',
+]) {}
 export class UpdateVideoDto extends PickType(VideoDto, [
   'id',
   'videoUrl',
@@ -68,4 +150,10 @@ export class UpdateVideoDto extends PickType(VideoDto, [
   'thumbnailUrl',
   'sprites',
   'vttFiles',
+  'isViolent',
+  'violenceScore',
+  'violentSegments',
+  'isNude',
+  'nudityScore',
+  'nuditySegments',
 ]) {}

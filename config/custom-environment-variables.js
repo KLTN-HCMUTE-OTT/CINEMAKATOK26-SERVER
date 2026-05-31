@@ -1,6 +1,9 @@
 const { aws, uploadDir } = require('./default');
 
-require('dotenv').config();
+// Load env vars from docker-compose / environment (do NOT use dotenv.config() here)
+// dotenv is devDependency and shouldn't be used in production containers
+// dotenv would cause conflicts with config order if loaded here
+// Envs are already injected by the env_file in docker-compose.yml
 
 const number = (name) => ({ __name: name, __format: 'number' });
 const boolean = (name) => ({ __name: name, __format: 'boolean' });

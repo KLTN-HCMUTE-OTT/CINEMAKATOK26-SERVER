@@ -5,3 +5,6 @@ export * from './r2.service';
 export * from './s3.service';
 export * from './shaka-packager.service';
 export * from './streaming.service';
+export * from './violence-detector.service';
+export * from './nudity-detector.service';
+

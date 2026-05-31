@@ -24,6 +24,8 @@ async function bootstrap() {
     'http://127.0.0.1:3003',
     'http://localhost:3020',
     'http://127.0.0.1:3020',
+    'http://localhost:3022',
+    'http://127.0.0.1:3022',
   ];
 
   const configuredOrigins = (process.env.CLIENT_ORIGIN ?? '')

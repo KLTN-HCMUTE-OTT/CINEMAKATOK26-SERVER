@@ -12,7 +12,11 @@ import { spawn, spawnSync } from 'child_process';
 import { VIDEO_STATUS } from '@app/common/enums/global.enum';
 import { UpdateVideoDto } from '@app/common/dtos/content/video.dto';
 import { getConfig } from '@app/common/utils/get-config';
-import { processVideoDASH, processVideoDASH_CPU, detectCuda } from '@app/common/utils/dash/video-dash';
+import {
+  processVideoDASH,
+  processVideoDASH_CPU,
+  detectCuda,
+} from '@app/common/utils/dash/video-dash';
 import { NestFactory } from '@nestjs/core';
 
 import { StreamingModule } from '../streaming.module';
@@ -21,6 +25,8 @@ import { R2StorageService } from '../services/r2.service';
 import { S3Service } from '../services/s3.service';
 import { DrmKeyService } from '../services/drm-key.service';
 import { ShakaPackagerService } from '../services/shaka-packager.service';
+import { ViolenceDetectorService } from '../services/violence-detector.service';
+import { NudityDetectorService } from '../services/nudity-detector.service';
 
 //r2
 async function generateSpritesAndVTT(
@@ -286,6 +292,8 @@ async function bootstrap() {
   const r2Service = appContext.get(R2StorageService);
   const drmKeyService = appContext.get(DrmKeyService);
   const shakaPackager = appContext.get(ShakaPackagerService);
+  const violenceDetector = appContext.get(ViolenceDetectorService);
+  const nudityDetector = appContext.get(NudityDetectorService);
 
   // Clean up stale files on startup
   await cleanupStaleFiles();
@@ -322,6 +330,47 @@ async function bootstrap() {
         console.log(
           `DASH transcode completed: ${dashResult.videoPaths.length} variants + audio`,
         );
+
+        // ────────────────────────────────────────────────────────────────────
+        // STEP 2.5: Violence Detection (ONNX) — non-blocking
+        // ────────────────────────────────────────────────────────────────────
+        let violenceResult: Awaited<
+          ReturnType<ViolenceDetectorService['detectViolence']>
+        > | null = null;
+        try {
+          console.log('Running violence detection (ONNX)...');
+          violenceResult = await violenceDetector.detectViolence(inputPath);
+          console.log(
+            `Violence detection done: isViolent=${violenceResult.isViolent}, ` +
+              `segments=${violenceResult.violentSegments.length}, ` +
+              `score=${violenceResult.overallScore}, ` +
+              `time=${violenceResult.processingTimeMs}ms`,
+          );
+        } catch (violenceError) {
+          console.warn(
+            'Violence detection failed (non-blocking):',
+            violenceError,
+          );
+        }
+
+        // ────────────────────────────────────────────────────────────────────
+        // STEP 2.6: Nudity Detection (ONNX) — non-blocking
+        // ────────────────────────────────────────────────────────────────────
+        let nudityResult: Awaited<
+          ReturnType<NudityDetectorService['detectNudity']>
+        > | null = null;
+        try {
+          console.log('Running nudity detection (ONNX)...');
+          nudityResult = await nudityDetector.detectNudity(inputPath);
+          console.log(
+            `Nudity detection done: isNude=${nudityResult.isNude}, ` +
+              `segments=${nudityResult.nuditySegments.length}, ` +
+              `score=${nudityResult.overallScore}, ` +
+              `time=${nudityResult.processingTimeMs}ms`,
+          );
+        } catch (nudityError) {
+          console.warn('Nudity detection failed (non-blocking):', nudityError);
+        }
 
         // ────────────────────────────────────────────────────────────────────
         // STEP 3: Encrypt with Shaka Packager (CENC + DASH manifest)
@@ -380,9 +429,7 @@ async function bootstrap() {
             thumbnailUrl = '';
           }
         } else {
-          console.warn(
-            `Thumbnail file not found: ${dashResult.thumbnailPath}`,
-          );
+          console.warn(`Thumbnail file not found: ${dashResult.thumbnailPath}`);
         }
 
         // ────────────────────────────────────────────────────────────────────
@@ -443,11 +490,23 @@ async function bootstrap() {
           videoUrl: mpdUploadResult.url,
           status: VIDEO_STATUS.READY,
           thumbnailUrl: thumbnailUrl,
+          ...(violenceResult
+            ? {
+                isViolent: violenceResult.isViolent,
+                violenceScore: violenceResult.overallScore,
+                violentSegments: violenceResult.violentSegments,
+              }
+            : {}),
+          ...(nudityResult
+            ? {
+                isNude: nudityResult.isNude,
+                nudityScore: nudityResult.overallScore,
+                nuditySegments: nudityResult.nuditySegments,
+              }
+            : {}),
         } as Partial<UpdateVideoDto>);
 
-        console.log(
-          `Updated video ${videoId} successfully in ${duration}s`,
-        );
+        console.log(`Updated video ${videoId} successfully in ${duration}s`);
 
         // ────────────────────────────────────────────────────────────────────
         // STEP 8: Generate sprites and VTT (non-blocking)
@@ -496,7 +555,9 @@ async function bootstrap() {
         );
         console.log(`Updated video entity: ${updatedVideo.id}`);
         console.log(`Video URL (DASH): ${mpdUploadResult.url}`);
-        console.log(`DRM: CENC encrypted, keyId=${drmKey.keyId.substring(0, 8)}...`);
+        console.log(
+          `DRM: CENC encrypted, keyId=${drmKey.keyId.substring(0, 8)}...`,
+        );
 
         return {
           updatedVideo,

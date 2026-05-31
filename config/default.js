@@ -1,22 +1,27 @@
-const dotenv = require('dotenv');
 const path = require('path');
 
 // ========================
-// Load .env theo service
-// SERVICE_NAME được set trong package.json scripts
+// Load .env theo service (chỉ dùng khi chạy local dev)
+// Trong Docker production, env vars được inject qua docker-compose.
+// dotenv là devDependency nên không có trong production node_modules.
 // ========================
-const SERVICE_NAME = process.env.SERVICE_NAME;
+try {
+  const dotenv = require('dotenv');
+  const SERVICE_NAME = process.env.SERVICE_NAME;
 
-if (SERVICE_NAME) {
-  // Load service-specific .env TRƯỚC (ưu tiên cao nhất)
-  dotenv.config({
-    path: path.resolve(`apps/${SERVICE_NAME}/.env`),
-    override: false,
-  });
+  if (SERVICE_NAME) {
+    // Load service-specific .env TRƯỚC (ưu tiên cao nhất)
+    dotenv.config({
+      path: path.resolve(`apps/${SERVICE_NAME}/.env`),
+      override: false,
+    });
+  }
+
+  // Load shared .env ở root (fallback)
+  dotenv.config({ path: path.resolve('.env'), override: false });
+} catch (_) {
+  // dotenv not available (production Docker build) — env vars injected by docker-compose
 }
-
-// Load shared .env ở root (fallback)
-dotenv.config({ path: path.resolve('.env'), override: false });
 
 // ========================
 // Helpers
