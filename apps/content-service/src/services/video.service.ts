@@ -105,6 +105,18 @@ export class VideoService {
         updateData.sprites = updateDto.sprites;
       if (updateDto.vttFiles !== undefined)
         updateData.vttFiles = updateDto.vttFiles;
+      if (updateDto.isViolent !== undefined)
+        updateData.isViolent = updateDto.isViolent;
+      if (updateDto.violenceScore !== undefined)
+        updateData.violenceScore = updateDto.violenceScore;
+      if (updateDto.violentSegments !== undefined)
+        updateData.violentSegments = updateDto.violentSegments;
+      if (updateDto.isNude !== undefined)
+        updateData.isNude = updateDto.isNude;
+      if (updateDto.nudityScore !== undefined)
+        updateData.nudityScore = updateDto.nudityScore;
+      if (updateDto.nuditySegments !== undefined)
+        updateData.nuditySegments = updateDto.nuditySegments;
 
       Object.assign(video, updateData);
 

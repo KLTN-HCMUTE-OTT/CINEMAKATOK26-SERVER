@@ -50,6 +50,29 @@ export const streamingEnvSchema = z.object({
   // Local Storage
   UPLOAD_DIR: z.string().default('uploads'),
   LOCAL_STORAGE_DIR: z.string().default('output'),
+
+  // Violence Detector
+  VIOLENCE_ENABLED: z.preprocess((v) => v === undefined ? true : (v === 'true' || v === '1'), z.boolean()).default(true),
+  VIOLENCE_MODEL_PATH: z.string().default('models/violence_mobilenetv3.onnx'),
+  VIOLENCE_THRESHOLD: z.coerce.number().default(0.4),
+  VIOLENCE_FRAME_INTERVAL: z.coerce.number().default(2),
+  VIOLENCE_SCENE_THRESHOLD: z.coerce.number().default(0.3),
+  VIOLENCE_INPUT_SIZE: z.coerce.number().default(224),
+  VIOLENCE_NORM_DIV: z.coerce.number().default(255.0),
+  VIOLENCE_IMAGENET_NORM: z.preprocess((v) => v === 'true' || v === '1', z.boolean()).default(false),
+  VIOLENCE_OBJ_THRESHOLD: z.coerce.number().default(0.4),
+
+  // Nudity Detector
+  NUDITY_ENABLED: z.preprocess((v) => v === undefined ? true : (v === 'true' || v === '1'), z.boolean()).default(true),
+  NUDITY_MODEL_PATH: z.string().default('models/nudenet.onnx'),
+  NUDITY_THRESHOLD: z.coerce.number().default(0.4),
+  NUDITY_FRAME_INTERVAL: z.coerce.number().default(2),
+  NUDITY_SCENE_THRESHOLD: z.coerce.number().default(0.3),
+  NUDITY_INPUT_SIZE: z.coerce.number().default(320),
+  NUDITY_NORM_DIV: z.coerce.number().default(255.0),
+  NUDITY_IMAGENET_NORM: z.preprocess((v) => v === 'true' || v === '1', z.boolean()).default(false),
+  NUDITY_OBJ_THRESHOLD: z.coerce.number().default(0.4),
+
 });
 
 export type StreamingEnv = z.infer<typeof streamingEnvSchema>;

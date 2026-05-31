@@ -13,6 +13,12 @@ import { DrmKeyService } from './drm-key.service';
 import { R2StorageService } from './r2.service';
 import { S3Service } from './s3.service';
 import { ShakaPackagerService } from './shaka-packager.service';
+import { ViolenceDetectorService } from './violence-detector.service';
+import { NudityDetectorService } from './nudity-detector.service';
+import type {
+  ViolenceDetectionResult,
+  NudityDetectionResult,
+} from '@app/common/types/violence.types';
 
 const readRedisEnv = (
   key: 'REDIS_HOST' | 'REDIS_PORT' | 'REDIS_PASSWORD',
@@ -35,8 +41,10 @@ export class QueueService {
     private readonly r2Service: R2StorageService,
     private readonly drmKeyService: DrmKeyService,
     private readonly shakaPackager: ShakaPackagerService,
+    private readonly violenceDetector: ViolenceDetectorService,
+    private readonly nudityDetector: NudityDetectorService,
   ) {
-    this.initializeQueue();
+    void this.initializeQueue();
   }
 
   /**
@@ -45,13 +53,14 @@ export class QueueService {
    */
   //test-local
 
-  private async processSyncAndUpload(inputPath: string, videoId: string) {
+  private async processSyncAndUpload(
+    inputPath: string,
+    videoId: string,
+  ): Promise<any> {
     // Step 1: Generate DRM keys
     this.logger.log(`Generating DRM keys for video ${videoId}...`);
     const drmKey = await this.drmKeyService.generateKeysForVideo(videoId);
-    this.logger.log(
-      `DRM keys ready: keyId=${drmKey.keyId.substring(0, 8)}...`,
-    );
+    this.logger.log(`DRM keys ready: keyId=${drmKey.keyId.substring(0, 8)}...`);
 
     // Step 2: Transcode to fragmented MP4
     this.logger.log(`Processing DASH transcode for video ${videoId}...`);
@@ -59,6 +68,41 @@ export class QueueService {
     this.logger.log(
       `DASH transcode completed: ${dashResult.videoPaths.length} variants`,
     );
+
+    // Step 2.5: Violence Detection (ONNX) — non-blocking
+    let violenceResult: ViolenceDetectionResult | null = null;
+    try {
+      this.logger.log(
+        `Running violence detection (ONNX) for video ${videoId}...`,
+      );
+      violenceResult = await this.violenceDetector.detectViolence(inputPath);
+      this.logger.log(
+        `Violence detection done: isViolent=${violenceResult.isViolent}, ` +
+          `segments=${violenceResult.violentSegments.length}, ` +
+          `score=${violenceResult.overallScore}`,
+      );
+    } catch (violenceError) {
+      this.logger.warn(
+        'Violence detection failed (non-blocking):',
+        violenceError,
+      );
+    }
+
+    // Step 2.6: Nudity Detection (ONNX) — non-blocking
+    let nudityResult: NudityDetectionResult | null = null;
+    try {
+      this.logger.log(
+        `Running nudity detection (ONNX) for video ${videoId}...`,
+      );
+      nudityResult = await this.nudityDetector.detectNudity(inputPath);
+      this.logger.log(
+        `Nudity detection done: isNude=${nudityResult.isNude}, ` +
+          `segments=${nudityResult.nuditySegments.length}, ` +
+          `score=${nudityResult.overallScore}`,
+      );
+    } catch (nudityError) {
+      this.logger.warn('Nudity detection failed (non-blocking):', nudityError);
+    }
 
     // Step 3: Encrypt with Shaka Packager
     this.logger.log(`Running Shaka Packager (CENC) for video ${videoId}...`);
@@ -94,13 +138,7 @@ export class QueueService {
     this.logger.log(`Shaka Packager completed`);
 
     // Step 4: Upload thumbnail
-    let thumbnailUrl = '';
-    const fileName = path.parse(inputPath).name;
-    const localThumbnailPath = path.join(
-      this.uploadBaseDir,
-      'thumbnails',
-      `${fileName}.png`,
-    );
+    const thumbnailUrl = '';
 
     // Step 5: Upload encrypted DASH files to S3
     this.logger.log(`Uploading encrypted DASH files to S3...`);
@@ -129,10 +167,7 @@ export class QueueService {
       if (!fileStats.isFile()) continue;
 
       let mimetype = 'application/octet-stream';
-      if (
-        fileNameInDir.endsWith('.mp4') ||
-        fileNameInDir.endsWith('.m4s')
-      ) {
+      if (fileNameInDir.endsWith('.mp4') || fileNameInDir.endsWith('.m4s')) {
         mimetype = 'video/mp4';
       } else if (fileNameInDir.endsWith('.m4a')) {
         mimetype = 'audio/mp4';
@@ -164,9 +199,22 @@ export class QueueService {
       videoUrl: mpdUploadResult.url,
       status: VIDEO_STATUS.READY,
       thumbnailUrl,
+      ...(violenceResult
+        ? {
+            isViolent: violenceResult.isViolent,
+            violenceScore: violenceResult.overallScore,
+            violentSegments: violenceResult.violentSegments,
+          }
+        : {}),
+      ...(nudityResult
+        ? {
+            isNude: nudityResult.isNude,
+            nudityScore: nudityResult.overallScore,
+            nuditySegments: nudityResult.nuditySegments,
+          }
+        : {}),
     });
   }
-
 
   private async initializeQueue() {
     try {
@@ -204,6 +252,7 @@ export class QueueService {
       this.videoQueue = null;
       this.logger.warn(
         'Redis is not available. Videos will be processed synchronously.',
+        error,
       );
     }
   }
@@ -223,14 +272,12 @@ export class QueueService {
       );
 
       try {
-        const updatedVideo = await this.processSyncAndUpload(
-          inputPath,
-          videoId,
-        );
-
         return {
           isQueued: false,
-          video: updatedVideo,
+          video: (await this.processSyncAndUpload(
+            inputPath,
+            videoId,
+          )) as unknown,
           videoId,
         };
       } catch (error) {

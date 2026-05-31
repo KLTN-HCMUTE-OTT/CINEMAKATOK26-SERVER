@@ -13,6 +13,9 @@ import { UpdateProfileCommand } from './commands/impl/update-profile.command';
 import { ChangePasswordCommand } from './commands/impl/change-password.command';
 import { UpdateAvatarCommand } from './commands/impl/update-avatar.command';
 import { DeleteAvatarCommand } from './commands/impl/delete-avatar.command';
+import { UpdateContentPreferencesCommand } from './commands/impl/update-content-preferences.command';
+import type { ContentPreferences } from '@app/common/types/violence.types';
+import { EntityUser } from './entities/user.entity';
 
 // Queries
 import { GetUserByEmailQuery } from './queries/impl/get-user-by-email.query';
@@ -22,7 +25,10 @@ import { GetAllUsersQuery } from './queries/impl/get-all-users.query';
 import { GetUsersByIdsQuery } from './queries/impl/get-users-by-ids.query';
 
 // DTOs
-import { UpdateProfileRequest, UpdateAvatarRequest } from '@app/common/dtos/user/profile.dto';
+import {
+  UpdateProfileRequest,
+  UpdateAvatarRequest,
+} from '@app/common/dtos/user/profile.dto';
 import { ChangePasswordRequest } from '@app/common/dtos/user/profile.dto';
 import { PaginationQueryDto } from '@app/common/utils/dto';
 import { BanUserDto, UpdateUserDto } from '@app/common/dtos/user/user.dto';
@@ -43,7 +49,9 @@ export class UserController {
 
   @MessagePattern({ cmd: 'user.find-by-providerId' })
   findByProviderId(@Payload() payload: { providerId: string }) {
-    return this.queryBus.execute(new GetUserByProviderIdQuery(payload.providerId));
+    return this.queryBus.execute(
+      new GetUserByProviderIdQuery(payload.providerId),
+    );
   }
 
   @MessagePattern({ cmd: 'user.getProfile' })
@@ -62,8 +70,12 @@ export class UserController {
   }
 
   @MessagePattern({ cmd: 'user.getAllUsers' })
-  getAllUsers(@Payload() payload: { query: PaginationQueryDto; search?: string }) {
-    return this.queryBus.execute(new GetAllUsersQuery(payload.query, payload.search));
+  getAllUsers(
+    @Payload() payload: { query: PaginationQueryDto; search?: string },
+  ) {
+    return this.queryBus.execute(
+      new GetAllUsersQuery(payload.query, payload.search),
+    );
   }
 
   @MessagePattern({ cmd: 'user.getUsersByIds' })
@@ -79,7 +91,9 @@ export class UserController {
   }
 
   @MessagePattern({ cmd: 'user.updateUser' })
-  updateUser(@Payload() payload: { userId: string; updateUserRequest: UpdateUserDto }) {
+  updateUser(
+    @Payload() payload: { userId: string; updateUserRequest: UpdateUserDto },
+  ) {
     return this.commandBus.execute(
       UpdateUserCommand.create({
         userId: payload.userId,
@@ -89,7 +103,9 @@ export class UserController {
   }
 
   @MessagePattern({ cmd: 'user.updateProfile' })
-  updateProfile(@Payload() payload: { userId: string; updateDto: UpdateProfileRequest }) {
+  updateProfile(
+    @Payload() payload: { userId: string; updateDto: UpdateProfileRequest },
+  ) {
     return this.commandBus.execute(
       UpdateProfileCommand.create(payload as UpdateProfileCommand),
     );
@@ -97,7 +113,11 @@ export class UserController {
 
   @MessagePattern({ cmd: 'user.changePassword' })
   changePassword(
-    @Payload() payload: { userId: string; changePasswordDto: ChangePasswordRequest },
+    @Payload()
+    payload: {
+      userId: string;
+      changePasswordDto: ChangePasswordRequest;
+    },
   ) {
     return this.commandBus.execute(
       ChangePasswordCommand.create(payload as ChangePasswordCommand),
@@ -105,7 +125,13 @@ export class UserController {
   }
 
   @MessagePattern({ cmd: 'user.updateAvatar' })
-  updateAvatar(@Payload() payload: { userId: string; updateAvatarDto: UpdateAvatarRequest }) {
+  updateAvatar(
+    @Payload()
+    payload: {
+      userId: string;
+      updateAvatarDto: UpdateAvatarRequest;
+    },
+  ) {
     return this.commandBus.execute(
       UpdateAvatarCommand.create({
         userId: payload.userId,
@@ -122,8 +148,12 @@ export class UserController {
   }
 
   @MessagePattern({ cmd: 'user.update-password' })
-  updatePassword(@Payload() payload: { userId: string; hashedPassword: string }) {
-    return this.commandBus.execute(UpdatePasswordCommand.create(payload as UpdatePasswordCommand));
+  updatePassword(
+    @Payload() payload: { userId: string; hashedPassword: string },
+  ) {
+    return this.commandBus.execute(
+      UpdatePasswordCommand.create(payload as UpdatePasswordCommand),
+    );
   }
 
   @MessagePattern({ cmd: 'user.banUser' })
@@ -138,11 +168,40 @@ export class UserController {
 
   @MessagePattern({ cmd: 'user.unbanUser' })
   unbanUser(@Payload() payload: { userId: string }) {
-    return this.commandBus.execute(UnbanUserCommand.create(payload as UnbanUserCommand));
+    return this.commandBus.execute(
+      UnbanUserCommand.create(payload as UnbanUserCommand),
+    );
   }
 
   @MessagePattern({ cmd: 'user.deleteUser' })
   deleteUser(@Payload() payload: { userId: string }) {
-    return this.commandBus.execute(DeleteUserCommand.create(payload as DeleteUserCommand));
+    return this.commandBus.execute(
+      DeleteUserCommand.create(payload as DeleteUserCommand),
+    );
+  }
+
+  @MessagePattern({ cmd: 'user.updateContentPreferences' })
+  async updateContentPreferences(
+    @Payload()
+    payload: {
+      userId: string;
+      preferences: Partial<ContentPreferences>;
+    },
+  ) {
+    const user: EntityUser = await this.commandBus.execute(
+      UpdateContentPreferencesCommand.create({
+        userId: payload.userId,
+        preferences: payload.preferences,
+      } as UpdateContentPreferencesCommand),
+    );
+    return user.contentPreferences;
+  }
+
+  @MessagePattern({ cmd: 'user.getContentPreferences' })
+  async getContentPreferences(@Payload() payload: { userId: string }) {
+    const user: EntityUser | null = await this.queryBus.execute(
+      new GetUserByIdQuery(payload.userId),
+    );
+    return user?.contentPreferences || { violence: 'strict', nudity: 'strict' };
   }
 }

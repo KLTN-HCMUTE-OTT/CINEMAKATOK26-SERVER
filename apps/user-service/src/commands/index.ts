@@ -8,6 +8,7 @@ export * from './impl/update-profile.command';
 export * from './impl/change-password.command';
 export * from './impl/update-avatar.command';
 export * from './impl/delete-avatar.command';
+export * from './impl/update-content-preferences.command';
 export * from './handlers/create-user.handler';
 export * from './handlers/update-user.handler';
 export * from './handlers/update-password.handler';
@@ -18,3 +19,5 @@ export * from './handlers/update-profile.handler';
 export * from './handlers/change-password.handler';
 export * from './handlers/update-avatar.handler';
 export * from './handlers/delete-avatar.handler';
+export * from './handlers/update-content-preferences.handler';
+

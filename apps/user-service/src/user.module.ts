@@ -25,6 +25,7 @@ import { ChangePasswordHandler } from './commands/handlers/change-password.handl
 import { UpdateAvatarHandler } from './commands/handlers/update-avatar.handler';
 import { DeleteAvatarHandler } from './commands/handlers/delete-avatar.handler';
 import { AutoUnbanUsersHandler } from './commands/handlers/auto-unban-users.handler';
+import { UpdateContentPreferencesHandler } from './commands/handlers/update-content-preferences.handler';
 import { UserBanSchedulerService } from './services/user-ban-scheduler.service';
 
 // Query Handlers
@@ -46,6 +47,7 @@ const CommandHandlers = [
   UpdateAvatarHandler,
   DeleteAvatarHandler,
   AutoUnbanUsersHandler,
+  UpdateContentPreferencesHandler,
 ];
 
 const QueryHandlers = [
@@ -77,7 +79,12 @@ const QueryHandlers = [
         useFactory: (config: ConfigService) => ({
           transport: Transport.RMQ,
           options: {
-            urls: [config.get<string>('RABBITMQ_URL', 'amqp://guest:guest@localhost:5672')],
+            urls: [
+              config.get<string>(
+                'RABBITMQ_URL',
+                'amqp://guest:guest@localhost:5672',
+              ),
+            ],
             queue: 'notification_queue',
             queueOptions: { durable: true },
           },

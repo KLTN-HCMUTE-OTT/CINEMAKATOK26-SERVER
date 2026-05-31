@@ -18,6 +18,8 @@ import {
   S3Service,
   ShakaPackagerService,
   StreamingService,
+  ViolenceDetectorService,
+  NudityDetectorService,
 } from './services';
 
 @Module({
@@ -72,6 +74,8 @@ import {
     DrmKeyService,
     DrmLicenseService,
     ShakaPackagerService,
+    ViolenceDetectorService,
+    NudityDetectorService,
   ],
 })
 export class StreamingModule {}

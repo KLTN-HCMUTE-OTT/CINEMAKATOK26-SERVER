@@ -9,6 +9,7 @@ import {
 } from '@app/common/dtos/user/profile.dto';
 import { PaginationQueryDto } from '@app/common/utils/dto';
 import { BanUserDto } from '@app/common/dtos/user/user.dto';
+import type { ContentPreferences } from '@app/common/types/violence.types';
 
 @Injectable()
 export class UserService {
@@ -106,6 +107,21 @@ export class UserService {
   getUsersByIds(ids: string[]): Observable<any> {
     return this.userClient
       .send({ cmd: 'user.getUsersByIds' }, { ids })
+      .pipe(catchRpcError());
+  }
+
+  updateContentPreferences(
+    userId: string,
+    preferences: Partial<ContentPreferences>,
+  ): Observable<any> {
+    return this.userClient
+      .send({ cmd: 'user.updateContentPreferences' }, { userId, preferences })
+      .pipe(catchRpcError());
+  }
+
+  getContentPreferences(userId: string): Observable<any> {
+    return this.userClient
+      .send({ cmd: 'user.getContentPreferences' }, { userId })
       .pipe(catchRpcError());
   }
 }

@@ -54,10 +54,17 @@ RUN --mount=type=cache,target=/pnpm/store \
 # ==========================================
 # Stage 6: Production Runtime
 # ==========================================
-FROM node:22-alpine AS runtime
+# Use Debian-based image (glibc) — required by onnxruntime-node.
+# Alpine (musl libc) is NOT compatible with the onnxruntime native binary.
+FROM node:22-slim AS runtime
 
-# Install system dependencies if required (e.g. ffmpeg libraries)
-RUN apk add --no-cache libc6-compat
+# Install system dependencies:
+#   - ffmpeg: required by video-worker for frame extraction
+#   - ca-certificates: needed for HTTPS calls
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy Shaka Packager Linux binary from Stage 1
 COPY --from=shaka-holder /usr/bin/packager /usr/local/bin/packager
@@ -71,13 +78,16 @@ ENV SERVICE_NAME=api-gateway
 WORKDIR /app
 
 # Create a non-root group and user for security hardening
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nestjs && \
+# (Debian syntax uses groupadd/useradd instead of Alpine's addgroup/adduser)
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 -g nodejs nestjs && \
     chown -R nestjs:nodejs /app
 
-# Copy production node_modules and built dist
+# Copy production node_modules, built dist, ONNX models, config, and package.json
 COPY --from=prod-dependencies --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/models ./models
+COPY --from=builder --chown=nestjs:nodejs /app/config ./config
 COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
 
 # Use the non-root user

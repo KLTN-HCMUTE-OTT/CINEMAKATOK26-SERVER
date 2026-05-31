@@ -1,17 +1,57 @@
-import {Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Put, Query, UseGuards} from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags, ApiQuery, ApiCreatedResponse } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+  ApiQuery,
+  ApiCreatedResponse,
+} from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { UserSession, IsAdmin } from '@app/common/decorators';
 import { UserDto } from '@app/common/dtos/user/user.dto';
 import { plainToInstance } from 'class-transformer';
-import { ApiBadRequestResponse, ApiBody, ApiNotFoundResponse, ApiOkResponse, ApiUnauthorizedResponse } from '@nestjs/swagger';
-import { ProfileResponse, UpdateProfileRequest, ChangePasswordRequest, UpdateAvatarRequest, UploadAvatarResponse } from '@app/common/dtos/user/profile.dto';
-import { ApiResponseDto, ResponseBuilder, PaginationQueryDto, PaginatedApiResponseDto } from '@app/common/utils/dto';
+import {
+  ApiBadRequestResponse,
+  ApiBody,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import {
+  ProfileResponse,
+  UpdateProfileRequest,
+  ChangePasswordRequest,
+  UpdateAvatarRequest,
+  UploadAvatarResponse,
+  UpdateContentPreferencesDto,
+} from '@app/common/dtos/user/profile.dto';
+import {
+  ApiResponseDto,
+  ResponseBuilder,
+  PaginationQueryDto,
+  PaginatedApiResponseDto,
+} from '@app/common/utils/dto';
 import { JwtAuthGuard, IsAdminGuard } from '@app/common/guards';
-import {  UserDetailDto, BanUserDto, UpdateUserInfoDto, CreateUserDto, UpdateUserDto } from '@app/common/dtos/user/user.dto';
+import {
+  UserDetailDto,
+  BanUserDto,
+  UpdateUserInfoDto,
+  CreateUserDto,
+  UpdateUserDto,
+} from '@app/common/dtos/user/user.dto';
 import { firstValueFrom } from 'rxjs';
-
-
 
 @ApiTags('Users')
 @ApiBearerAuth('access-token')
@@ -36,15 +76,22 @@ export class UserController {
     description: 'Unauthorized - Invalid or missing access token',
   })
   async getProfile(@UserSession('id') userId: string) {
-    const result = await firstValueFrom<ProfileResponse>(this.userService.getProfile(userId));
-    return ResponseBuilder.createResponse({ data: plainToInstance(ProfileResponse, result, { excludeExtraneousValues: true }) });
+    const result = await firstValueFrom<ProfileResponse>(
+      this.userService.getProfile(userId),
+    );
+    return ResponseBuilder.createResponse({
+      data: plainToInstance(ProfileResponse, result, {
+        excludeExtraneousValues: true,
+      }),
+    });
   }
 
   @Put('profile')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Update user profile',
-    description: 'Update user basic information (name, gender, date of birth, address, phone)',
+    description:
+      'Update user basic information (name, gender, date of birth, address, phone)',
   })
   @ApiOkResponse({
     description: 'Profile updated successfully',
@@ -63,9 +110,13 @@ export class UserController {
     @UserSession('id') userId: string,
     @Body() updateProfileDto: UpdateProfileRequest,
   ) {
-    const result = await firstValueFrom<ProfileResponse>(this.userService.updateProfile(userId, updateProfileDto));
+    const result = await firstValueFrom<ProfileResponse>(
+      this.userService.updateProfile(userId, updateProfileDto),
+    );
     return ResponseBuilder.createResponse({
-      data: plainToInstance(ProfileResponse, result, { excludeExtraneousValues: true }),
+      data: plainToInstance(ProfileResponse, result, {
+        excludeExtraneousValues: true,
+      }),
       message: 'Profile updated successfully',
     });
   }
@@ -93,9 +144,13 @@ export class UserController {
     @UserSession('id') userId: string,
     @Body() changePasswordDto: ChangePasswordRequest,
   ) {
-    const result = await firstValueFrom(this.userService.changePassword(userId, changePasswordDto));
+    const result = await firstValueFrom(
+      this.userService.changePassword(userId, changePasswordDto),
+    );
     return ResponseBuilder.createResponse({
-      data: plainToInstance(ProfileResponse, result, { excludeExtraneousValues: true }),
+      data: plainToInstance(ProfileResponse, result, {
+        excludeExtraneousValues: true,
+      }),
       message: 'Password changed successfully',
     });
   }
@@ -124,9 +179,13 @@ export class UserController {
     @UserSession('id') userId: string,
     @Body() updateAvatarDto: UpdateAvatarRequest,
   ) {
-    const result = await firstValueFrom<UploadAvatarResponse>(this.userService.updateAvatar(userId, updateAvatarDto));
+    const result = await firstValueFrom<UploadAvatarResponse>(
+      this.userService.updateAvatar(userId, updateAvatarDto),
+    );
     return ResponseBuilder.createResponse({
-      data: plainToInstance(UploadAvatarResponse, result, { excludeExtraneousValues: true }),
+      data: plainToInstance(UploadAvatarResponse, result, {
+        excludeExtraneousValues: true,
+      }),
       message: 'Avatar updated successfully',
     });
   }
@@ -151,7 +210,58 @@ export class UserController {
   })
   async deleteAvatar(@UserSession('id') userId: string) {
     await firstValueFrom(this.userService.deleteAvatar(userId));
-    return ResponseBuilder.createResponse({ data: null, message: 'Avatar deleted successfully' });
+    return ResponseBuilder.createResponse({
+      data: null,
+      message: 'Avatar deleted successfully',
+    });
+  }
+
+  @Patch('me/content-preferences')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Update content preferences',
+    description: 'Update user content sensitivity preferences (e.g. violence)',
+  })
+  @ApiBody({ type: UpdateContentPreferencesDto })
+  @ApiOkResponse({
+    description: 'Content preferences updated successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - Invalid or missing access token',
+  })
+  async updateContentPreferences(
+    @UserSession('id') userId: string,
+    @Body() body: UpdateContentPreferencesDto,
+  ) {
+    const result = (await firstValueFrom(
+      this.userService.updateContentPreferences(userId, body),
+    )) as unknown;
+    return ResponseBuilder.createResponse({
+      data: result,
+      message: 'Content preferences updated successfully',
+    });
+  }
+
+  @Get('me/content-preferences')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get content preferences',
+    description: 'Get user content sensitivity preferences',
+  })
+  @ApiOkResponse({
+    description: 'Content preferences retrieved successfully',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - Invalid or missing access token',
+  })
+  async getContentPreferences(@UserSession('id') userId: string) {
+    const result = (await firstValueFrom(
+      this.userService.getContentPreferences(userId),
+    )) as unknown;
+    return ResponseBuilder.createResponse({
+      data: result,
+      message: 'Content preferences retrieved successfully',
+    });
   }
 
   @Post('batch')
@@ -160,7 +270,9 @@ export class UserController {
   @ApiOperation({ summary: 'Batch fetch users by IDs (admin)' })
   @ApiOkResponse({ description: 'List of users by IDs' })
   async getUsersByIds(@Body() body: { ids: string[] }) {
-    const users = await firstValueFrom(this.userService.getUsersByIds(body.ids));
+    const users = await firstValueFrom(
+      this.userService.getUsersByIds(body.ids),
+    );
     return ResponseBuilder.createResponse({ data: users });
   }
 
@@ -169,7 +281,10 @@ export class UserController {
   @UseGuards(JwtAuthGuard, IsAdminGuard)
   @IsAdmin()
   @ApiOperation({ summary: 'Get all users (Admin only)' })
-  @ApiOkResponse({ description: 'List of users', type: PaginatedApiResponseDto(UserDto) })
+  @ApiOkResponse({
+    description: 'List of users',
+    type: PaginatedApiResponseDto(UserDto),
+  })
   @ApiQuery({
     name: 'page',
     required: false,
@@ -199,10 +314,17 @@ export class UserController {
     type: 'string',
     example: 'user01',
   })
-  async findAll(@Query() query: PaginationQueryDto, @Query('search') search?: string) {
-    const { data, total } = await firstValueFrom(this.userService.getAllUsers(query, search));
+  async findAll(
+    @Query() query: PaginationQueryDto,
+    @Query('search') search?: string,
+  ) {
+    const { data, total } = await firstValueFrom(
+      this.userService.getAllUsers(query, search),
+    );
     return ResponseBuilder.createPaginatedResponse({
-      data: data.map(user => plainToInstance(UserDto, user, { excludeExtraneousValues: true })),
+      data: data.map((user) =>
+        plainToInstance(UserDto, user, { excludeExtraneousValues: true }),
+      ),
       totalItems: total,
       currentPage: query.page || 1,
       itemsPerPage: query.limit || 10,
@@ -214,7 +336,9 @@ export class UserController {
   @ApiOkResponse({ description: 'User details', type: ApiResponseDto(UserDto) })
   async findOne(@Param('id', new ParseUUIDPipe()) id: string) {
     const result = await firstValueFrom(this.userService.getById(id));
-    return ResponseBuilder.createResponse({ data: plainToInstance(UserDto, result, { excludeExtraneousValues: true }) });
+    return ResponseBuilder.createResponse({
+      data: plainToInstance(UserDto, result, { excludeExtraneousValues: true }),
+    });
   }
   @Post()
   @ApiBody({ type: CreateUserDto })
@@ -223,24 +347,40 @@ export class UserController {
     type: ApiResponseDto(UserDto),
   })
   async create(@Body() createUserDto: CreateUserDto) {
-    const result = await firstValueFrom(this.userService.createUser(createUserDto));
-    return ResponseBuilder.createResponse({ data: plainToInstance(UserDto, result, { excludeExtraneousValues: true }) });
+    const result = await firstValueFrom(
+      this.userService.createUser(createUserDto),
+    );
+    return ResponseBuilder.createResponse({
+      data: plainToInstance(UserDto, result, { excludeExtraneousValues: true }),
+    });
   }
 
   @Put(':id')
-  @ApiOkResponse({ description: 'User updated successfully', type: ApiResponseDto(UserDto) })
+  @ApiOkResponse({
+    description: 'User updated successfully',
+    type: ApiResponseDto(UserDto),
+  })
   @ApiBody({ type: UpdateUserDto })
-  async update(@Param('id', new ParseUUIDPipe()) id: string, @Body() updateUserDto: UpdateUserDto) {
-    const result = await firstValueFrom(this.userService.updateUser(id, updateUserDto));
-    return ResponseBuilder.createResponse({ data: plainToInstance(UserDto, result, { excludeExtraneousValues: true }) });
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    const result = await firstValueFrom(
+      this.userService.updateUser(id, updateUserDto),
+    );
+    return ResponseBuilder.createResponse({
+      data: plainToInstance(UserDto, result, { excludeExtraneousValues: true }),
+    });
   }
 
   @Delete(':id')
   @ApiOkResponse({ description: 'User deleted successfully' })
-  
   async delete(@Param('id', new ParseUUIDPipe()) id: string) {
     const result = await firstValueFrom(this.userService.deleteUser(id));
-    return ResponseBuilder.createResponse({ data: result, message: 'User deleted successfully' });
+    return ResponseBuilder.createResponse({
+      data: result,
+      message: 'User deleted successfully',
+    });
   }
 
   // Admin user management endpoints
@@ -248,13 +388,20 @@ export class UserController {
   @UseGuards(JwtAuthGuard, IsAdminGuard)
   @IsAdmin()
   @ApiOperation({ summary: 'Get user detail (Admin only)' })
-  @ApiOkResponse({ description: 'User detail', type: ApiResponseDto(UserDetailDto) })
+  @ApiOkResponse({
+    description: 'User detail',
+    type: ApiResponseDto(UserDetailDto),
+  })
   @ApiNotFoundResponse({ description: 'User not found' })
-  @ApiUnauthorizedResponse({ description: 'Unauthorized - Invalid or missing access token' })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - Invalid or missing access token',
+  })
   async getUserDetail(@Param('id', new ParseUUIDPipe()) id: string) {
     const result = await firstValueFrom(this.userService.getUserDetail(id));
     return ResponseBuilder.createResponse({
-      data: plainToInstance(UserDetailDto, result, { excludeExtraneousValues: true }),
+      data: plainToInstance(UserDetailDto, result, {
+        excludeExtraneousValues: true,
+      }),
       message: 'User detail retrieved successfully',
     });
   }
@@ -263,14 +410,26 @@ export class UserController {
   @UseGuards(JwtAuthGuard, IsAdminGuard)
   @IsAdmin()
   @ApiOperation({ summary: 'Ban user (Admin only)' })
-  @ApiOkResponse({ description: 'User banned successfully', type: ApiResponseDto(UserDetailDto) })
+  @ApiOkResponse({
+    description: 'User banned successfully',
+    type: ApiResponseDto(UserDetailDto),
+  })
   @ApiBody({ type: BanUserDto })
   @ApiNotFoundResponse({ description: 'User not found' })
-  @ApiUnauthorizedResponse({ description: 'Unauthorized - Invalid or missing access token' })
-  async banUser(@Param('id', new ParseUUIDPipe()) id: string, @Body() banUserDto: BanUserDto) {
-    const result = await firstValueFrom(this.userService.banUser(id, banUserDto));
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - Invalid or missing access token',
+  })
+  async banUser(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() banUserDto: BanUserDto,
+  ) {
+    const result = await firstValueFrom(
+      this.userService.banUser(id, banUserDto),
+    );
     return ResponseBuilder.createResponse({
-      data: plainToInstance(UserDetailDto, result, { excludeExtraneousValues: true }),
+      data: plainToInstance(UserDetailDto, result, {
+        excludeExtraneousValues: true,
+      }),
       message: 'User banned successfully',
     });
   }
@@ -279,13 +438,20 @@ export class UserController {
   @UseGuards(JwtAuthGuard, IsAdminGuard)
   @IsAdmin()
   @ApiOperation({ summary: 'Unban user (Admin only)' })
-  @ApiOkResponse({ description: 'User unbanned successfully', type: ApiResponseDto(UserDetailDto) })
+  @ApiOkResponse({
+    description: 'User unbanned successfully',
+    type: ApiResponseDto(UserDetailDto),
+  })
   @ApiNotFoundResponse({ description: 'User not found' })
-  @ApiUnauthorizedResponse({ description: 'Unauthorized - Invalid or missing access token' })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - Invalid or missing access token',
+  })
   async unbanUser(@Param('id', new ParseUUIDPipe()) id: string) {
     const result = await firstValueFrom(this.userService.unbanUser(id));
     return ResponseBuilder.createResponse({
-      data: plainToInstance(UserDetailDto, result, { excludeExtraneousValues: true }),
+      data: plainToInstance(UserDetailDto, result, {
+        excludeExtraneousValues: true,
+      }),
       message: 'User unbanned successfully',
     });
   }
@@ -300,14 +466,20 @@ export class UserController {
   })
   @ApiBody({ type: UpdateUserInfoDto })
   @ApiNotFoundResponse({ description: 'User not found' })
-  @ApiUnauthorizedResponse({ description: 'Unauthorized - Invalid or missing access token' })
+  @ApiUnauthorizedResponse({
+    description: 'Unauthorized - Invalid or missing access token',
+  })
   async updateUserInfo(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() updateUserInfoDto: UpdateUserInfoDto,
   ) {
-    const result = await firstValueFrom(this.userService.updateUser(id, updateUserInfoDto));
+    const result = await firstValueFrom(
+      this.userService.updateUser(id, updateUserInfoDto),
+    );
     return ResponseBuilder.createResponse({
-      data: plainToInstance(UserDetailDto, result, { excludeExtraneousValues: true }),
+      data: plainToInstance(UserDetailDto, result, {
+        excludeExtraneousValues: true,
+      }),
       message: 'User info updated successfully',
     });
   }

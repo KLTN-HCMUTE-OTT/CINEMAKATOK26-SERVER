@@ -1,6 +1,5 @@
 import { Expose } from 'class-transformer';
 import {
-  IsDate,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -8,6 +7,8 @@ import {
   IsString,
   Matches,
   MinLength,
+  IsIn,
+  IsOptional,
 } from 'class-validator';
 
 import { BaseEntityDto } from '@app/common/base/base-entity-dto';
@@ -146,4 +147,26 @@ export class UploadAvatarResponse {
   constructor(avatarUrl: string) {
     this.avatarUrl = avatarUrl;
   }
+}
+
+export class UpdateContentPreferencesDto {
+  @ApiProperty({
+    description: 'Violence sensitivity level',
+    enum: ['off', 'moderate', 'strict'],
+    example: 'moderate',
+  })
+  @IsOptional()
+  @IsIn(['off', 'moderate', 'strict'])
+  @Expose()
+  violence?: 'off' | 'moderate' | 'strict';
+
+  @ApiProperty({
+    description: 'Nudity sensitivity level',
+    enum: ['off', 'moderate', 'strict'],
+    example: 'strict',
+  })
+  @IsOptional()
+  @IsIn(['off', 'moderate', 'strict'])
+  @Expose()
+  nudity?: 'off' | 'moderate' | 'strict';
 }
