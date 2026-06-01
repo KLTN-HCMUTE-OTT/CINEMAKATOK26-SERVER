@@ -100,7 +100,7 @@ export class EntitlementGuard implements CanActivate {
           }
 
           if (accessTier) {
-            requiredTier = PLAN_TIER[accessTier] ?? 0;
+            requiredTier = PLAN_TIER[accessTier.toUpperCase()] ?? 0;
           }
         } catch (contentErr: any) {
           this.logger.error(

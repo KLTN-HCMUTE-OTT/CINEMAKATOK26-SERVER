@@ -58,6 +58,17 @@ import * as path from 'path';
         inject: [ConfigService],
       },
       {
+        name: 'ORDER_SERVICE',
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.TCP,
+          options: {
+            host: config.get<string>('ORDER_SERVICE_HOST', 'localhost'),
+            port: config.get<number>('ORDER_SERVICE_PORT', 3004),
+          },
+        }),
+        inject: [ConfigService],
+      },
+      {
         name: 'NOTIFICATION_SERVICE',
         useFactory: (config: ConfigService) => ({
           transport: Transport.RMQ,

@@ -15,7 +15,7 @@ import {
   UserPayload,
   SocialLoginRequest,
 } from '@app/common/dtos/auth/auth.dto';
-import { OTP_PURPOSE } from '@app/common/enums/global.enum';
+import { SubscriptionPlan, OTP_PURPOSE } from '@app/common/enums/global.enum';
 import {
   EmailAlreadyExistsError,
   InvalidCredentialsError,
@@ -36,6 +36,7 @@ export class AuthService {
 
   constructor(
     @Inject('USER_SERVICE') private readonly userClient: ClientProxy,
+    @Inject('ORDER_SERVICE') private readonly orderClient: ClientProxy,
     @Inject('NOTIFICATION_SERVICE')
     private readonly notificationClient: ClientProxy,
     private readonly tokenService: TokenService,
@@ -185,7 +186,7 @@ export class AuthService {
     }
 
     // Create new user
-    return firstValueFrom<UserPayload>(
+    const createdUser = await firstValueFrom<UserPayload>(
       this.userClient.send(
         { cmd: 'user.createUser' },
         {
@@ -198,6 +199,21 @@ export class AuthService {
         },
       ),
     );
+
+    // Gán gói Basic miễn phí cho user mới đăng nhập bằng social
+    try {
+      await firstValueFrom(
+        this.orderClient.send(
+          { cmd: 'order.createSubscription' },
+          { userId: createdUser.id, plan: SubscriptionPlan.BASIC, durationDays: 36500 },
+        ),
+      );
+      this.logger.log(`Assigned BASIC plan to new social user ${createdUser.id}`);
+    } catch (err) {
+      this.logger.error(`Failed to assign BASIC plan to social user ${createdUser.id}`, err);
+    }
+
+    return createdUser;
   }
 
   async refresh(token: TokenRequest): Promise<TokenResponse> {
@@ -247,7 +263,7 @@ export class AuthService {
 
     //const hashedPassword = PasswordHash.hashPassword(dto.password);
 
-    await firstValueFrom(
+    const newUser = await firstValueFrom<UserPayload>(
       this.userClient.send(
         { cmd: 'user.createUser' },
         {
@@ -260,6 +276,20 @@ export class AuthService {
         },
       ),
     );
+
+    // Gán gói Basic miễn phí cho user mới
+    try {
+      await firstValueFrom(
+        this.orderClient.send(
+          { cmd: 'order.createSubscription' },
+          { userId: newUser.id, plan: SubscriptionPlan.BASIC, durationDays: 36500 },
+        ),
+      );
+      this.logger.log(`Assigned BASIC plan to new user ${newUser.id}`);
+    } catch (err) {
+      this.logger.error(`Failed to assign BASIC plan to user ${newUser.id}`, err);
+    }
+
     return true;
   }
 

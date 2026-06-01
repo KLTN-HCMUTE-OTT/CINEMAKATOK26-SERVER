@@ -56,14 +56,16 @@ export class DrmLicenseService {
               .send({ cmd: 'content.getMovieById' }, { id: ownership.movieId })
               .pipe(timeout(4000)),
           );
-          accessTier = movie?.metaData?.accessTier as ACCESS_TIER;
+          const raw = movie?.metaData?.accessTier as string;
+          accessTier = raw?.toUpperCase() as ACCESS_TIER;
         } else if (ownership.tvSeriesId) {
           const tvSeries = await firstValueFrom(
             this.contentClient
               .send({ cmd: 'content.getTvSeriesById' }, { id: ownership.tvSeriesId })
               .pipe(timeout(4000)),
           );
-          accessTier = tvSeries?.metaData?.accessTier as ACCESS_TIER;
+          const raw = tvSeries?.metaData?.accessTier as string;
+          accessTier = raw?.toUpperCase() as ACCESS_TIER;
         }
       }
       return accessTier ?? ACCESS_TIER.BASIC;
@@ -122,8 +124,9 @@ export class DrmLicenseService {
     );
 
     // Step 3: Content tier enforcement
-    if (contentTier === ACCESS_TIER.PREMIUM && sub.plan === ACCESS_TIER.BASIC) {
-      this.logger.warn(`User ${userId} (basic) attempted to access premium content for video ${videoId}`);
+    const userPlanUpper = (sub.plan as string)?.toUpperCase();
+    if (contentTier === ACCESS_TIER.PREMIUM && userPlanUpper !== ACCESS_TIER.PREMIUM) {
+      this.logger.warn(`User ${userId} (plan=${sub.plan}) attempted to access premium content for video ${videoId}`);
       throw new ForbiddenException('Premium content requires premium subscription');
     }
 
