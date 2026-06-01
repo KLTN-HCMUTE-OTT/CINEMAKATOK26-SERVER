@@ -12,6 +12,7 @@ import {
   CreateVideoDto,
   UpdateVideoDto,
 } from 'libs/common/src/dtos/content/video.dto';
+import { EntityMovie } from '../entities/movie.entity';
 import { EntityEpisode } from '../entities/tvseries.entity';
 import { EntityVideo, VideoOwnerType } from '../entities/video.entity';
 
@@ -22,6 +23,8 @@ export class VideoService {
     private readonly videoRepository: Repository<EntityVideo>,
     @InjectRepository(EntityEpisode, 'content')
     private readonly episodeRepository: Repository<EntityEpisode>,
+    @InjectRepository(EntityMovie, 'content')
+    private readonly movieRepository: Repository<EntityMovie>,
   ) {}
 
   async create(createDto: CreateVideoDto) {
@@ -271,9 +274,12 @@ export class VideoService {
     }
   }
 
-  async getMovieOrSeriesFromVideo(
-    videoId: string,
-  ): Promise<{ movieId?: string; tvSeriesId?: string; episodeId?: string }> {
+  async getMovieOrSeriesFromVideo(videoId: string): Promise<{
+    movieId?: string;
+    tvSeriesId?: string;
+    episodeId?: string;
+    contentTitle?: string;
+  }> {
     const video = await this.videoRepository.findOne({
       where: { id: videoId },
     });
@@ -285,7 +291,13 @@ export class VideoService {
     }
 
     if (video.ownerType === VideoOwnerType.MOVIE) {
-      return { movieId: video.ownerId ?? undefined };
+      const movie = await this.movieRepository.findOne({
+        where: { id: video.ownerId },
+      });
+      return {
+        movieId: video.ownerId ?? undefined,
+        contentTitle: movie?.metaData?.title ?? undefined,
+      };
     } else if (video.ownerType === VideoOwnerType.EPISODE) {
       if (!video.ownerId) {
         throw new NotFoundException({
@@ -300,6 +312,7 @@ export class VideoService {
       return {
         tvSeriesId: episode?.season?.tvseries?.id ?? undefined,
         episodeId: video.ownerId ?? undefined,
+        contentTitle: episode?.season?.tvseries?.metaData?.title ?? undefined,
       };
     }
 
