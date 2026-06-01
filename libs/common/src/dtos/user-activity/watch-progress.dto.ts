@@ -1,5 +1,11 @@
 import { Expose, Transform } from 'class-transformer';
-import { IsBoolean, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsBoolean,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 import { BaseEntityDto } from '@app/common/base/base-entity-dto';
 import { ApiProperty } from '@nestjs/swagger';
@@ -21,7 +27,7 @@ export class WatchProgressDto extends BaseEntityDto {
   })
   @Expose()
   @IsString()
-  @Transform(({ obj }) => obj.video?.videoUrl || obj.contentTitle)
+  @Transform(({ value, obj }) => obj.metadata?.title ?? value)
   contentTitle: string | null;
 
   @ApiProperty({
@@ -109,7 +115,8 @@ export class WatchProgressDto extends BaseEntityDto {
   seasonNumber: number | null;
 
   @ApiProperty({
-    description: 'Full content metadata including description, release date, rating, etc.',
+    description:
+      'Full content metadata including description, release date, rating, etc.',
     type: Object,
     nullable: true,
   })

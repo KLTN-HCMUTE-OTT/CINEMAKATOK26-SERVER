@@ -129,7 +129,7 @@ export class WatchProgressService {
       movieId: ownerInfo?.movieId ?? null,
       tvSeriesId: ownerInfo?.tvSeriesId ?? null,
       episodeId: ownerInfo?.episodeId ?? null,
-      contentTitle: video?.videoUrl ?? null,
+      contentTitle: ownerInfo?.contentTitle ?? null,
       contentThumbnail: video?.thumbnailUrl ?? null,
     };
   }
