@@ -80,7 +80,15 @@ export class DrmLicenseService {
     keyIds: string[],
     userId: string,
     videoId: string,
+    isAdmin = false,
   ): Promise<ClearKeyLicenseResponse> {
+    if (isAdmin) {
+      this.logger.log(
+        `[DrmLicenseService] Admin user ${userId} requested DRM license for video ${videoId} - bypassing subscription checks`,
+      );
+      return this.buildClearKeyResponse(keyIds);
+    }
+
     // Step 1: Parallel subscription + content tier check with 5s timeout
     const [sub, contentTier] = await Promise.all([
       firstValueFrom(

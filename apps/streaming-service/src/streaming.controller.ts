@@ -31,12 +31,13 @@ export class StreamingController {
    */
   @MessagePattern({ cmd: 'streaming.drm.issueLicense' })
   issueLicense(
-    @Payload() payload: { keyIds: string[]; userId: string; videoId: string },
+    @Payload() payload: { keyIds: string[]; userId: string; videoId: string; isAdmin?: boolean },
   ) {
     return this.drmLicenseService.issueClearKeyLicense(
       payload.keyIds,
       payload.userId,
       payload.videoId,
+      payload.isAdmin,
     );
   }
 

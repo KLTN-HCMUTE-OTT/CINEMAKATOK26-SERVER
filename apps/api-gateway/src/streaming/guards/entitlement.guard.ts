@@ -64,6 +64,11 @@ export class EntitlementGuard implements CanActivate {
       throw new ForbiddenException('Authentication required');
     }
 
+    if (request.user?.isAdmin) {
+      this.logger.log(`[EntitlementGuard] User ${userId} is admin — bypassing entitlement check`);
+      return true;
+    }
+
     try {
       // Step 1: Resolve content access tier dynamically
       let requiredTier = 0; // default to free
