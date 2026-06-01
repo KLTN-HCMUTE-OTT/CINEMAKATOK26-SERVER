@@ -32,6 +32,7 @@ export class StreamingGatewayService {
       keyIds: string[];
       userId: string;
       videoId: string;
+      isAdmin?: boolean;
     },
   ) {
     return this.streamingClient

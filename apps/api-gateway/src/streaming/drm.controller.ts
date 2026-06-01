@@ -61,8 +61,9 @@ export class DrmController {
   async issueClearKeyLicense(
     @Body() body: ClearKeyLicenseRequestDto,
     @UserSession('id') userId: string,
+    @UserSession('isAdmin') isAdmin?: boolean,
   ): Promise<ClearKeyLicenseResponseDto> {
-
+    console.log('isAdmin', isAdmin)
     /**
      * Convert incoming base64url Key IDs
      * into hex format for DB lookup.
@@ -76,6 +77,7 @@ export class DrmController {
         keyIds,
         userId,
         videoId: body.videoId,
+        isAdmin: !!isAdmin,
       }),
     );
 

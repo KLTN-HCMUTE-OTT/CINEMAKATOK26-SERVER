@@ -43,7 +43,7 @@ export class StreamingController {
   constructor(private readonly streamingService: StreamingGatewayService) {}
 
   @Post('upload')
-  //@UseGuards(JwtAuthGuard, IsAdminGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @UseInterceptors(FileInterceptor('file', multerConfig))
   @ApiOperation({ summary: '[ADMIN] Upload video for HLS encoding' })
   @ApiConsumes('multipart/form-data')
