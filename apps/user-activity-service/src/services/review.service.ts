@@ -20,6 +20,8 @@ export class ReviewService {
     private readonly reviewRepository: Repository<EntityReview>,
     @Inject('CONTENT_SERVICE')
     private readonly contentClient: ClientProxy,
+    @Inject('USER_SERVICE')
+    private readonly userClient: ClientProxy,
     private readonly auditLogEmitter: AuditLogEmitterService,
   ) {}
 
@@ -84,7 +86,8 @@ export class ReviewService {
     await queryRunner.startTransaction();
 
     try {
-      const review = await this.findReviewById(id);
+      const review = await this.reviewRepository.findOne({ where: { id } });
+      if (!review) throw new ReviewNotFoundError();
 
       if (userId && review.userId !== userId) {
         throw new ForbiddenException({ message: 'You are not authorized to update this review', code: ERROR_CODE.UNAUTHORIZED });
@@ -131,7 +134,8 @@ export class ReviewService {
     await queryRunner.startTransaction();
 
     try {
-      const review = await this.findReviewById(id);
+      const review = await this.reviewRepository.findOne({ where: { id } });
+      if (!review) throw new ReviewNotFoundError();
 
       if (userId && review.userId !== userId) {
         throw new ForbiddenException({ message: 'You are not authorized to delete this review', code: ERROR_CODE.UNAUTHORIZED });
@@ -172,12 +176,35 @@ export class ReviewService {
     }
   }
 
+  private async enrichWithUserInfo(reviews: EntityReview[]): Promise<any[]> {
+    if (reviews.length === 0) return reviews;
+    const ids = [...new Set(reviews.map((r) => r.userId))];
+    let usersMap: Record<string, { name: string; avatar: string | null }> = {};
+    try {
+      const users: any[] = await firstValueFrom(
+        this.userClient.send({ cmd: 'user.getUsersByIds' }, { ids }),
+      );
+      if (Array.isArray(users)) {
+        users.forEach((u) => {
+          usersMap[u.id] = { name: u.name, avatar: u.avatar ?? null };
+        });
+      }
+    } catch {
+      // fail silently — reviews still returned without user info
+    }
+    return reviews.map((r) => ({
+      ...r,
+      user: usersMap[r.userId] ? { id: r.userId, ...usersMap[r.userId] } : undefined,
+    }));
+  }
+
   async findReviewById(id: string) {
     const review = await this.reviewRepository.findOne({ where: { id } });
     if (!review) {
       throw new ReviewNotFoundError();
     }
-    return review;
+    const [enriched] = await this.enrichWithUserInfo([review]);
+    return enriched;
   }
 
   async findReviews(query: PaginationQueryDto & { contentId?: string; userId?: string }) {
@@ -206,7 +233,8 @@ export class ReviewService {
       .take(limit)
       .getManyAndCount();
 
-    return { data, total };
+    const enriched = await this.enrichWithUserInfo(data);
+    return { data: enriched, total };
   }
 
   async isReviewOwner(reviewId: string, userId: string): Promise<boolean> {

@@ -1,10 +1,12 @@
+import { firstValueFrom } from 'rxjs';
 import { Repository, In } from 'typeorm';
 
 import { ERROR_CODE } from '@app/common/constants/global.constants';
 import { REPORT_TYPE, REVIEW_STATUS } from '@app/common/enums/global.enum';
 import { PaginationQueryDto } from '@app/common/utils/dto/pagination-query.dto';
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ClientProxy } from '@nestjs/microservices';
 
 import { CreateReviewReplyDto, UpdateReviewReplyDto } from '@app/common/dtos/user-activity/review-reply.dto';
 import { EntityReport } from '../entities/report.entity';
@@ -24,7 +26,31 @@ export class ReviewReplyService {
     private readonly reviewEpisodeRepository: Repository<EntityReviewEpisode>,
     @InjectRepository(EntityReport, 'activity')
     private readonly reportRepository: Repository<EntityReport>,
+    @Inject('USER_SERVICE')
+    private readonly userClient: ClientProxy,
   ) {}
+
+  private async enrichWithUserInfo(replies: EntityReviewReply[]): Promise<any[]> {
+    if (replies.length === 0) return replies;
+    const ids = [...new Set(replies.map((r) => r.userId))];
+    let usersMap: Record<string, { name: string; avatar: string | null }> = {};
+    try {
+      const users: any[] = await firstValueFrom(
+        this.userClient.send({ cmd: 'user.getUsersByIds' }, { ids }),
+      );
+      if (Array.isArray(users)) {
+        users.forEach((u) => {
+          usersMap[u.id] = { name: u.name, avatar: u.avatar ?? null };
+        });
+      }
+    } catch {
+      // fail silently
+    }
+    return replies.map((r) => ({
+      ...r,
+      user: usersMap[r.userId] ? { id: r.userId, ...usersMap[r.userId] } : undefined,
+    }));
+  }
 
   async createReply(userId: string, createReplyDto: CreateReviewReplyDto) {
     // Validate that exactly one of reviewId or episodeReviewId is provided
@@ -87,7 +113,8 @@ export class ReviewReplyService {
       // Đảm bảo parent reply thuộc cùng review hoặc episode review
       if (
         hasReviewId &&
-        (!parentReply.review || parentReply.review.id !== createReplyDto.reviewId)
+        parentReply.review &&
+        parentReply.review.id !== createReplyDto.reviewId
       ) {
         throw new ForbiddenException({
           message: 'Parent reply does not belong to the specified review',
@@ -97,8 +124,8 @@ export class ReviewReplyService {
 
       if (
         hasEpisodeReviewId &&
-        (!parentReply.episodeReview ||
-          parentReply.episodeReview.id !== createReplyDto.episodeReviewId)
+        parentReply.episodeReview &&
+        parentReply.episodeReview.id !== createReplyDto.episodeReviewId
       ) {
         throw new ForbiddenException({
           message: 'Parent reply does not belong to the specified episode review',
@@ -124,7 +151,8 @@ export class ReviewReplyService {
   }
 
   async updateReply(id: string, updateReplyDto: UpdateReviewReplyDto, userId?: string) {
-    const reply = await this.findReplyById(id);
+    const reply = await this.reviewReplyRepository.findOne({ where: { id } });
+    if (!reply) throw new ReviewReplyNotFoundError();
 
     // Check ownership if userId is provided
     if (userId && reply.userId !== userId) {
@@ -146,7 +174,8 @@ export class ReviewReplyService {
 
     try {
       console.log('Deleting reply id:', id);
-      const reply = await this.findReplyById(id);
+      const reply = await this.reviewReplyRepository.findOne({ where: { id } });
+      if (!reply) throw new ReviewReplyNotFoundError();
 
       // Check ownership if userId is provided
       if (userId && reply.userId !== userId) {
@@ -226,7 +255,8 @@ export class ReviewReplyService {
       throw new ReviewReplyNotFoundError();
     }
 
-    return reply;
+    const [enriched] = await this.enrichWithUserInfo([reply]);
+    return enriched;
   }
 
   async findReplies(
@@ -300,18 +330,17 @@ export class ReviewReplyService {
       .take(limit)
       .getManyAndCount();
 
-    // Get reply counts for all replies
+    // Attach reply counts
     if (data.length > 0) {
       const replyIds = data.map(reply => reply.id);
       const replyCounts = await this.getReplyCountsForReplies(replyIds);
-
-      // Attach reply count to each reply
       data.forEach(reply => {
         (reply as any).replyCount = replyCounts[reply.id] || 0;
       });
     }
 
-    return { data, total };
+    const enriched = await this.enrichWithUserInfo(data);
+    return { data: enriched, total };
   }
 
   async isReplyOwner(replyId: string, userId: string): Promise<boolean> {

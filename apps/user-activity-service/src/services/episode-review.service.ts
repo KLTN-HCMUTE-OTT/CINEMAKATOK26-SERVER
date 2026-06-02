@@ -31,8 +31,32 @@ export class EpisodeReviewService {
     private readonly reviewEpisodeRepository: Repository<EntityReviewEpisode>,
     @Inject('CONTENT_SERVICE')
     private readonly contentClient: ClientProxy,
+    @Inject('USER_SERVICE')
+    private readonly userClient: ClientProxy,
     private readonly auditLogEmitter: AuditLogEmitterService,
   ) {}
+
+  private async enrichWithUserInfo(reviews: EntityReviewEpisode[]): Promise<any[]> {
+    if (reviews.length === 0) return reviews;
+    const ids = [...new Set(reviews.map((r) => r.userId))];
+    let usersMap: Record<string, { name: string; avatar: string | null }> = {};
+    try {
+      const users: any[] = await firstValueFrom(
+        this.userClient.send({ cmd: 'user.getUsersByIds' }, { ids }),
+      );
+      if (Array.isArray(users)) {
+        users.forEach((u) => {
+          usersMap[u.id] = { name: u.name, avatar: u.avatar ?? null };
+        });
+      }
+    } catch {
+      // fail silently
+    }
+    return reviews.map((r) => ({
+      ...r,
+      user: usersMap[r.userId] ? { id: r.userId, ...usersMap[r.userId] } : undefined,
+    }));
+  }
 
   async createReview(userId: string, createEpisodeReviewDto: CreateEpisodeReviewDto) {
     try{
@@ -74,7 +98,7 @@ export class EpisodeReviewService {
       metadata: { episodeId: createEpisodeReviewDto.episodeId, reviewId: savedReview.id },
     });
 
-    return savedReview;
+    return this.findReviewById(savedReview.id);
     }
     catch(error){
       if(error instanceof DomainError || error instanceof HttpException || (error as any).code){
@@ -86,7 +110,8 @@ export class EpisodeReviewService {
 
   async updateReview(id: string, updateReviewDto: UpdateEpisodeReviewDto, userId?: string) {
     try{
-      const review = await this.findReviewById(id);
+      const review = await this.reviewEpisodeRepository.findOne({ where: { id } });
+      if (!review) throw new ReviewNotFoundError();
 
     if (userId && review.userId !== userId) {
       throw new ForbiddenException({
@@ -118,8 +143,8 @@ export class EpisodeReviewService {
     } catch {
       // ignore
     }
-    
-    return updatedReview;
+
+    return this.findReviewById(updatedReview.id);
     }
     catch(error){
       if(error instanceof DomainError || error instanceof HttpException || (error as any).code){
@@ -131,7 +156,8 @@ export class EpisodeReviewService {
 
   async deleteReview(id: string, userId?: string) {
     try{
-      const review = await this.findReviewById(id);
+      const review = await this.reviewEpisodeRepository.findOne({ where: { id } });
+      if (!review) throw new ReviewNotFoundError();
 
     if (userId && review.userId !== userId) {
       throw new ForbiddenException({
@@ -186,11 +212,13 @@ export class EpisodeReviewService {
     const review = await this.reviewEpisodeRepository.findOne({
       where: { id },
     });
-    
+
     if (!review) {
       throw new ReviewNotFoundError();
     }
-    return review;
+
+    const [enriched] = await this.enrichWithUserInfo([review]);
+    return enriched;
   }
 
   async findReviews(query: PaginationQueryDto & { episodeId?: string; userId?: string; status?: REVIEW_STATUS }) {
@@ -230,7 +258,8 @@ export class EpisodeReviewService {
       .take(limit)
       .getManyAndCount();
 
-    return { data, total };
+    const enriched = await this.enrichWithUserInfo(data);
+    return { data: enriched, total };
     }
     catch(error){
        if (error instanceof RpcException) {

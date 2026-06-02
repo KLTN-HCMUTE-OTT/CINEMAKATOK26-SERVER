@@ -28,19 +28,19 @@ export class ReviewReplyService {
 
   findRepliesForReview(reviewId: string, query: PaginationQueryDto & { parentReplyId?: string }): Observable<any> {
     return this.userActivityClient
-      .send({ cmd: 'activity.review-reply.list-for-review' }, {query, reviewId })
+      .send({ cmd: 'activity.review-reply.list-for-review' }, { ...query, reviewId })
       .pipe(catchRpcError());
   }
 
   findRepliesForEpisodeReview(episodeReviewId: string, query: PaginationQueryDto & { parentReplyId?: string }): Observable<any> {
     return this.userActivityClient
-      .send({ cmd: 'activity.review-reply.list-for-episode-review' }, {query, episodeReviewId })
+      .send({ cmd: 'activity.review-reply.list-for-episode-review' }, { ...query, episodeReviewId })
       .pipe(catchRpcError());
   }
 
   findRepliesByUserId(userId: string, query: PaginationQueryDto & { parentReplyId?: string }): Observable<any> {
     return this.userActivityClient
-      .send({ cmd: 'activity.review-reply.list-by-user' }, { query, userId })
+      .send({ cmd: 'activity.review-reply.list-by-user' }, { ...query, userId })
       .pipe(catchRpcError());
   }
 

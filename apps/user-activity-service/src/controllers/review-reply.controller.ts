@@ -25,19 +25,19 @@ export class ReviewReplyController {
     @MessagePattern({ cmd: 'activity.review-reply.list-for-review' })
     findRepliesForReview(@Payload() payload: PaginationQueryDto & { reviewId: string, parentReplyId?: string } ) {
         const { reviewId, parentReplyId, ...query } = payload;
-        return this.reviewReplyService.findReplies(query && {reviewId, parentReplyId });
+        return this.reviewReplyService.findReplies({ ...query, reviewId, parentReplyId });
     }
 
     @MessagePattern({ cmd: 'activity.review-reply.list-for-episode-review' })
     findRepliesForEpisodeReview(@Payload() payload: PaginationQueryDto & { episodeReviewId: string, parentReplyId?: string } ) {
         const { episodeReviewId, parentReplyId, ...query } = payload;
-        return this.reviewReplyService.findReplies(query && {episodeReviewId, parentReplyId });
+        return this.reviewReplyService.findReplies({ ...query, episodeReviewId, parentReplyId });
     }
 
     @MessagePattern({ cmd: 'activity.review-reply.list-by-user' })
     findRepliesByUserId(@Payload() payload: PaginationQueryDto & { userId: string, parentReplyId?: string } ) {
         const { userId, parentReplyId, ...query } = payload;
-        return this.reviewReplyService.findReplies(query && {userId, parentReplyId });
+        return this.reviewReplyService.findReplies({ ...query, userId, parentReplyId });
     }
 
     @MessagePattern({ cmd: 'activity.review-reply.get' })

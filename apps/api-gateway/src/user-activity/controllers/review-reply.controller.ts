@@ -109,7 +109,7 @@ export class ReviewReplyController {
     description: 'Search replies by content',
   })
   async findRepliesByUserId(@UserSession('id') userId: string, @Query() query: PaginationQueryDto) {
-    const { data, total } = await firstValueFrom(this.reviewReplyService.findReplies(query && {userId}));
+    const { data, total } = await firstValueFrom(this.reviewReplyService.findRepliesByUserId(userId, query));
     return ResponseBuilder.createPaginatedResponse({
       data: data.map((item: ReviewReplyDto) => plainToInstance(ReviewReplyDto, item, { excludeExtraneousValues: true })),
       totalItems: total,
@@ -199,7 +199,7 @@ export class ReviewReplyController {
     @Param('episodeReviewId') episodeReviewId: string,
     @Query() query: PaginationQueryDto & { parentReplyId?: string },
   ) {
-    const { data, total } = await firstValueFrom(this.reviewReplyService.findReplies(query && {episodeReviewId}));
+    const { data, total } = await firstValueFrom(this.reviewReplyService.findRepliesForEpisodeReview(episodeReviewId, query));
     return ResponseBuilder.createPaginatedResponse({
       data: data.map((item: ReviewReplyDto) => plainToInstance(ReviewReplyDto, item, { excludeExtraneousValues: true })),
       totalItems: total,
