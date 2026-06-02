@@ -282,8 +282,12 @@ export class ReviewReplyController {
     description: 'Reply not found',
   })
   @UseGuards(JwtAuthGuard)
-  async deleteReply(@Param('id') id: string, @UserSession('id') userId: string) {
-    await firstValueFrom(this.reviewReplyService.deleteReply(id, userId));
+  async deleteReply(
+    @Param('id') id: string,
+    @UserSession('id') userId: string,
+    @UserSession('isAdmin') isAdmin: boolean,
+  ) {
+    await firstValueFrom(this.reviewReplyService.deleteReply(id, isAdmin ? undefined : userId));
     return ResponseBuilder.createResponse({
       message: 'Reply deleted successfully',
       data: null,

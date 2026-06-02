@@ -103,20 +103,20 @@ export class ReportService {
 
   private async enrichReport(report: EntityReport) {
     const reporter = await this.getExternalInfo(this.userClient, 'user.getById', { id: report.reporterId });
-    
-    let target: any = null;
+
+    let review: any = null;
+    let episodeReview: any = null;
     if (report.type === REPORT_TYPE.REVIEW) {
-      target = await this.reviewRepository.findOne({ where: { id: report.targetId } });
+      review = await this.reviewRepository.findOne({ where: { id: report.targetId } });
     } else if (report.type === REPORT_TYPE.EPISODE_REVIEW) {
-      target = await this.reviewEpisodeRepository.findOne({ where: { id: report.targetId } });
-    } else if (report.type === REPORT_TYPE.REVIEW_REPLY) {
-      target = await this.reviewReplyRepository.findOne({ where: { id: report.targetId } });
+      episodeReview = await this.reviewEpisodeRepository.findOne({ where: { id: report.targetId } });
     }
 
     return {
       ...report,
       reporter,
-      target,
+      review,
+      episodeReview,
     };
   }
 
@@ -239,8 +239,9 @@ export class ReportService {
     });
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(id: string): Promise<boolean> {
     const report = await this.findOne(id);
     await this.reportRepository.remove(report);
+    return true;
   }
 }
