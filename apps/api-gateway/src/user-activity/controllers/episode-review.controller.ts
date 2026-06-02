@@ -131,8 +131,9 @@ export class EpisodeReviewController {
   async getReviewForEpisode(
     @Param('episodeId') episodeId: string,
     @Query() query: PaginationQueryDto,
+    @Query('userId') userId?: string,
   ) {
-    const {data, total} = await firstValueFrom(this.episodeReviewService.getEpisodeReviewsByEpisodeId(query && {episodeId}));
+    const {data, total} = await firstValueFrom(this.episodeReviewService.getEpisodeReviewsByEpisodeId({ ...query, episodeId, ...(userId ? { userId } : {}) }));
     return ResponseBuilder.createPaginatedResponse({
       data: data.map((item: EpisodeReviewDto) => plainToInstance(EpisodeReviewDto, item, { excludeExtraneousValues: true })),
       totalItems: total,

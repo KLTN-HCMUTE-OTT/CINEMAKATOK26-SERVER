@@ -33,7 +33,7 @@ export class EpisodeReviewService {
 
     getEpisodeReviewsByEpisodeId(query: PaginationQueryDto & { episodeId?: string; userId?: string; status?: REVIEW_STATUS }): Observable<any> {
         return this.userActivityClient
-            .send({ cmd: 'activity.episode-review.list-by-episode' }, { query, episodeId: query.episodeId, status: query.status })
+            .send({ cmd: 'activity.episode-review.list-by-episode' }, { ...query })
             .pipe(catchRpcError());
     }
 
