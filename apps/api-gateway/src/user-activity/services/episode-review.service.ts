@@ -55,7 +55,7 @@ export class EpisodeReviewService {
             .pipe(catchRpcError());
     }
 
-    deleteEpisodeReview(episodeReviewId: string, userId: string): Observable<any> {
+    deleteEpisodeReview(episodeReviewId: string, userId?: string): Observable<any> {
         return this.userActivityClient
             .send({ cmd: 'activity.episode-review.delete' }, { episodeReviewId, userId })
             .pipe(catchRpcError());

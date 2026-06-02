@@ -33,7 +33,7 @@ export class ReviewService {
         return this.reviewClient.send({ cmd: 'activity.review.update' }, { ...updateReviewDto, id, userId }).pipe(catchRpcError());
     }
 
-    deleteReview(id: string, userId: string): Observable<any> {
+    deleteReview(id: string, userId?: string): Observable<any> {
         return this.reviewClient.send({ cmd: 'activity.review.delete' }, { id, userId }).pipe(catchRpcError());
     }
 

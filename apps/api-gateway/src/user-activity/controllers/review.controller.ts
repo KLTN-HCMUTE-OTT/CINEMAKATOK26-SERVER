@@ -199,8 +199,12 @@ export class ReviewController {
     description: 'Review not found',
   })
   @UseGuards(JwtAuthGuard)
-  async deleteReview(@Param('id') id: string, @UserSession('id') userId: string) {
-    await firstValueFrom(this.reviewService.deleteReview(id, userId));
+  async deleteReview(
+    @Param('id') id: string,
+    @UserSession('id') userId: string,
+    @UserSession('isAdmin') isAdmin: boolean,
+  ) {
+    await firstValueFrom(this.reviewService.deleteReview(id, isAdmin ? undefined : userId));
     return ResponseBuilder.createResponse({
       message: 'Review deleted successfully',
       data: null,
