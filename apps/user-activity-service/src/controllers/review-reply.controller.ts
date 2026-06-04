@@ -23,19 +23,19 @@ export class ReviewReplyController {
     }
 
     @MessagePattern({ cmd: 'activity.review-reply.list-for-review' })
-    findRepliesForReview(@Payload() payload: PaginationQueryDto & { reviewId: string, parentReplyId?: string } ) {
+    findRepliesForReview(@Payload() payload: PaginationQueryDto & { reviewId: string, parentReplyId?: string, status?: REVIEW_STATUS } ) {
         const { reviewId, parentReplyId, ...query } = payload;
         return this.reviewReplyService.findReplies({ ...query, reviewId, parentReplyId });
     }
 
     @MessagePattern({ cmd: 'activity.review-reply.list-for-episode-review' })
-    findRepliesForEpisodeReview(@Payload() payload: PaginationQueryDto & { episodeReviewId: string, parentReplyId?: string } ) {
+    findRepliesForEpisodeReview(@Payload() payload: PaginationQueryDto & { episodeReviewId: string, parentReplyId?: string, status?: REVIEW_STATUS } ) {
         const { episodeReviewId, parentReplyId, ...query } = payload;
         return this.reviewReplyService.findReplies({ ...query, episodeReviewId, parentReplyId });
     }
 
     @MessagePattern({ cmd: 'activity.review-reply.list-by-user' })
-    findRepliesByUserId(@Payload() payload: PaginationQueryDto & { userId: string, parentReplyId?: string } ) {
+    findRepliesByUserId(@Payload() payload: PaginationQueryDto & { userId: string, parentReplyId?: string, status?: REVIEW_STATUS } ) {
         const { userId, parentReplyId, ...query } = payload;
         return this.reviewReplyService.findReplies({ ...query, userId, parentReplyId });
     }

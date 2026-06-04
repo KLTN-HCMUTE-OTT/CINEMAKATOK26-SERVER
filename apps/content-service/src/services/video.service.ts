@@ -38,7 +38,7 @@ export class VideoService {
       throw new BadRequestException({
         code: ERROR_CODE.UNEXPECTED_ERROR,
         message: 'Failed to create video',
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -114,8 +114,7 @@ export class VideoService {
         updateData.violenceScore = updateDto.violenceScore;
       if (updateDto.violentSegments !== undefined)
         updateData.violentSegments = updateDto.violentSegments;
-      if (updateDto.isNude !== undefined)
-        updateData.isNude = updateDto.isNude;
+      if (updateDto.isNude !== undefined) updateData.isNude = updateDto.isNude;
       if (updateDto.nudityScore !== undefined)
         updateData.nudityScore = updateDto.nudityScore;
       if (updateDto.nuditySegments !== undefined)
@@ -131,7 +130,7 @@ export class VideoService {
       throw new BadRequestException({
         code: ERROR_CODE.UNEXPECTED_ERROR,
         message: 'Failed to update video',
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -291,6 +290,12 @@ export class VideoService {
     }
 
     if (video.ownerType === VideoOwnerType.MOVIE) {
+      if (!video.ownerId) {
+        throw new NotFoundException({
+          message: `Movie ownerId is null for video`,
+          code: ERROR_CODE.ENTITY_NOT_FOUND,
+        });
+      }
       const movie = await this.movieRepository.findOne({
         where: { id: video.ownerId },
       });

@@ -8,6 +8,7 @@ import { JwtAuthGuard, IsAdminGuard } from '@app/common/guards';
 import { ApiResponseDto, ResponseBuilder, PaginatedApiResponseDto, PaginationQueryDto} from '@app/common/utils/dto';
 import { EpisodeReviewDto, CreateEpisodeReviewDto, UpdateEpisodeReviewDto } from "@app/common/dtos/user-activity/episode-review.dto";
 import { plainToInstance } from "class-transformer";
+import { REVIEW_STATUS } from "@app/common/enums/global.enum";
 @Controller('episode-reviews')
 @ApiTags('User Activity / episode-reviews')
 @ApiBearerAuth('access-token')
@@ -130,7 +131,7 @@ export class EpisodeReviewController {
   })
   async getReviewForEpisode(
     @Param('episodeId') episodeId: string,
-    @Query() query: PaginationQueryDto,
+    @Query() query: PaginationQueryDto & { status?: REVIEW_STATUS },
     @Query('userId') userId?: string,
   ) {
     const {data, total} = await firstValueFrom(this.episodeReviewService.getEpisodeReviewsByEpisodeId({ ...query, episodeId, ...(userId ? { userId } : {}) }));
