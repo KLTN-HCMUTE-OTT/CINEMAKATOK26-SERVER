@@ -49,8 +49,8 @@ describe('DrmLicenseService', () => {
 
     expect(result.keys).toHaveLength(1);
     expect(result.keys[0].kty).toBe('oct');
-    expect(orderClient.send).toHaveBeenCalledWith('subscription.check', { userId: mockUserId });
-    expect(contentClient.send).toHaveBeenCalledWith('content.getAccessTier', { contentId: mockContentId });
+    expect(orderClient.send).toHaveBeenCalledWith({ cmd: 'order.checkSubscription' }, { userId: mockUserId });
+    expect(contentClient.send).toHaveBeenCalledWith({ cmd: 'content.getMovieOrSeriesFromVideo' }, { videoId: mockContentId });
   });
 
   it('should issue license for premium user on premium content', async () => {
@@ -81,7 +81,13 @@ describe('DrmLicenseService', () => {
 
   it('should block basic user on premium content', async () => {
     orderClient.send.mockReturnValue(of({ isActive: true, plan: 'basic' }));
-    contentClient.send.mockReturnValue(of({ accessTier: 'premium' }));
+    // fetchAccessTier does: getMovieOrSeriesFromVideo → getMovieById
+    // Two service calls per issueClearKeyLicense invocation (called twice below)
+    contentClient.send
+      .mockReturnValueOnce(of({ movieId: 'movie-1' }))
+      .mockReturnValueOnce(of({ metaData: { accessTier: 'PREMIUM' } }))
+      .mockReturnValueOnce(of({ movieId: 'movie-1' }))
+      .mockReturnValueOnce(of({ metaData: { accessTier: 'PREMIUM' } }));
 
     await expect(
       service.issueClearKeyLicense(mockKeyIds, mockUserId, mockContentId),
