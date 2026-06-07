@@ -141,9 +141,14 @@
       "<rootDir>/apps/",
       "<rootDir>/libs/"
     ],
+    "modulePaths": [
+      "<rootDir>"
+    ],
     "moduleNameMapper": {
       "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
-      "^@app/core(|/.*)$": "<rootDir>/libs/core/src/$1"
+      "^@app/core(|/.*)$": "<rootDir>/libs/core/src/$1",
+      "^libs/common/src(|/.*)$": "<rootDir>/libs/common/src/$1",
+      "^libs/core/src(|/.*)$": "<rootDir>/libs/core/src/$1"
     }
   }
 }
