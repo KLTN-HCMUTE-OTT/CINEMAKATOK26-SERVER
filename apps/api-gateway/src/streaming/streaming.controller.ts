@@ -37,13 +37,14 @@ import { StreamingGatewayService } from './streaming.service';
 import { EntitlementGuard } from './guards/entitlement.guard';
 
 @ApiTags('Streaming')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @Controller('videos')
 export class StreamingController {
   constructor(private readonly streamingService: StreamingGatewayService) {}
 
   @Post('upload')
   @UseGuards(JwtAuthGuard, IsAdminGuard)
+  @ApiBearerAuth('access-token')
   @UseInterceptors(FileInterceptor('file', multerConfig))
   @ApiOperation({ summary: '[ADMIN] Upload video for HLS encoding' })
   @ApiConsumes('multipart/form-data')
@@ -131,6 +132,7 @@ export class StreamingController {
   // ─── DRM Endpoints ────────────────────────────────────────────────────────────
 
   @UseGuards(JwtAuthGuard, EntitlementGuard)
+  @ApiBearerAuth('access-token')
   @Get(':videoId/manifest')
   @ApiOperation({
     summary: 'Get signed DASH manifest URL for DRM-protected video',
@@ -150,7 +152,9 @@ export class StreamingController {
 
     // Also set signed cookies for segment access
     const cookieResult = (await firstValueFrom(
-      this.streamingService.getFileAccess(`videos/${videoId}/dash/manifest.mpd`),
+      this.streamingService.getFileAccess(
+        `videos/${videoId}/dash/manifest.mpd`,
+      ),
     )) as any;
 
     Object.keys(cookieResult.cookies || {}).forEach((key) => {
@@ -165,6 +169,7 @@ export class StreamingController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
   @Get(':videoId/drm-info')
   @ApiOperation({
     summary: 'Get DRM key info (keyId) for a video',

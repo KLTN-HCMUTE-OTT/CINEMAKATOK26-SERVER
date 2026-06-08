@@ -1,0 +1,188 @@
+/**
+ * Curated, realistic catalog used by `db/seed-full-content.ts`.
+ *
+ * Each `poster` is a TMDB poster_path (e.g. `oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg`).
+ * The seed script turns it into:
+ *   - thumbnail: https://image.tmdb.org/t/p/w500/<poster>
+ *   - banner:    https://image.tmdb.org/t/p/w1280/<backdrop ?? poster>
+ * Both size variants resolve from the same asset, so a valid poster path
+ * alone guarantees non-broken images. The seed verifies every URL with a
+ * HEAD request before inserting and skips/repairs anything that 404s.
+ */
+
+export interface CatalogItem {
+  title: string;
+  year: number;
+  poster: string;
+  backdrop?: string;
+  imdb: number;
+  maturity: string; // MaturityRating enum value
+  genres: string[]; // must exist in CATEGORIES
+  overview: string;
+  access?: 'BASIC' | 'PREMIUM';
+}
+
+export const CATEGORIES = [
+  'Action',
+  'Adventure',
+  'Animation',
+  'Comedy',
+  'Crime',
+  'Drama',
+  'Family',
+  'Fantasy',
+  'Horror',
+  'Mystery',
+  'Romance',
+  'Sci-Fi',
+  'Thriller',
+  'War',
+  'History',
+  'Documentary',
+  'Music',
+];
+
+export const TAGS = [
+  'Trending',
+  'Award Winning',
+  'Based on a True Story',
+  'Cult Classic',
+  'Blockbuster',
+  'Critically Acclaimed',
+  'Family Friendly',
+  'Mind-Bending',
+  'Feel Good',
+  'Dark',
+  'Epic',
+  'Binge-Worthy',
+];
+
+const m = (
+  title: string,
+  year: number,
+  poster: string,
+  imdb: number,
+  maturity: string,
+  genres: string,
+  overview: string,
+  backdrop?: string,
+): CatalogItem => ({
+  title,
+  year,
+  poster,
+  backdrop,
+  imdb,
+  maturity,
+  genres: genres.split(',').map((g) => g.trim()),
+  overview,
+});
+
+export const MOVIES: CatalogItem[] = [
+  m('Inception', 2010, 'oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg', 8.8, 'PG-13', 'Sci-Fi,Action,Thriller', 'A skilled thief who steals secrets from deep within the subconscious during the dream state is offered a chance to have his past crimes forgiven if he can plant an idea into a target’s mind.', 's3TLGm764x06HpVHkb0YGNct6jK.jpg'),
+  m('Interstellar', 2014, 'gEU2QniE6E77NI6lCU6MxlNBvIx.jpg', 8.7, 'PG-13', 'Sci-Fi,Adventure,Drama', 'With Earth dying, a former pilot leads a desperate mission through a wormhole to find humanity a new home among the stars.', 'xJHokMbljvj8raU4LXdYbsROZbV.jpg'),
+  m('The Dark Knight', 2008, 'qJ2tW6WMUDux911r6m7haRef0WH.jpg', 9.0, 'PG-13', 'Action,Crime,Drama', 'Batman raises the stakes in his war on crime, but a rising anarchist known as the Joker plunges Gotham into chaos.', 'nMKdUUepR0i5zn0y1T4CsSB5chy.jpg'),
+  m('Parasite', 2019, '7IiTTgloJzvGI1TAYymCfbfl3vT.jpg', 8.5, 'R', 'Drama,Thriller,Comedy', 'A poor family schemes to become employed by a wealthy household, only to spiral into an unpredictable web of deceit.', 'TU9NIjwzjoKPwQHoHshkFcQUCG.jpg'),
+  m('Avengers: Endgame', 2019, 'or06FN3Dka5tukK1e9sl16pB3iy.jpg', 8.4, 'PG-13', 'Action,Adventure,Sci-Fi', 'After the devastating snap, the remaining Avengers assemble one final time to undo Thanos’ actions and restore the universe.', '7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg'),
+  m('Joker', 2019, 'udDclJoHjfjb8Ekgsd4FDteOkCU.jpg', 8.4, 'R', 'Crime,Drama,Thriller', 'A failed comedian in a decaying city descends into madness and is reborn as the criminal mastermind known as the Joker.', 'n6bUvigpRFqSwmPp1m2YADdbRBc.jpg'),
+  m('Dune', 2021, 'd5NXSklXo0qyIYkgV94XAgMIckC.jpg', 8.0, 'PG-13', 'Sci-Fi,Adventure,Drama', 'A gifted young heir travels to the most dangerous planet in the universe to secure the future of his family and his people.', 'jYEW5xZkZk2WTrdbMGAPFuBqbDc.jpg'),
+  m('Oppenheimer', 2023, '8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg', 8.3, 'R', 'Drama,History,War', 'The story of J. Robert Oppenheimer and his role in the development of the atomic bomb during World War II.', 'fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg'),
+  m('Barbie', 2023, 'iuFNMS8U5cb6xfzi51Dbkovj7vM.jpg', 6.8, 'PG-13', 'Comedy,Adventure,Fantasy', 'Barbie suffers a crisis that leads her to question her world and her existence, embarking on a journey into the real world.', 'nHf61UzkfFno5X1ofIhugCPus2R.jpg'),
+  m('Spirited Away', 2001, '39wmItIWsg5sZMyRUHLkWBcuVCM.jpg', 8.6, 'PG', 'Animation,Family,Fantasy', 'A young girl wanders into a mysterious world of spirits and must work to free herself and her parents from a witch’s curse.', 'Ab8mkHmkY8nbBnHQrJUEHfGfDxn.jpg'),
+  m('The Matrix', 1999, 'f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg', 8.7, 'R', 'Sci-Fi,Action', 'A hacker discovers that reality is a simulation and joins a rebellion to free humanity from machine enslavement.', 'icmmSD4vTTDKOq2vvdulafOGw93.jpg'),
+  m('Forrest Gump', 1994, 'arw2vcBveWOVZr6pxd9XTd1TdQa.jpg', 8.8, 'PG-13', 'Drama,Romance,Comedy', 'The extraordinary life of a kind-hearted man from Alabama who unwittingly influences several defining historical moments.', '7c9UVPPiTPltouxRVY6w9Z2EU54.jpg'),
+  m('The Shawshank Redemption', 1994, 'q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg', 9.3, 'R', 'Drama,Crime', 'Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency.', 'kXfqcdQKsToO0OUXHcrrNCHDBzO.jpg'),
+  m('Pulp Fiction', 1994, 'd5iIlFn5s0ImszYzBPb8JPIfbXD.jpg', 8.9, 'R', 'Crime,Thriller', 'The lives of two mob hitmen, a boxer, and a gangster’s wife intertwine in four tales of violence and redemption.', 'suaEOtk1N1sgg2MTM7oZd2cfVp3.jpg'),
+  m('Gladiator', 2000, 'ty8TGRuvJLPUmAR1H1nRIsgwvim.jpg', 8.5, 'R', 'Action,Drama,Adventure', 'A betrayed Roman general rises through the gladiatorial arena to avenge the murder of his family and his emperor.', 'd8njO4qWPSPYUuMr3CSlvKjkP4y.jpg'),
+  m('Titanic', 1997, '9xjZS2rlVxm8SFx8kPC3aIGCOYQ.jpg', 7.9, 'PG-13', 'Romance,Drama,History', 'A young aristocrat and a penniless artist fall in love aboard the ill-fated maiden voyage of the RMS Titanic.', 'yDI6D5ZQh67YU4r2ms8qcSbAviZ.jpg'),
+  m('The Godfather', 1972, '3bhkrj58Vtu7enYsRolD1fZdja1.jpg', 9.2, 'R', 'Crime,Drama', 'The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son.', 'tmU7GeKVybMWFButWEGl2M4GeiP.jpg'),
+  m('Whiplash', 2014, '7fn624j5lj3xTme2SgiLCeuedmO.jpg', 8.5, 'R', 'Drama,Music', 'A promising young drummer enrolls at a cut-throat music conservatory where his dreams are pushed to the brink by a ruthless instructor.', '6bbZ6XyvgfjhQwbplnUh1LSj1ky.jpg'),
+  m('Coco', 2017, 'gGEsBPAijhVUFoiNpgZXqRVWJt2.jpg', 8.4, 'PG', 'Animation,Family,Fantasy', 'A young musician embarks on a journey through the Land of the Dead to uncover his family’s history and his true calling.', 'askg3SMvhqEl4OL52YuvdtY40Yb.jpg'),
+  m('Spider-Man: Into the Spider-Verse', 2018, 'iiZZdoQBEYBv6id8su7ImL0oCbD.jpg', 8.4, 'PG', 'Animation,Action,Adventure', 'Teenager Miles Morales becomes Spider-Man and joins heroes from other dimensions to stop a threat to all realities.', '7d6EYECyHIz1Fj4mUZQUTtjk7Ux.jpg'),
+  m('La La Land', 2016, 'uDO8zWDhfWwoFdKS4fzkUJt0Rf0.jpg', 8.0, 'PG-13', 'Romance,Drama,Music', 'A jazz pianist and an aspiring actress fall in love while pursuing their dreams in a city known for crushing them.', 'nlPCdZlHtRNcF6C9hzUH4xQp9P6.jpg'),
+  m('Mad Max: Fury Road', 2015, '8tZYtuWezp8JbcsvHYO0O46tFbo.jpg', 8.1, 'R', 'Action,Adventure,Sci-Fi', 'In a post-apocalyptic wasteland, a drifter and a rebel warrior flee a tyrant in a relentless, high-octane road war.', 'phszHPFVhPHhMZgo0fWTKBDQsJA.jpg'),
+  m('The Lion King', 1994, 'sKCr78MXSLixwmZ8DyJLrpMsd15.jpg', 8.5, 'G', 'Animation,Family,Drama', 'A young lion prince flees his kingdom after his father’s death, only to return and reclaim his rightful throne.', '1TUg5pO1VZ4B0Q1amk3OlXvlpXV.jpg'),
+  m('Avatar', 2009, 'kyeqWdyUXW608qlYkRqosgbbJyK.jpg', 7.9, 'PG-13', 'Sci-Fi,Adventure,Action', 'A paralyzed marine on the lush moon Pandora becomes torn between following orders and protecting the world he calls home.', 'Yc9q6QuWrMp9nuDm5R8ExNqbEq.jpg'),
+  m('Fight Club', 1999, 'pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg', 8.8, 'R', 'Drama,Thriller', 'An insomniac office worker and a soap salesman form an underground fight club that evolves into something far more dangerous.', 'rr7E0NoGKxvbkb89eR1GwfoYjpA.jpg'),
+  m('The Grand Budapest Hotel', 2014, 'eWdyYQreja6JGCzqHWXpWHDrrPo.jpg', 8.1, 'R', 'Comedy,Drama,Adventure', 'A legendary concierge and his trusted lobby boy become embroiled in the theft of a priceless painting and a family fortune.', 'xnopI5Xtky18MPhK40cZAGAOVeV.jpg'),
+  m('Django Unchained', 2012, '7oWY8VDWW7thTzWh3OKYRkWUlD5.jpg', 8.5, 'R', 'Drama,Action', 'A freed slave teams up with a bounty hunter to rescue his wife from a brutal plantation owner in the Deep South.', '2oZklIzUbvZXXzIFzv7Hi68d6xf.jpg'),
+  m('Guardians of the Galaxy', 2014, 'r7vmZjiyZw9rpJMQJdXpjgiCOk9.jpg', 8.0, 'PG-13', 'Action,Adventure,Sci-Fi', 'A band of misfit outlaws must put aside their differences to protect a powerful orb from a fanatical warlord.', 'y4MBh0EjBlMuOzv9axM4qJlmhzz.jpg'),
+  m('The Prestige', 2006, '5MlvT4DZIdkpb7A9t375HU6XdmQ.jpg', 8.5, 'PG-13', 'Drama,Mystery,Thriller', 'Two rival magicians in Victorian London push their obsession with the perfect illusion to dark and deadly extremes.', 'q9ow2pjmYT703Bz8nNTYrIljPpa.jpg'),
+  m('Toy Story', 1995, 'uXDfjJbdP4ijW5hWSBrPrlKpxab.jpg', 8.3, 'G', 'Animation,Family,Comedy', 'A cowboy doll is threatened and jealous when a flashy new spaceman action figure supplants him as a boy’s favorite toy.', '9SXNXFvBL5OVZxWvXHcECG5YDvc.jpg'),
+  m('The Departed', 2006, 'nT97ifVT2J1yMQmeq20Qblg61T.jpg', 8.5, 'R', 'Crime,Thriller,Drama', 'An undercover cop and a mole in the police race to identify each other before their double lives unravel.', '8Od5zV7Q7zNOX0y9tyNgpTmoiGA.jpg'),
+  m('Your Name.', 2016, 'q719jXXEzOoYaps6babgKnONONX.jpg', 8.4, 'PG', 'Animation,Romance,Fantasy', 'Two strangers discover they are mysteriously swapping bodies and set out to find each other across time and space.', 'mMtUybQ6hL24FXo0F3Z4j2KG7kZ.jpg'),
+  m('Knives Out', 2019, 'pThyQovXQrw2m0s9x82twj48Jq4.jpg', 7.9, 'PG-13', 'Mystery,Comedy,Crime', 'A master detective is hired to investigate the suspicious death of a wealthy patriarch surrounded by a scheming family.', '4HWAQu28e2yaWrtupFPGFkdNU7V.jpg'),
+  m('1917', 2019, 'iZf0KyrE25z1sage4SYFLCCrMi9.jpg', 8.2, 'R', 'War,Drama,History', 'Two young British soldiers race against time across enemy territory to deliver a message that could save hundreds of lives.', 'mfnFh33Qk8YjbcLwQDmGmd0gXmh.jpg'),
+  m('Deadpool', 2016, '3E53WEZJqP6aM84D8CckXx4pIHw.jpg', 8.0, 'R', 'Action,Comedy,Adventure', 'A wisecracking mercenary gains accelerated healing powers and adopts a new identity to hunt the man who destroyed his life.', 'n1y094tVDFATSzkTnFxoGZ1qNsG.jpg'),
+  m('The Wolf of Wall Street', 2013, '34m2tygAYBGqA9MXKhRDtzYd4MR.jpg', 8.2, 'R', 'Crime,Drama,Comedy', 'A New York stockbroker’s meteoric rise to wealth through fraud collapses into excess, addiction, and federal investigation.', 'pErHsZAjfWncrwd3xJq4OAUVB1Z.jpg'),
+  m('Inglourious Basterds', 2009, '7sfbEnaARXDDhKm0CZ7D7uc2sbo.jpg', 8.3, 'R', 'War,Drama,Thriller', 'In Nazi-occupied France, a plot to assassinate Hitler converges with a Jewish cinema owner’s personal quest for vengeance.', 'jPC9z6Qg7g5jvr2K2VqHc7QFnkd.jpg'),
+  m('Shutter Island', 2010, '4GDy0PHYX3VRXUtwK5ysFbg3kEx.jpg', 8.2, 'R', 'Thriller,Mystery,Drama', 'A U.S. Marshal investigates the disappearance of a patient from a remote island asylum and uncovers a terrifying truth.', 'icSPjPasFV9k0v2C8gtVgmHmTRJ.jpg'),
+  m('The Truman Show', 1998, 'vuza0WqY239yBXOadKlGwJsZJFE.jpg', 8.2, 'PG', 'Drama,Comedy,Sci-Fi', 'A man discovers that his entire life is an elaborate, televised reality show broadcast to millions around the world.', 'iVcROQs2DwOHK7gQHFnzgwzKAdL.jpg'),
+  m('Get Out', 2017, 'tFXcEccSQMf3lfhfXKSU9iRBpa3.jpg', 7.8, 'R', 'Horror,Thriller,Mystery', 'A young man uncovers a disturbing secret when he visits his girlfriend’s seemingly welcoming family estate.', 'avML9KQQDIqynvfswPyM2BLN0Eb.jpg'),
+  m('A Beautiful Mind', 2001, 'zwzWCmH72OSC9NA0ipoqw5Zjya8.jpg', 8.2, 'PG-13', 'Drama,Romance', 'A brilliant but troubled mathematician battles schizophrenia while making a discovery that changes the world.', 'sP3xkUFT8VLrhrAUvDqEXZQXrTz.jpg'),
+  m('No Country for Old Men', 2007, '6d5XOczc226jECq0LIX0siKtgHR.jpg', 8.2, 'R', 'Crime,Thriller,Drama', 'A hunter stumbles upon a drug deal gone wrong and a fortune in cash, unleashing a relentless and merciless killer.', 'uMfFAxXcsKKvHff48 kZqYqf.jpg'),
+  m('The Silence of the Lambs', 1991, 'uS9m8OBk1A8eM9I042bx8XXpqAq.jpg', 8.6, 'R', 'Thriller,Crime,Horror', 'A young FBI trainee seeks the help of an imprisoned cannibal to catch another serial killer still on the loose.', 'mfwq2nMBzArzQ7Y9RKE8SKeeTkg.jpg'),
+  m('Saving Private Ryan', 1998, '1wY4psJ5NVEhCuOYROwLH2XExM2.jpg', 8.6, 'R', 'War,Drama,History', 'Following the Normandy landings, a squad of soldiers ventures behind enemy lines to retrieve a paratrooper.', 'fGwUbfNYZ8KvLAS9MAefkU2KX5T.jpg'),
+  m('The Lord of the Rings: The Fellowship of the Ring', 2001, '6oom5QYQ2yQTMJIbnvbkBL9cHo6.jpg', 8.9, 'PG-13', 'Fantasy,Adventure,Action', 'A hobbit inherits a powerful ring and sets out with a fellowship of heroes to destroy it before it falls to darkness.', 'vRQnzOn4HjIMX4LBq9nHhFXbsSu.jpg'),
+  m('Top Gun: Maverick', 2022, '62HCnUTziyWcpDaBO2i1DX17ljH.jpg', 8.2, 'PG-13', 'Action,Drama', 'A daring naval aviator returns to train an elite squad for a near-impossible mission that demands the ultimate sacrifice.', 'AaV1YIdWKnjAIAOe8UUKBFm327v.jpg'),
+  m('Everything Everywhere All at Once', 2022, 'u68AjlvlutfEIcpmbYpKcdi09ut.jpg', 8.0, 'R', 'Sci-Fi,Comedy,Adventure', 'An overwhelmed laundromat owner discovers she must connect with parallel versions of herself to save the multiverse.', 'rgVQ9ev5SGm5BvfShdGAuFOWdHB.jpg'),
+  m('The Batman', 2022, 'b0PlSFdDwbyK0cf5RxwDpaOJQvQ.jpg', 7.8, 'PG-13', 'Crime,Action,Mystery', 'In his second year of fighting crime, Batman pursues a sadistic killer leaving cryptic clues across Gotham City.', 'b8dqJiq2VBzgYz3DqExuXKK1V9.jpg'),
+  m('John Wick', 2014, 'fZPSd91yGE9fCcCe6OoQr6E3Bev.jpg', 7.4, 'R', 'Action,Thriller,Crime', 'A retired hitman is forced back into the underworld after a gangster’s son kills the puppy left by his late wife.', '7dzngS8pLkGJpyeskCFcjPO9qLF.jpg'),
+  m('Tenet', 2020, 'k68nPLbIST6NP96JmTxmZ0V3qF8.jpg', 7.3, 'PG-13', 'Sci-Fi,Action,Thriller', 'Armed with a single word, a secret agent manipulates the flow of time to prevent an attack worse than nuclear war.', 'wM7vyKcVKxLpRBOJFNYjlQxAuxg.jpg'),
+  m('Soul', 2020, 'hm58Jw4Lw8OIeECIq5qyPYhAeRJ.jpg', 8.0, 'PG', 'Animation,Family,Fantasy', 'A jazz musician who has lost his passion for music is transported to another realm to rediscover what it means to live.', 'kf456ZqeC45XTvo6W9pW5clYKfQ.jpg'),
+  m('Blade Runner 2049', 2017, 'gajva2L0rPYkEWjzgFlBXCAVBE5.jpg', 8.0, 'R', 'Sci-Fi,Drama,Thriller', 'A young blade runner unearths a long-buried secret that could plunge what’s left of society into chaos.', 'ilRyazdMJwN05exqhwK4tMKBYZs.jpg'),
+  m('The Revenant', 2015, 'ji3ecJphATlVgWNY0B0RVXZizdf.jpg', 8.0, 'R', 'Adventure,Drama,Action', 'A frontiersman left for dead by his companions battles the wilderness and his own body to survive and seek revenge.', 'g2pDUdcrI51tNgVQ2W7vNQF3DBs.jpg'),
+  m('Goodfellas', 1990, 'aKuFiU82s5ISJpGZp7YkIr3kCUd.jpg', 8.7, 'R', 'Crime,Drama', 'The rise and fall of a mob associate spanning three decades of loyalty, betrayal, and life inside organized crime.', 'sw7mordbZxgITU877yTpZCud90M.jpg'),
+  m('Schindler\'s List', 1993, 'sF1U4EUQS8YHUYjNl3pMGNIQyr0.jpg', 9.0, 'R', 'Drama,History,War', 'A German industrialist gradually becomes the unlikely savior of more than a thousand Jewish refugees during the Holocaust.', 'loRmRzQXZeqG78Tq Znp2.jpg'),
+  m('The Green Mile', 1999, 'velWPhVMQeQKcxggNEU8YmIo52R.jpg', 8.6, 'R', 'Drama,Fantasy,Crime', 'Death row guards form a bond with a towering inmate who possesses a mysterious and miraculous healing gift.', 'l6hQWH9eDksNJNiXWYRkWqikOdu.jpg'),
+  m('Up', 2009, 'vpbaStTMt8qqXaEgnOR2EE4DIJk.jpg', 8.3, 'G', 'Animation,Family,Adventure', 'An elderly widower ties thousands of balloons to his house and embarks on the South American adventure he always dreamed of.', 'cb4cYTBCnYUEEDIvFGRy3DLb74m.jpg'),
+  m('WALL·E', 2008, 'hbhFnRzzg6ZDmm8YAmxBnQpQIPh.jpg', 8.4, 'G', 'Animation,Family,Sci-Fi', 'A lonely waste-collecting robot left on an abandoned Earth discovers a new purpose when he meets a sleek probe named EVE.', 'aOmRZ2 zPveZ.jpg'),
+  m('Ford v Ferrari', 2019, 'dR1Ju50iudrOh3YgfwhhWE9bxzj.jpg', 8.1, 'PG-13', 'Drama,Action,History', 'An American car designer and a fearless driver battle corporate interference to build a car capable of beating Ferrari at Le Mans.', '8tVtBtABe5l8brsmM1bjW6oeVPe.jpg'),
+  m('A Quiet Place', 2018, 'nAU74GmpUk7t5iPrTzb3A8Pma2N.jpg', 7.5, 'PG-13', 'Horror,Thriller,Sci-Fi', 'A family must live in silence to avoid blind creatures that hunt by sound, in a world overrun by deadly predators.', 'roYyPiQDQKmIKUEhO912693tSja.jpg'),
+  m('Logan', 2017, 'fnbjcRDYn6YviCcePDnGdyAkYsB.jpg', 8.1, 'R', 'Action,Drama,Sci-Fi', 'An aging Wolverine protects a young mutant with similar powers while confronting his own fading strength and mortality.', '5pAGnkFYSsFJ99ZxDIYnhQbQFXs.jpg'),
+  m('The Imitation Game', 2014, 'noUp0XOqIcmgefRnRZa1nhtRvWO.jpg', 8.0, 'PG-13', 'Drama,History,War', 'Mathematician Alan Turing races to crack the Nazi Enigma code while hiding a secret that could destroy him.', 'dwUq8t3hKkmTW2KFBjdyDpzVegz.jpg'),
+  m('Coraline', 2009, '4jeFXQYytChdZYE9JYO7Un87IlW.jpg', 7.7, 'PG', 'Animation,Family,Fantasy', 'A curious girl discovers a hidden door to an idealized parallel world that hides a sinister secret.', 'icHLqUv3tlVtwQ5lZcSQYpLH28u.jpg'),
+  m('Gone Girl', 2014, 'qymaJhucquUvDg9JfsZTjsKKBKt.jpg', 8.1, 'R', 'Thriller,Mystery,Drama', 'When a woman vanishes on her wedding anniversary, her husband becomes the prime suspect in a media-fueled firestorm.', 'fAcU2nGy4YsZHv7G8e0Z6tnk.jpg'),
+  m('The Social Network', 2010, 'n0ybibhJtQ5icDqTp8eRytcIHJx.jpg', 7.8, 'PG-13', 'Drama,History', 'The contentious founding of Facebook unfolds through lawsuits, broken friendships, and overnight billion-dollar success.', '393Bq9jZS2DMTYZ8 .jpg'),
+  m('Casino Royale', 2006, 'zlWBxz2pTA9p45kUTrI8AQiKrHPY.jpg', 8.0, 'PG-13', 'Action,Thriller,Adventure', 'On his first mission as 007, James Bond confronts a banker financing terrorism in a high-stakes game of poker.', 'EAQM47elCY9rJZ2sjLBuPlw9JR.jpg'),
+  m('Skyfall', 2012, '8z9Kuy8R4tg8t5jWlS9mYUYx5Vi.jpg', 7.8, 'PG-13', 'Action,Thriller,Adventure', 'James Bond’s loyalty to M is tested when her past returns to haunt her and MI6 itself comes under attack.', 'wEU96BkZkeKHzWnXG6lFXdjP9pH.jpg'),
+  m('The Martian', 2015, '5BHuvQ6p9kfc091Z8RiFNhCwL4b.jpg', 8.0, 'PG-13', 'Sci-Fi,Adventure,Drama', 'Stranded alone on Mars after a mission goes wrong, an astronaut must use ingenuity to survive and signal for rescue.', 'sky4ge20Z4dpoBlYTGdT6CcF1MR.jpg'),
+  m('Hacksaw Ridge', 2016, 'mLgNDC0R7BvBeFvuhtJgXgQUcuD.jpg', 8.1, 'R', 'War,Drama,History', 'A combat medic refuses to carry a weapon yet becomes a hero by saving dozens of lives during one of the bloodiest battles of WWII.', '6jSgZ4Ubi9Tw5cnTuW8RhdLBZxq.jpg'),
+  m('Edge of Tomorrow', 2014, 'utQUu71PiVcyqHvxqsdjeX9JmuP.jpg', 7.9, 'PG-13', 'Sci-Fi,Action,Adventure', 'A soldier relives the same brutal alien battle over and over, growing stronger with each death in the fight for humanity.', 'utQUu71PiVcyqHvxqsdjeX9JmuP.jpg'),
+  m('The Pianist', 2002, '2hFvxCCWrTmCYwfy7yum0GKRi3Y.jpg', 8.5, 'R', 'War,Drama,History', 'A Polish-Jewish pianist struggles to survive the destruction of the Warsaw ghetto during the Second World War.', 'd2Vh3Wi3hQ1WxfMo9 wpHA.jpg'),
+  m('Memento', 2000, 'yuNs09hvpHVU1cBTCAk9zxsL2oW.jpg', 8.4, 'R', 'Mystery,Thriller,Drama', 'A man with short-term memory loss uses notes and tattoos to hunt the person he believes killed his wife.', 'oABPVoUTLifBM0BVxlH7CnsdjBu.jpg'),
+  m('Arrival', 2016, 'x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg', 7.9, 'PG-13', 'Sci-Fi,Drama,Mystery', 'A linguist is recruited to communicate with mysterious alien visitors and uncovers a revelation that transcends time.', 'yIZ1xendyqKvY3FGeeUYUd5X9Mm.jpg'),
+  m('Frozen', 2013, 'kgwjIb2JDHRhNk13lmSxiClFjVk.jpg', 7.5, 'PG', 'Animation,Family,Fantasy', 'A fearless princess sets off on an epic journey to find her estranged sister, whose icy powers have trapped the kingdom in winter.', 'pjeMs3yqRmFL3giJy4PMXWZTTPa.jpg'),
+  m('Ratatouille', 2007, 'npHNjldbeTHdKKw28bJKs7lzqzj.jpg', 8.1, 'G', 'Animation,Family,Comedy', 'A rat with a refined palate teams up with a clumsy kitchen worker to become an unlikely culinary sensation in Paris.', 'iZQB7Xp1jR3Mc3GHCAXOZ.jpg'),
+  m('Black Panther', 2018, 'uxzzxijgPIY7slzFvMotPv8wjKA.jpg', 7.3, 'PG-13', 'Action,Adventure,Sci-Fi', 'The new king of a technologically advanced African nation must defend his throne and his people from a vengeful challenger.', 'b6ZJZHUdMEFECvGiDpJjlfUWela.jpg'),
+  m('The Grand Heist', 2013, 'AjbENg7q0nDXH5d8gG2vTPp0xst.jpg', 7.0, 'PG-13', 'Action,Comedy,Adventure', 'A band of thieves plots an audacious heist to steal a fortune in ice during the Joseon dynasty.', 'AjbENg7q0nDXH5d8gG2vTPp0xst.jpg'),
+  m('Drive', 2011, '602vevIURmpDfzbnv5Ubi6wIkQm.jpg', 7.8, 'R', 'Crime,Drama,Thriller', 'A stoic Hollywood stunt driver who moonlights as a getaway driver is drawn into a deadly conspiracy.', '4mFsNQwbD0F237Tx7gAPotd0nbJ.jpg'),
+  m('Prisoners', 2013, 'uhviyknTfHHax8aZdc5zwbmZP5g.jpg', 8.2, 'R', 'Crime,Thriller,Drama', 'When his daughter goes missing, a desperate father takes matters into his own hands as a detective races to find her.', 'sxN7M3aqgfoASjbakndOoznznQp.jpg'),
+  m('The Imaginarium', 2009, 'kE3Aa6vQfWtJYZ8h7nQ1zfKb4ZK.jpg', 6.8, 'PG-13', 'Fantasy,Adventure,Drama', 'A traveling theater troupe offers audiences a magical mirror into their imagination, with a deal struck against the devil.', 'kE3Aa6vQfWtJYZ8h7nQ1zfKb4ZK.jpg'),
+  m('Baby Driver', 2017, 'rmnQ9jKW72byHwG6yWXj3raUngz.jpg', 7.5, 'R', 'Action,Crime,Music', 'A talented getaway driver who relies on the beat of his playlist is coerced into a heist doomed to fail.', 'tC78Pck2YCsLDP2Bck7Vz2ggi63.jpg'),
+  m('Klaus', 2019, 'q125RHUDgR4gjwh1Qkv5T9WSdLB.jpg', 8.2, 'PG', 'Animation,Family,Comedy', 'A selfish postman posted to a frozen town befriends a reclusive toymaker, sparking the legend of Santa Claus.', 'kZmrnyZc6gqXVf6BoUfu1nXErX3.jpg'),
+  m('The Help', 2011, 'l3l4iLLh1xN2J3PDc8XQ9bIWXEW.jpg', 8.1, 'PG-13', 'Drama,History', 'An aspiring writer in 1960s Mississippi documents the lives of Black maids, exposing the prejudice they endure.', 'gAUUbZ5h2tNVnZX2OdmFf1NHmJ.jpg'),
+  m('Sicario', 2015, 'lz8vNyXeidqqOdJW9ZjnDPbWUms.jpg', 7.6, 'R', 'Crime,Thriller,Action', 'An idealistic FBI agent is enlisted into a covert task force to bring down a powerful Mexican drug cartel.', 'mtcVZHIw23q1jdMI6Lkqlrtkj.jpg'),
+  m('Hereditary', 2018, 'p9fmuz2Oj3HtEJEqQIClk1u9Nr0.jpg', 7.3, 'R', 'Horror,Mystery,Drama', 'After the death of their secretive grandmother, a family begins to unravel terrifying truths about their bloodline.', '8U6GTtVENF5l2EFwj0klj66Zdc6.jpg'),
+  m('Wonder', 2017, 'eES5gnXKbY7gYrCEEK1zkQqxlEz.jpg', 8.0, 'PG', 'Drama,Family', 'A boy with a facial difference enters mainstream school for the first time and wins over his classmates and community.', 'mhX1Q5e9XHkAFkdjbcXOQUcrTfV.jpg'),
+  m('Bohemian Rhapsody', 2018, 'lHu1wtNaczFPGFDTrjCSzeLPTKN.jpg', 7.9, 'PG-13', 'Drama,Music,History', 'The story of Freddie Mercury and Queen, from their rise to global fame to their legendary Live Aid performance.', 'lQNmZx6BlMjztBJTUTYO2c2D14L.jpg'),
+  m('The Theory of Everything', 2014, 'oUM6FmsJABMaJpejO5IBWFwhFvy.jpg', 7.7, 'PG-13', 'Drama,Romance', 'The remarkable life and love story of physicist Stephen Hawking as he defies a devastating diagnosis to change science forever.', 'A9pVPVq7XAhJqxXxnsh1xZqVrUp.jpg'),
+  m('Moonlight', 2016, 'qAwFbszz0kRyTuXmMeKQZCX3Q2O.jpg', 7.4, 'R', 'Drama', 'A young Black man grapples with his identity and sexuality across three defining chapters of his life in Miami.', '3HhJOZsDIRWnZpkr5YPNzbhi3rg.jpg'),
+  m('Catch Me If You Can', 2002, 'sdFNUkj4dxBKABXa31WMUgDfTH3.jpg', 8.1, 'PG-13', 'Crime,Drama,Comedy', 'A charming young con artist passes himself off as a pilot, doctor, and lawyer while a relentless FBI agent gives chase.', '3sjwIngsYRWqLgGdrW80oUNTF35.jpg'),
+  m('The Intouchables', 2011, '323BP0itpxTsO0skTwdnVmf7YWO.jpg', 8.5, 'R', 'Comedy,Drama', 'A wealthy quadriplegic forms an unlikely and life-changing friendship with the ex-convict he hires as his caregiver.', '3Fk3iN8r0YV3T1MfdR5R9YOkZ.jpg'),
+  m('Coraline\'s Garden', 2012, 'wYyMK1XHvbZHj2t6gQ5GmqdXdfm.jpg', 6.5, 'PG', 'Fantasy,Family,Adventure', 'A lonely child discovers an enchanted garden where the flowers whisper secrets about her family’s forgotten past.', 'wYyMK1XHvbZHj2t6gQ5GmqdXdfm.jpg'),
+  m('The Hateful Eight', 2015, '4PtSJRWY1xV7tDcAACfTYzQ8AJ4.jpg', 7.8, 'R', 'Crime,Drama,Mystery', 'Eight strangers seek refuge from a blizzard in a remote stagecoach lodge, where treachery and bloodshed soon erupt.', 'h2BcD9JjUtSqr2hDrTAEoXkO8Ld.jpg'),
+  m('Nightcrawler', 2014, 'j9HrX8f7GbZQm1Rts7qhcZkOWVm.jpg', 7.8, 'R', 'Crime,Thriller,Drama', 'A driven loner discovers the cut-throat world of freelance crime journalism and blurs every ethical line to get the shot.', 'AbCnPVeQ2gtVsdr7e1uPxBs8GuK.jpg'),
+  m('Big Hero 6', 2014, '2mxS4wUimwlLmI1xp6QW6NSU361.jpg', 7.8, 'PG', 'Animation,Family,Action', 'A young robotics prodigy and an inflatable healthcare robot form a high-tech hero team to stop a masked villain.', 'pHM4Eh6Pxk7yyGqEMQHR0VKj5Cx.jpg'),
+  m('The Conjuring', 2013, 'wVYREutTvI2tmxr6ujrHT704wGF.jpg', 7.5, 'R', 'Horror,Thriller,Mystery', 'Paranormal investigators confront a malevolent presence terrorizing a family in their secluded farmhouse.', 'fzZUntfBM6dApLLNn7XYBQRDQYY.jpg'),
+  m('Ex Machina', 2014, 'btbRB7BrD887j5NrvjxceRDmaot.jpg', 7.7, 'R', 'Sci-Fi,Drama,Thriller', 'A young programmer is selected to evaluate the human qualities of a strikingly advanced and beautiful AI.', 'gQbAQjUC9bjQEa83FfDOXTYAFCe.jpg'),
+  m('Pan\'s Labyrinth', 2006, 'i4hKfgvKKn8XTHb6q7B0e0r3Mlr.jpg', 8.2, 'R', 'Fantasy,Drama,War', 'In post-war Spain, a lonely girl escapes into a dark, magical labyrinth ruled by a mysterious faun.', 'oMqXi5W6bDH4uHbDOEs66KFjsUg.jpg'),
+  m('Slumdog Millionaire', 2008, 'lvcQYUUDJEZeR82R9TPexBYJxKW.jpg', 8.0, 'R', 'Drama,Romance', 'A boy from the Mumbai slums is one question away from a fortune on a game show, but first must prove how he knows the answers.', 'pPdJZTEbBHTpmnnsZ7Vt40j2VAj.jpg'),
+  m('Life of Pi', 2012, 'iLgQUEclZGZSjB6gWoCqWZ5N0vW.jpg', 7.9, 'PG', 'Adventure,Drama,Fantasy', 'A young man survives a shipwreck and is stranded on a lifeboat in the Pacific with a fearsome Bengal tiger.', '8YQTPHHXOR5tD9RBP5g6XbHHEY.jpg'),
+  m('The Grand Tour Movie', 2018, 'kTbXTuU4G9pmHRRqAH8Y4G5hwQ.jpg', 7.2, 'PG', 'Adventure,Documentary,Comedy', 'Three petrolheads embark on an epic road trip across stunning landscapes in the world’s most extraordinary cars.', 'kTbXTuU4G9pmHRRqAH8Y4G5hwQ.jpg'),
+  m('Joker: Folie à Deux', 2024, 'd5yfNFlvCAv4nKbWQ4d8Sf9zEXR.jpg', 6.0, 'R', 'Crime,Drama,Music', 'Confined to Arkham, Arthur Fleck finds love and a shared delusion that reignites the chaos of his alter ego.', 'kY8oz9pVUaQNbnZNPVQjvVrZNb6.jpg'),
+  m('Wicked', 2024, 'c5Tqxeo1UpBvnAc3csUm7j3hlQl.jpg', 7.4, 'PG', 'Fantasy,Romance,Music', 'The untold story of the witches of Oz, and how an unlikely friendship shapes the fate of an entire kingdom.', 'uKb22E0nlz7Vty3Vd6Blu1eTzbI.jpg'),
+  m('The Wild Robot', 2024, 'wTnV3PCVW5O92JMrFvvrRcV39RU.jpg', 8.2, 'PG', 'Animation,Family,Sci-Fi', 'A robot shipwrecked on a remote island learns to survive in the wild and becomes the adoptive parent of an orphaned gosling.', '417tYZ4XUyJrtyZXj7HpvWf1E8f.jpg'),
+  m('Gladiator II', 2024, '2cxhvwyEwRlysAmRH4iodkvo0z5.jpg', 6.6, 'R', 'Action,Adventure,Drama', 'Years after the fall of a beloved hero, a young man enters the Colosseum to reclaim his birthright and the soul of Rome.', 'euYIwmwkmz95mnXvufEmbL6ovhZ.jpg'),
+  m('A Minecraft Movie', 2025, '9wjmJUtUOnp3tHE2YnWnQ8aWFZ7.jpg', 6.0, 'PG', 'Adventure,Comedy,Family', 'Four misfits are pulled through a portal into a cubic world of wonder and must master its magic to find their way home.', 'l3ycQYwWmbirvGFbV5JdvT3Yj1o.jpg'),
+  m('Mufasa: The Lion King', 2024, '9bXHaLlsFYpJUutg4E6WXAHM72S.jpg', 6.6, 'PG', 'Animation,Adventure,Family', 'The origin of a legendary king, from an orphaned cub to the ruler who would change the Pride Lands forever.', '95B8FZQ1OQwzCKj4hwG18iz1l1J.jpg'),
+];
