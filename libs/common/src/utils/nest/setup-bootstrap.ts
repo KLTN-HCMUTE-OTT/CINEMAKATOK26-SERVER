@@ -1,7 +1,14 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 import { HttpExceptionFilter } from '@app/common/filters';
-import { HttpLoggingInterceptor, HttpResponseInterceptor } from '@app/common/interceptors';
-import { ClassSerializerInterceptor, INestApplication, Logger } from '@nestjs/common';
+import {
+  HttpLoggingInterceptor,
+  HttpResponseInterceptor,
+} from '@app/common/interceptors';
+import {
+  ClassSerializerInterceptor,
+  INestApplication,
+  Logger,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -24,6 +31,7 @@ export async function setupBootstrap(app: INestApplication<any>) {
       'http://127.0.0.1:3005',
       'https://cinemakatok25-fe-client.vercel.app',
       'https://cinemakatok-25-fe-admin.vercel.app',
+      'https://dev.veezy.shop',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -54,7 +62,8 @@ export async function setupBootstrap(app: INestApplication<any>) {
     .addBearerAuth()
     .build();
 
-  const documentFactory = () => SwaggerModule.createDocument(app, documentConfig);
+  const documentFactory = () =>
+    SwaggerModule.createDocument(app, documentConfig);
   SwaggerModule.setup('/api/docs', app, documentFactory);
 
   await app.listen(getConfig('core.port', 3000));
