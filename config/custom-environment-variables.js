@@ -13,7 +13,7 @@ module.exports = {
   //Server configuration
   port: number('PORT'),
   appName: 'APP_NAME',
-  recommendBaseUrl: 'RECOMMEND_BASE_URL',
+  recommendationApiUrl: 'RECOMMENDATION_API_URL',
   google: {
     clientID: 'GOOGLE_CLIENT_ID',
     clientSecret: 'GOOGLE_CLIENT_SECRET',

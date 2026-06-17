@@ -7,6 +7,7 @@ import { DirectorsController } from './controllers/directors.controller';
 import { EpisodesController } from './controllers/episodes.controller';
 import { MoviesController } from './controllers/movies.controller';
 import { NewsController } from './controllers/news.controller';
+import { RecommendationsController } from './controllers/recommendations.controller';
 import { TagsController } from './controllers/tags.controller';
 import { TvSeriesController } from './controllers/tv-series.controller';
 import { VideosController } from './controllers/videos.controller';
@@ -31,6 +32,7 @@ import { UserModule } from '../user/user.module';
     ContentsController,
     MoviesController,
     NewsController,
+    RecommendationsController,
     TvSeriesController,
     EpisodesController,
     ActorsController,
