@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { HttpModule } from '@nestjs/axios';
 import * as path from 'path';
 
 import { CoreModule } from '@app/core';
@@ -26,6 +27,7 @@ import { validateContentEnv } from './config/env.schema';
 import { DirectorService } from './services/director.service';
 import { MovieService } from './services/movie.service';
 import { NewsService } from './services/news.service';
+import { RecommendService } from './services/recommend.service';
 import { TagService } from './services/tag.service';
 import { TvSeriesService } from './services/tvseries.service';
 import { VideoService } from './services/video.service';
@@ -57,6 +59,10 @@ import { VideoService } from './services/video.service';
       ],
       'content',
     ),
+    HttpModule.register({
+      timeout: 5000,
+      maxRedirects: 3,
+    }),
     CoreModule,
   ],
   controllers: [ContentController],
@@ -67,6 +73,7 @@ import { VideoService } from './services/video.service';
     DirectorService,
     MovieService,
     NewsService,
+    RecommendService,
     TagService,
     TvSeriesService,
     VideoService,

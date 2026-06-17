@@ -23,6 +23,9 @@ export const contentEnvSchema = z.object({
   CONTENT_DB_SSL_REJECT_UNAUTHORIZED: z
     .preprocess((v) => v === 'true' || v === '1', z.boolean())
     .default(false),
+
+  // FastAPI Recommendation Service
+  RECOMMENDATION_API_URL: z.string().url().optional(),
 });
 
 export type ContentEnv = z.infer<typeof contentEnvSchema>;

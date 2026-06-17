@@ -47,6 +47,7 @@ import { NewsService } from './services/news.service';
 import { TagService } from './services/tag.service';
 import { TvSeriesService } from './services/tvseries.service';
 import { VideoService } from './services/video.service';
+import { RecommendService } from './services/recommend.service';
 
 @Controller()
 export class ContentController {
@@ -60,6 +61,7 @@ export class ContentController {
     private readonly categoryService: CategoryService,
     private readonly tagService: TagService,
     private readonly videoService: VideoService,
+    private readonly recommendService: RecommendService,
   ) {}
 
   // ─── Content ─────────────────────────────────────────────────────────────────
@@ -405,5 +407,16 @@ export class ContentController {
   @MessagePattern({ cmd: 'content.getMovieOrSeriesFromVideo' })
   getMovieOrSeriesFromVideo(@Payload() payload: { videoId: string }) {
     return this.videoService.getMovieOrSeriesFromVideo(payload.videoId);
+  }
+
+  // ─── Recommendations (AI) ─────────────────────────────────────────────────────
+  @MessagePattern({ cmd: 'content.getRecommendationsForUser' })
+  getRecommendationsForUser(
+    @Payload() payload: { userId: string; limit?: number },
+  ) {
+    return this.recommendService.getRecommendationsForUser(
+      payload.userId,
+      payload.limit,
+    );
   }
 }

@@ -387,4 +387,16 @@ export class ContentService {
       .send({ cmd: 'content.deleteVideo' }, { id })
       .pipe(catchRpcError());
   }
+  // ========================= RECOMMENDATIONS (AI) =========================
+  getRecommendationsForUser(
+    userId: string,
+    limit?: number,
+  ): Observable<any> {
+    return this.contentClient
+      .send(
+        { cmd: 'content.getRecommendationsForUser' },
+        { userId, limit },
+      )
+      .pipe(catchRpcError());
+  }
 }
